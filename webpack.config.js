@@ -1,5 +1,6 @@
 const webpack = require('webpack');
 const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
     entry: {
@@ -7,7 +8,7 @@ module.exports = {
     },
 
     output: {
-        path: path.join(__dirname, 'dist'),
+        path: path.join(__dirname, 'public'),
         filename: '[name].[hash:6].js'
     },
 
@@ -15,7 +16,8 @@ module.exports = {
 		extensions: ['.js', '.jsx'],
 		alias: {
 			components: path.resolve(__dirname, './src/components'),
-			pages: path.resolve(__dirname, './src/pages')
+            pages: path.resolve(__dirname, './src/pages'),
+            api: path.resolve(__dirname, './src/API')
 		}
 	},
 
@@ -27,15 +29,45 @@ module.exports = {
                 use: {
                     loader: 'babel-loader'
                 }
+            },
+            {
+                test: /\.css$/,
+                use: [
+                    {
+                        loader: 'style-loader'
+                    },
+                    {
+                        loader: 'css-loader',
+                        options: {
+                        // modules: true,
+                        camelCase: true,
+                        sourceMap: true
+                        }
+                    }
+                ]
             }
         ]
     },
 
     devServer: {
-        contentBase: path.join(__dirname, 'dist'),
+        contentBase: path.join(__dirname, 'public'),
         port: 9090,
-        host: 'localhost',
+        host: '0.0.0.0',
         overlay: true,
-        compress: true //服务器返回浏览器时是否启动gzip压缩
-    }
+        historyApiFallback: true,
+        noInfo: true,
+        inline: true,
+        compress: true, //服务器返回浏览器时是否启动gzip压缩
+    },
+
+    plugins: [
+        new webpack.DefinePlugin({
+			'process.env.NODE_ENV': JSON.stringify('development')
+		}),
+        new HtmlWebpackPlugin({
+            filename: 'index.html',
+            template: './src/index.html',
+            inject: true,
+        }),
+    ]
 }

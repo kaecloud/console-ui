@@ -1,0 +1,35 @@
+.detailPage {
+    width: 80%;
+    margin: 0 auto;
+}
+
+.ant-collapse-borderless{
+    margin-bottom: 20px;
+    background-color: #fff;
+    border: 1px solid rgba(0,0,0,.12);
+    border-radius: 2px;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 2px 1px -1px rgba(0,0,0,.12);
+}
+
+.btnIcon {
+    cursor: pointer;
+    transform:rotate(90deg);
+    -ms-transform:rotate(90deg); /* Internet Explorer */
+    -moz-transform:rotate(90deg); /* Firefox */
+    -webkit-transform:rotate(90deg); /* Safari 和 Chrome */
+    -o-transform:rotate(90deg); /* Opera */
+}
+
+.detailLeft {
+    float: left;
+    width: 20%;
+    margin-bottom: 16px;
+}
+
+.detailRight {
+    float: right;
+    width: 74%;
+    height: 347px;
+    margin-bottom: 16px;
+    background-color: #ccc;
+}
