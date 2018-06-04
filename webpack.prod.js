@@ -5,11 +5,12 @@ const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
     entry: {
-        app: path.join(__dirname, './src/index.js')
+        app: path.join(__dirname, './src/index.js'),
+        vonder: ['react', 'react-router-dom', 'react-dom']
     },
 
     output: {
-        path: path.join(__dirname, 'public'),
+        path: path.join(__dirname, 'dist'),
         filename: '[name].[hash:6].js'
     },
 
