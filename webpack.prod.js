@@ -2,6 +2,7 @@ const webpack = require('webpack');
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const CleanWebpackPlugin = require('clean-webpack-plugin');
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const ParallelUglifyPlugin = require('webpack-parallel-uglify-plugin');
 
 module.exports = {
@@ -12,7 +13,7 @@ module.exports = {
 
     output: {
         path: path.join(__dirname, 'dist'),
-        filename: '[name].[hash:6].js'
+        filename: 'static/js/[name].[hash:6].js'
     },
 
     resolve: {
@@ -36,17 +37,15 @@ module.exports = {
             {
                 test: /\.css$/,
                 use: [
-                    {
-                        loader: 'style-loader'
-                    },
-                    {
-                        loader: 'css-loader',
-                        options: {
-                        // modules: true,
-                        camelCase: true,
-                        sourceMap: true
-                        }
+                  MiniCssExtractPlugin.loader,
+                  {
+                    loader: 'css-loader',
+                    options: {
+                      // modules: true,
+                      camelCase: true,
+                      sourceMap: true
                     }
+                  }
                 ]
             }
         ]
@@ -60,6 +59,10 @@ module.exports = {
             filename: 'index.html',
             template: './src/index.html',
             inject: true,
+        }),
+        new MiniCssExtractPlugin({
+            filename: "static/css/style.[name].css",
+            chunkFilename: "static/css/style.[id].css"
         }),
         new ParallelUglifyPlugin({
             workerCount: 4,
@@ -77,7 +80,7 @@ module.exports = {
             }
         }),
         new CleanWebpackPlugin(
-            ['dist/*.js'],　 //匹配删除的文件
+            ['dist/*'],　 //匹配删除的文件
             {
                 root: __dirname,       　　　　　　　　　　//根目录
                 verbose:  true,        　　　　　　　　　　//开启在控制台输出信息

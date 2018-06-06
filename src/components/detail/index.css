@@ -27,12 +27,15 @@
 }
 
 .detailRight {
-    float: right;
-    max-width: 530px;
+    float: left;
+    margin: 0 0 0 24%;
+    min-width: 530px;
+    border-radius: 10px;
+    overflow: hidden;
     height: 347px;
     margin-bottom: 16px;
     background-color: #ccc;
-    box-shadow: rgba(0, 0, 0, 0.8) 0px 20px 70px;
+    box-shadow: rgba(0, 0, 0, 0.8) 0px 8px 22px;
 }
 
 .detailRight .title-bar {
@@ -50,7 +53,7 @@
 }
 
 .detailRight .text-body {
-    height: 250px;
+    height: 347px;
     background-color: rgba(0, 0, 0, 0.85);
     padding: 10px;
     color: #f0f0f0;

@@ -16,7 +16,7 @@ const spanStyle = {
 
 const options = {
     strings: ["<i>First</i> sentence.", "&amp; a second sentence."],
-    typeSpeed: 40
+    typeSpeed: 40,
 }
 
 class AppDetail extends React.Component {
@@ -32,6 +32,7 @@ class AppDetail extends React.Component {
             data: [],
             tableData: [],
             visible: false,
+            textVisible: false,
             columns: [
                 {
                     title: 'tag',
@@ -136,8 +137,27 @@ class AppDetail extends React.Component {
     // 更新
     handleRenew() {
         let name = this.state.name
-        appRenew({name: name});
-        var typed = new Typed('.text-body', options);
+        let data;
+        appRenew({name: name}).then(res => {
+            data = JSON.stringify(res)
+        });
+        this.setState({
+            textVisible: true
+        })
+        setTimeout(() => {
+            console.log(data)
+            var typed = new Typed('.text', {
+                strings: [data],
+                typeSpeed: 40,
+                onComplete: () => {
+                    setTimeout(() => {
+                        this.setState({
+                            textVisible: false
+                        })
+                    }, 800);
+                }
+            });
+        }, 300);
     }
 
     // 伸缩
@@ -149,8 +169,31 @@ class AppDetail extends React.Component {
     // 回滚
     handleRollback() {
         let name = this.state.name
-        appRollback({name: name})
+        let data;
+        appRollback({name: name}).then(res => {
+            data = JSON.stringify(res)
+        });
+        this.setState({
+            textVisible: true
+        })
+        setTimeout(() => {
+            console.log(data)
+            var typed = new Typed('.text', {
+                strings: [data],
+                typeSpeed: 40,
+                onComplete: () => {
+                    setTimeout(() => {
+                        this.setState({
+                            textVisible: false
+                        })
+                    }, 800);
+                }
+            });
+        }, 300);
     }
+
+    // 显示信息
+    
 
     render() {
         const { data, name, columns } = this.state;
@@ -181,10 +224,14 @@ class AppDetail extends React.Component {
                             <Button onClick={this.handleRollback.bind(this)}>回滚</Button>
                             <div>{this.state.example}</div>
                         </div>
-                        <div className="detailRight">
-                            <div className="title-bar"></div>
-                            <div className="text-body"></div>
-                        </div>
+                        { this.state.textVisible ? (
+                            <div className="detailRight">
+                                <div className="title-bar"></div>
+                                <div className="text-body">
+                                    <span className="text"></span>
+                                </div>
+                            </div>
+                        ) : ''}
                     </Panel>
                 </Collapse>
 
