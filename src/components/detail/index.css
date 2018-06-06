@@ -30,6 +30,7 @@
     float: left;
     margin: 0 0 0 24%;
     min-width: 530px;
+    max-width: 530px;
     border-radius: 10px;
     overflow: hidden;
     height: 347px;

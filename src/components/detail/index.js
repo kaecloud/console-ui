@@ -91,6 +91,7 @@ class AppDetail extends React.Component {
                 }
             ]
         }
+        this.handleMsg = this.handleMsg.bind(this);
     }
 
     componentDidMount() {
@@ -121,7 +122,10 @@ class AppDetail extends React.Component {
     // 构建
     handleBuild() {
         let name = this.state.name;
-        appBuild({name: name, tag: 'v0.0.2'});
+        let data;
+        appBuild({name: name, tag: 'v0.0.2'}).then(res => {
+            this.handleMsg(JSON.stringify(res).replace(/,/g, '<br/>'));
+        });
     }
 
     // 打开配置弹框
@@ -139,25 +143,8 @@ class AppDetail extends React.Component {
         let name = this.state.name
         let data;
         appRenew({name: name}).then(res => {
-            data = JSON.stringify(res)
+            this.handleMsg(JSON.stringify(res));
         });
-        this.setState({
-            textVisible: true
-        })
-        setTimeout(() => {
-            console.log(data)
-            var typed = new Typed('.text', {
-                strings: [data],
-                typeSpeed: 40,
-                onComplete: () => {
-                    setTimeout(() => {
-                        this.setState({
-                            textVisible: false
-                        })
-                    }, 800);
-                }
-            });
-        }, 300);
     }
 
     // 伸缩
@@ -171,29 +158,29 @@ class AppDetail extends React.Component {
         let name = this.state.name
         let data;
         appRollback({name: name}).then(res => {
-            data = JSON.stringify(res)
+            this.handleMsg(JSON.stringify(res));
         });
-        this.setState({
-            textVisible: true
-        })
-        setTimeout(() => {
-            console.log(data)
-            var typed = new Typed('.text', {
-                strings: [data],
-                typeSpeed: 40,
-                onComplete: () => {
-                    setTimeout(() => {
-                        this.setState({
-                            textVisible: false
-                        })
-                    }, 800);
-                }
-            });
-        }, 300);
     }
 
     // 显示信息
-    
+    handleMsg(data) {
+        this.setState({
+            textVisible: true
+        })
+        console.log(data)
+        var typed = new Typed('.text', {
+            strings: [data],
+            typeSpeed: 40,
+            onComplete: () => {
+                setTimeout(() => {
+                    this.setState({
+                        textVisible: false
+                    })
+                }, 1000);
+            }
+        });
+    }
+
 
     render() {
         const { data, name, columns } = this.state;
