@@ -1,6 +1,6 @@
 import React from 'react';
 import { Divider, Icon, Button, Modal } from 'antd';
-import { appList } from 'api';
+import { appList, getUserId } from 'api';
 import './index.css';
 
 class Header extends React.Component {
@@ -11,7 +11,8 @@ class Header extends React.Component {
             loading: false,
             hasLogin: false,
             visible: false,
-            url: ''
+            url: '',
+            username: ''
         }
     }
 
@@ -19,9 +20,12 @@ class Header extends React.Component {
         appList()
         .then(res => {
             if(res) {
-                this.setState({
-                    hasLogin: true,
-                })
+                getUserId().then(res => {
+                    this.setState({
+                        username: res.username,
+                        hasLogin: true,
+                    })
+                });
             }
         })
         .catch(err => {
@@ -61,11 +65,13 @@ class Header extends React.Component {
             <div className="headerStyle">
                 <div className="container">
                     <div className="logo">logo</div>
-                    { this.state.hasLogin ? '' : <div className="login"><Button onClick={this.handleVisible.bind(this)}>登录<Icon type="login" /></Button></div> }
+                    { this.state.hasLogin ? <div className="login">{this.state.username}</div> : <div className="login"><Button onClick={this.handleVisible.bind(this)}>登录<Icon type="login" /></Button></div> }
                 </div>
                 <Modal
                     title="您未登录"
                     visible={this.state.visible}
+                    onOk={this.handleLogin.bind(this)}
+                    onCancel={this.handleCancel.bind(this)}
                     footer={[
                         <Button key="back" onClick={this.handleCancel.bind(this)}>取消</Button>,
                         <Button key="login" type="primary" loading={this.state.loading} onClick={this.handleLogin.bind(this)}>

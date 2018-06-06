@@ -1,97 +1,10 @@
 import React from 'react';
-import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button } from 'antd';
+import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal } from 'antd';
 import { Link } from 'react-router-dom'; 
-import { getDetail, getReleases } from 'api';
+import { getDetail, getReleases, appBuild, appScale, appRollback, appRenew } from 'api';
+import Typed from 'typed.js';
 import './index.css';
 const Panel = Collapse.Panel;
-
-const data = {
-    name: 'test',
-    space: 'default',
-    label: {
-        web: 'true',
-        hah: 'yes'
-    },
-    comments: 'this is comments',
-    created: '2018-10-00',
-    select: '~',
-    strategies: '~',
-    mintime: '1s',
-    history: '2',
-    maxadd: '2',
-    maxinvalid: '0',
-    updated: '3',
-    total: '4',
-    used: '3',
-    unused: '1'
-}
-
-const columns = [
-    {
-        title: 'id',
-        dataIndex: 'id',
-        width: '5%',
-    }, {
-        title: 'updated',
-        dataIndex: 'updated',
-        width: '15%',
-    }, {
-        title: 'created',
-        dataIndex: 'created',
-        width: '15%',
-        sorter: (a, b) => a.name.length - b.name.length,
-    }, {
-        title: 'image',
-        dataIndex: 'image',
-        width: '30%',
-    }, {
-        title: 'misc',
-        dataIndex: 'misc',
-        width: '20%',
-        render: misc => {
-            let miscToJson = JSON.parse(misc);
-            return (
-                <div>
-                    <span style={spanStyle}>commit_message: {miscToJson.commit_message ? miscToJson.commit_message : 'null'}</span>
-                    <span style={spanStyle}>author: {miscToJson.author ? miscToJson.author : 'null'}</span><br/>
-                    <span style={spanStyle}>git: {miscToJson.git}</span>
-                </div>
-            )
-        }
-    }, {
-        title: 'tag',
-        dataIndex: 'tag',
-        width: '10%',
-    }, {
-        title: 'more',
-        dataIndex: 'more',
-        render() {
-
-            const menu = (
-                <Menu>
-                    <Menu.Item key="0">
-                        <a href="#">回滚</a>
-                    </Menu.Item>
-                    <Menu.Item key="1">
-                        <a href="#">升级</a>
-                    </Menu.Item>
-                    <Menu.Divider />
-                    <Menu.Item key="3">
-                        <a href="#">编辑</a>
-                    </Menu.Item>
-                </Menu>
-            );
-
-            return (
-                <Dropdown overlay={menu} trigger={['click']}>
-                    <a className="ant-dropdown-link" href="#">
-                        <Icon type="ellipsis" className="btnIcon" />
-                    </a>
-                </Dropdown>
-            )
-        }
-    }
-]
 
 const spanStyle = {
     padding: '0 4px',
@@ -101,15 +14,81 @@ const spanStyle = {
     borderRadius: '6px'
 }
 
+const options = {
+    strings: ["<i>First</i> sentence.", "&amp; a second sentence."],
+    typeSpeed: 40
+}
+
 class AppDetail extends React.Component {
 
     constructor() {
         super();
+        let self = this;
         this.state = {
+            text: '',
+            example: '',
             name: '',
+            nowRowData: {},
             data: [],
             tableData: [],
-            visible: false
+            visible: false,
+            columns: [
+                {
+                    title: 'tag',
+                    dataIndex: 'tag',
+                    width: '10%',
+                }, {
+                    title: 'updated',
+                    dataIndex: 'updated',
+                    width: '15%',
+                }, {
+                    title: 'created',
+                    dataIndex: 'created',
+                    width: '15%',
+                    sorter: (a, b) => a.name.length - b.name.length,
+                }, {
+                    title: 'image',
+                    dataIndex: 'image',
+                    width: '30%',
+                }, {
+                    title: 'misc',
+                    dataIndex: 'misc',
+                    width: '20%',
+                    render: misc => {
+                        let miscToJson = JSON.parse(misc);
+                        return (
+                            <div>
+                                <span style={spanStyle}>commit_message: {miscToJson.commit_message ? miscToJson.commit_message : 'null'}</span>
+                                <span style={spanStyle}>author: {miscToJson.author ? miscToJson.author : 'null'}</span><br/>
+                                <span style={spanStyle}>git: {miscToJson.git}</span>
+                            </div>
+                        )
+                    }
+                }, {
+                    title: 'more',
+                    dataIndex: 'specs_text',
+                    render(data) {
+                        const menu = (
+                            <Menu>
+                                <Menu.Item key="0">
+                                    <div onClick={self.handleBuild.bind(self)}>构建</div>
+                                </Menu.Item>
+                                <Menu.Item key="1">
+                                    <div onClick={() => {self.handleText(data)}}>配置</div>
+                                </Menu.Item>
+                            </Menu>
+                        );
+            
+                        return (
+                            <Dropdown overlay={menu} trigger={['click']}>
+                                <a className="ant-dropdown-link" href="#">
+                                    <Icon type="ellipsis" className="btnIcon" />
+                                </a>
+                            </Dropdown>
+                        )
+                    }
+                }
+            ]
         }
     }
 
@@ -130,27 +109,56 @@ class AppDetail extends React.Component {
             })
         });
     }
-
-    hide() {
+    
+    // 关闭配置弹框
+    handleCancel() {
         this.setState({
             visible: false,
         });
     }
 
-    handleVisibleChange(visible) {
-        this.setState({ visible });
+    // 构建
+    handleBuild() {
+        let name = this.state.name;
+        appBuild({name: name, tag: 'v0.0.2'});
+    }
+
+    // 打开配置弹框
+    handleText(data) {
+        let text = data.replace(/\n/g, '<br/>');
+        text = text.replace(/ /g, '&nbsp;&nbsp;');
+        this.setState({ 
+            text: text,
+            visible: true
+        });
+    }
+
+    // 更新
+    handleRenew() {
+        let name = this.state.name
+        appRenew({name: name});
+        var typed = new Typed('.text-body', options);
+    }
+
+    // 伸缩
+    handleScale() {
+        let name = this.state.name
+        appScale({name: name, replicas: '1'})
+    }
+
+    // 回滚
+    handleRollback() {
+        let name = this.state.name
+        appRollback({name: name})
     }
 
     render() {
-
-        const { data, name } = this.state;
+        const { data, name, columns } = this.state;
 
         let labels = [];
         for (let p in data.label) {
             labels.push(<span style={spanStyle} key={p}>{p}: {data.label[p]}</span>)
         }
-
-        
 
         return (
             <div className="detailPage">
@@ -168,8 +176,14 @@ class AppDetail extends React.Component {
                             <p>滚动更新策略： 最大激增数：{data.maxadd}，最大无效数：{data.maxinvalid}</p>
                             <p>状态： 个已更新，共计 {data.total}个， {data.used}个可用， {data.unused}个不可用</p>
                             <Button><Link to={`/logger?app=${name}`}>查看日志</Link></Button>
+                            <Button onClick={this.handleRenew.bind(this)}>更新</Button>
+                            <Button onClick={this.handleScale.bind(this)}>伸缩</Button>
+                            <Button onClick={this.handleRollback.bind(this)}>回滚</Button>
+                            <div>{this.state.example}</div>
                         </div>
                         <div className="detailRight">
+                            <div className="title-bar"></div>
+                            <div className="text-body"></div>
                         </div>
                     </Panel>
                 </Collapse>
@@ -192,9 +206,29 @@ class AppDetail extends React.Component {
                             columns={columns} 
                             dataSource={this.state.tableData} 
                             rowKey="id"
+                            onRow={(record) => {
+                                return {
+                                    onClick: () => {this.setState({nowRowData: record})},       // 点击行
+                                };
+                            }}
                         />
                     </Panel>
                 </Collapse>
+
+                <Modal
+                    title="配置信息"
+                    visible={this.state.visible}
+                    onOk={this.handleCancel.bind(this)}
+                    onCancel={this.handleCancel.bind(this)}
+                    footer={[
+                        <Button key="back" onClick={this.handleCancel.bind(this)}>取消</Button>,
+                        <Button key="login" type="primary" onClick={this.handleCancel.bind(this)}>
+                            确定
+                        </Button>,
+                    ]}
+                >
+                    <div dangerouslySetInnerHTML={{__html: this.state.text}}></div>
+                </Modal>
             </div>
         )
     }

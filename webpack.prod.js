@@ -1,12 +1,13 @@
 const webpack = require('webpack');
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
-const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
+const CleanWebpackPlugin = require('clean-webpack-plugin');
+const ParallelUglifyPlugin = require('webpack-parallel-uglify-plugin');
 
 module.exports = {
     entry: {
+        vonder: ['antd', 'react', 'react-router-dom', 'react-dom'],
         app: path.join(__dirname, './src/index.js'),
-        vonder: ['react', 'react-router-dom', 'react-dom']
     },
 
     output: {
@@ -60,5 +61,28 @@ module.exports = {
             template: './src/index.html',
             inject: true,
         }),
+        new ParallelUglifyPlugin({
+            workerCount: 4,
+            uglifyJS: {
+                output: {
+                beautify: false, //不需要格式化
+                comments: true
+                },
+                compress: {
+                warnings : false,
+                drop_console: true,
+                collapse_vars: true, // 内嵌定义了但是只有用到一次的变量
+                reduce_vars: true // 提取出出现多次但是没有定义成变量去引用的静态值
+                }
+            }
+        }),
+        new CleanWebpackPlugin(
+            ['dist/*.js'],　 //匹配删除的文件
+            {
+                root: __dirname,       　　　　　　　　　　//根目录
+                verbose:  true,        　　　　　　　　　　//开启在控制台输出信息
+                dry:      false        　　　　　　　　　　//启用删除文件
+            }
+        )
     ]
 }

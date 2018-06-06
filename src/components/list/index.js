@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, withRouter } from 'react-router-dom';
 import { appList } from 'api';
 import { Table, Collapse } from 'antd';
 const Panel = Collapse.Panel;
@@ -10,11 +10,6 @@ const columns = [
     {
         title: 'name',
         dataIndex: 'name',
-        render: name => {
-            return (
-                <Link to={`/detail?app=${name}`}>{name}</Link>
-            )
-        }
     }, {
         title: 'Git',
         dataIndex: 'git',
@@ -65,6 +60,11 @@ class AppList extends React.Component {
                             dataSource={this.state.data} 
                             onChange={onChange} 
                             rowKey="name"
+                            onRow={(record) => {
+                                return {
+                                    onClick: () => {this.props.history.push(`/detail?app=${record.name}`);},       // 点击行
+                                };
+                            }}
                         />
                     </Panel>
                 </Collapse>
@@ -74,4 +74,4 @@ class AppList extends React.Component {
     }
 }
 
-export default AppList;
+export default withRouter(AppList);
