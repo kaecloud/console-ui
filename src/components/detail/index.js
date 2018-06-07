@@ -29,7 +29,6 @@ class AppDetail extends React.Component {
             example: '',
             name: '',
             scaleNum: 1,
-            nowRowData: {},
             data: [],
             tableData: [],
             podTableData: [],
@@ -54,30 +53,27 @@ class AppDetail extends React.Component {
                     dataIndex: 'image',
                     width: '30%',
                 }, {
-                    title: 'misc',
-                    dataIndex: 'misc',
+                    title: 'build_status',
+                    dataIndex: 'build_status',
                     width: '20%',
-                    render: misc => {
-                        let miscToJson = JSON.parse(misc);
-                        return (
-                            <div>
-                                <span style={spanStyle}>commit_message: {miscToJson.commit_message ? miscToJson.commit_message : 'null'}</span>
-                                <span style={spanStyle}>author: {miscToJson.author ? miscToJson.author : 'null'}</span><br/>
-                                <span style={spanStyle}>git: {miscToJson.git}</span>
-                            </div>
-                        )
+                    render(build_status) {
+                        return build_status + ''
                     }
                 }, {
-                    title: 'more',
-                    dataIndex: 'specs_text',
-                    render(data) {
+                    title: 'Action',
+                    dataIndex: 'action',
+                    render(text, record) {
                         const menu = (
                             <Menu>
-                                <Menu.Item key="0">
-                                    <div onClick={self.handleBuild.bind(self)}>构建</div>
-                                </Menu.Item>
+                                {
+                                    record.build_status ? '' : (
+                                        <Menu.Item key="0">
+                                            <div onClick={self.handleBuild.bind(self)}>构建</div>
+                                        </Menu.Item>
+                                    )
+                                }
                                 <Menu.Item key="1">
-                                    <div onClick={() => {self.handleText(data)}}>配置</div>
+                                    <div onClick={() => {self.handleText(record.specs_text)}}>配置</div>
                                 </Menu.Item>
                             </Menu>
                         );
@@ -96,14 +92,41 @@ class AppDetail extends React.Component {
                 {
                     title: 'name',
                     dataIndex: 'name',
+                    width: '30%'
                 },
                 {
                     title: 'status',
                     dataIndex: 'status',
+                    align: 'center',
+                    width: '30%',
+                    render: status => {
+                        if(status === 'Pending') {
+                            return (
+                                <Icon type="loading" style={{ color: '#347EFF' }}/>
+                            )
+                        }else {
+                            return (
+                                <span style={{color: 'red'}}>Running</span>
+                            )
+                        }
+                    }
                 },
                 {
                     title: 'ready',
                     dataIndex: 'ready',
+                    align: 'center',
+                    width: '30%',
+                    render: ready => {
+                        if(ready) {
+                            return (
+                                <Icon type="check-circle" style={{ color: 'green' }}/>
+                            )
+                        }else {
+                            return (
+                                <Icon type="close-circle" style={{ color: 'red' }}/>
+                            )
+                        }
+                    }
                 }
             ]
         }
@@ -221,7 +244,6 @@ class AppDetail extends React.Component {
 
     render() {
         const { data, name, columns, podColumns } = this.state;
-        console.log(data)
 
         let labels = [],
             annotations = [],
@@ -316,11 +338,6 @@ class AppDetail extends React.Component {
                             columns={columns} 
                             dataSource={this.state.tableData} 
                             rowKey="id"
-                            onRow={(record) => {
-                                return {
-                                    onClick: () => {this.setState({nowRowData: record})},       // 点击行
-                                };
-                            }}
                         />
                     </Panel>
                 </Collapse>
