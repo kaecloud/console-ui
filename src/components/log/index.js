@@ -21,8 +21,9 @@ const columns = [
     }, {
         title: '创建时间',
         dataIndex: 'created',
+        key: 'created',
         width: '15%',
-        sorter: (a, b) => a.name.length - b.name.length,
+        sorter: (a, b) => a.created - b.created,
     }, {
         title: '修改内容',
         dataIndex: 'content',

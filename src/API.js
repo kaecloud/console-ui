@@ -20,7 +20,7 @@ export const appList = params => {
 
 // 获取detail
 export const getDetail = params => {
-    return axios.get(`${testUrl}${version}/app/${params}`, {
+    return axios.get(`${testUrl}${version}/app/${params}/deployment`, {
         params: params
     }).then(res => res.data)
     .catch(err => console.log(err))
@@ -50,6 +50,14 @@ export const getUserId = params => {
     .catch(err => console.log(err))
 }
 
+// 获取副本
+export const getPods = params => {
+    return axios.get(`${testUrl}${version}/app/${params}/pods`, {
+        params: params
+    }).then(res => res.data)
+    .catch(err => console.log(err))
+}
+
 // app_build
 export const appBuild = params => {
     return axios({
@@ -62,13 +70,6 @@ export const appBuild = params => {
 			'Content-Type': 'application/json'
         },
         transformResponse: [function (data) {
-            // 对 data 进行任意转换处理
-            data = JSON.parse(data);
-            console.log(data);
-            console.log(data.raw_data);
-            console.log(data.msg);
-            console.log(data.success);
-            console.log(data.phase);
             return data;
         }],
     }).then(res => res.data)
@@ -86,9 +87,6 @@ export const appScale = params => {
 			'Content-Type': 'application/json'
         },
         transformResponse: [function (data) {
-            // 对 data 进行任意转换处理
-            data = JSON.parse(data);
-            console.log(data);
             return data;
         }],
     }).then(res => res.data)
@@ -103,9 +101,6 @@ export const appRenew = params => {
 			'Content-Type': 'application/json'
         },
         transformResponse: [function (data) {
-            // 对 data 进行任意转换处理
-            data = JSON.parse(data);
-            console.log(data);
             return data;
         }],
     }).then(res => res.data)
@@ -120,9 +115,6 @@ export const appRollback = params => {
 			'Content-Type': 'application/json'
         },
         transformResponse: [function (data) {
-            // 对 data 进行任意转换处理
-            data = JSON.parse(data);
-            console.log(data);
             return data;
         }],
     }).then(res => res.data)

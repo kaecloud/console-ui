@@ -22,7 +22,7 @@ class Header extends React.Component {
             if(res) {
                 getUserId().then(res => {
                     this.setState({
-                        username: res.username,
+                        username: res.nickname,
                         hasLogin: true,
                     })
                 });
@@ -64,7 +64,7 @@ class Header extends React.Component {
         return (
             <div className="headerStyle">
                 <div className="container">
-                    <div className="logo">logo</div>
+                    <div className="logo">KAE</div>
                     { this.state.hasLogin ? <div className="login">{this.state.username}</div> : <div className="login"><Button onClick={this.handleVisible.bind(this)}>登录<Icon type="login" /></Button></div> }
                 </div>
                 <Modal

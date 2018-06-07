@@ -13,12 +13,11 @@ const columns = [
     }, {
         title: 'Git',
         dataIndex: 'git',
-        sorter: (a, b) => a.name.length - b.name.length,
     }, {
         title: 'Updated',
         dataIndex: 'updated',
         defaultSortOrder: 'descend',
-        sorter: (a, b) => a.age - b.age,
+        sorter: (a, b) => a.updated - b.updated,
     }, {
         title: 'created',
         dataIndex: 'created',

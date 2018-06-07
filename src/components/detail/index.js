@@ -1,7 +1,7 @@
 import React from 'react';
-import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal } from 'antd';
+import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal, InputNumber } from 'antd';
 import { Link } from 'react-router-dom'; 
-import { getDetail, getReleases, appBuild, appScale, appRollback, appRenew } from 'api';
+import { getDetail, getPods, getReleases, appBuild, appScale, appRollback, appRenew } from 'api';
 import Typed from 'typed.js';
 import './index.css';
 const Panel = Collapse.Panel;
@@ -28,11 +28,14 @@ class AppDetail extends React.Component {
             text: '',
             example: '',
             name: '',
+            scaleNum: 1,
             nowRowData: {},
             data: [],
             tableData: [],
+            podTableData: [],
             visible: false,
             textVisible: false,
+            scaleVisible: false,
             columns: [
                 {
                     title: 'tag',
@@ -46,7 +49,6 @@ class AppDetail extends React.Component {
                     title: 'created',
                     dataIndex: 'created',
                     width: '15%',
-                    sorter: (a, b) => a.name.length - b.name.length,
                 }, {
                     title: 'image',
                     dataIndex: 'image',
@@ -89,6 +91,20 @@ class AppDetail extends React.Component {
                         )
                     }
                 }
+            ],
+            podColumns: [
+                {
+                    title: 'name',
+                    dataIndex: 'name',
+                },
+                {
+                    title: 'status',
+                    dataIndex: 'status',
+                },
+                {
+                    title: 'ready',
+                    dataIndex: 'ready',
+                }
             ]
         }
         this.handleMsg = this.handleMsg.bind(this);
@@ -105,6 +121,22 @@ class AppDetail extends React.Component {
                 data: res
             })
         });
+
+        getPods(name).then(res => {
+            let arr = [];
+            res.items.map(d => {
+                let temp = {
+                    name: d.metadata.name,
+                    status: d.status.phase,
+                    ready: d.status.container_statuses[0].ready + ''
+                }
+                arr.push(temp);
+            })
+            this.setState({
+                podTableData: arr
+            })
+        });
+
         getReleases(name).then(res => {
             this.setState({
                 tableData: res
@@ -124,7 +156,7 @@ class AppDetail extends React.Component {
         let name = this.state.name;
         let data;
         appBuild({name: name, tag: 'v0.0.2'}).then(res => {
-            this.handleMsg(JSON.stringify(res).replace(/,/g, '<br/>'));
+            this.handleMsg(res.replace(/,/g, '<br/>'));
         });
     }
 
@@ -143,14 +175,19 @@ class AppDetail extends React.Component {
         let name = this.state.name
         let data;
         appRenew({name: name}).then(res => {
-            this.handleMsg(JSON.stringify(res));
+            this.handleMsg(res);
         });
     }
 
     // 伸缩
     handleScale() {
-        let name = this.state.name
-        appScale({name: name, replicas: '1'})
+        this.setState({scaleVisible: false})
+        let name = this.state.name,
+            num = this.state.scaleNum;
+        let data;
+        appScale({name: name, replicas: num}).then(res => {
+            // this.handleMsg(res.replace(/,/g, '<br/>'));
+        });
     }
 
     // 回滚
@@ -158,7 +195,7 @@ class AppDetail extends React.Component {
         let name = this.state.name
         let data;
         appRollback({name: name}).then(res => {
-            this.handleMsg(JSON.stringify(res));
+            this.handleMsg(res);
         });
     }
 
@@ -167,7 +204,6 @@ class AppDetail extends React.Component {
         this.setState({
             textVisible: true
         })
-        console.log(data)
         var typed = new Typed('.text', {
             strings: [data],
             typeSpeed: 40,
@@ -176,18 +212,54 @@ class AppDetail extends React.Component {
                     this.setState({
                         textVisible: false
                     })
-                }, 1000);
+                    location.reload();
+                }, 2000);
             }
         });
     }
 
 
     render() {
-        const { data, name, columns } = this.state;
+        const { data, name, columns, podColumns } = this.state;
+        console.log(data)
 
-        let labels = [];
-        for (let p in data.label) {
-            labels.push(<span style={spanStyle} key={p}>{p}: {data.label[p]}</span>)
+        let labels = [],
+            annotations = [],
+            match_labels = [],
+            detailData = {
+                created: '',
+                history: '',
+                rolling_update: {},
+                status: {},
+                strategy: '',
+                min_ready_seconds: ''
+            };
+            
+        if(data.length !== 0) {
+            // 详情的数据
+            detailData = {
+                created: data.metadata.creation_timestamp,
+                history: data.spec.revision_history_limit,
+                rolling_update: data.spec.strategy.rolling_update,
+                strategy: data.spec.strategy.type,
+                min_ready_seconds: data.spec.min_ready_seconds === null ? '0' : data.spec.min_ready_seconds,
+                status: data.status
+            }
+
+            // 标签样式
+            for (let p in data.metadata.labels) {
+                labels.push(<span style={spanStyle} key={p}>{p}: {data.metadata.labels[p]}</span>)
+            }
+            // 选择器样式
+            for (let p in data.spec.selector.match_labels) {
+                match_labels.push(<span style={spanStyle} key={p}>{p}: {data.spec.selector.match_labels[p]}</span>)
+            }
+            // 注释样式
+            for (let p in data.metadata.annotations) {
+                if(p !== 'app_specs_text') {
+                    annotations.push(<span style={spanStyle} key={p}>{p}: {data.metadata.annotations[p]}</span>)
+                }
+            }
         }
 
         return (
@@ -196,18 +268,20 @@ class AppDetail extends React.Component {
                 <Collapse bordered={false} defaultActiveKey={['1']}>
                     <Panel header={<h2>详情</h2>} key="1">
                         <div className="detailLeft">
-                            <p>名称：{data.name}</p>
+                            <p>名称：{name}</p>
                             <p>命名空间：{data.space ? data.space : 'default'}</p>
-                            <p>标签： {data.type}</p>
-                            <p>注释： {data.comments ? data.comments : '无'}</p>
-                            <p>创建时间： {data.created}</p>
-                            <p>更新时间： {data.updated}</p>
-                            <p>历史版本限制值： {data.history}</p>
-                            <p>滚动更新策略： 最大激增数：{data.maxadd}，最大无效数：{data.maxinvalid}</p>
-                            <p>状态： 个已更新，共计 {data.total}个， {data.used}个可用， {data.unused}个不可用</p>
-                            <Button><Link to={`/logger?app=${name}`}>查看日志</Link></Button>
+                            <p>标签： {labels}</p>
+                            <p>注释： {annotations ? annotations : '无'}</p>
+                            <p>创建时间： {detailData.created}</p>
+                            <p>选择器： {match_labels}</p>
+                            <p>策略： {detailData.strategy}</p>
+                            <p>最小就绪秒数： {detailData.min_ready_seconds}</p>
+                            <p>历史版本限制值： {detailData.history}</p>
+                            <p>滚动更新策略： 最大激增数：{detailData.rolling_update.max_surge}，最大无效数：{detailData.rolling_update.max_unavailable}</p>
+                            <p>状态： {detailData.status.updated_replicas}个已更新，共计 {detailData.status.ready_replicas}个， {detailData.status.available_replicas}个可用， {detailData.status.unavailable_replicas === null ? '0' : detailData.status.unavailable_replicas}个不可用</p>
+                            <Button type="primary"><Link to={`/logger?app=${name}`}>查看日志</Link></Button>
                             <Button onClick={this.handleRenew.bind(this)}>更新</Button>
-                            <Button onClick={this.handleScale.bind(this)}>伸缩</Button>
+                            <Button onClick={() => {this.setState({scaleVisible: true})}}>伸缩</Button>
                             <Button onClick={this.handleRollback.bind(this)}>回滚</Button>
                             <div>{this.state.example}</div>
                         </div>
@@ -227,7 +301,9 @@ class AppDetail extends React.Component {
                 <Collapse bordered={false} defaultActiveKey={['1']}>
                     <Panel header={<h2>副本集</h2>} key="1">
                         <Table 
-                            
+                            columns={podColumns} 
+                            dataSource={this.state.podTableData} 
+                            rowKey="name"
                         />
                     </Panel>
                 </Collapse>
@@ -262,6 +338,16 @@ class AppDetail extends React.Component {
                     ]}
                 >
                     <div dangerouslySetInnerHTML={{__html: this.state.text}}></div>
+                </Modal>
+
+                <Modal
+                    title="伸缩 部署"
+                    visible={this.state.scaleVisible}
+                    onOk={this.handleScale.bind(this)}
+                    onCancel={() => {this.setState({scaleVisible: false})}}
+                >
+                    <span>所需容器数量：</span>   
+                    <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
                 </Modal>
             </div>
         )
