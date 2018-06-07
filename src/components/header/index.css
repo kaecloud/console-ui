@@ -7,7 +7,7 @@
 }
 
 .headerStyle .container {
-    width: 1100px;
+    width: 80%;
     height: 50px;
     margin: 0 auto;
 }
@@ -17,7 +17,7 @@
     margin-top: 10px;
     width: 100px;
     height: 30px;
-    text-align: center;
+    text-align: left;
     line-height: 30px;
     color: #fff;
     font-weight: bold;
@@ -27,10 +27,10 @@
 
 .headerStyle .container .login {
     float: right;
-    width: 50px;
     height: 50px;
     line-height: 50px;
     color: #fff;
     cursor: pointer;
+    text-align: center;
     font-size: 16px;
 }

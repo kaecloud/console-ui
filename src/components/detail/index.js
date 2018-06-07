@@ -81,7 +81,9 @@ class AppDetail extends React.Component {
                         return (
                             <Dropdown overlay={menu} trigger={['click']}>
                                 <a className="ant-dropdown-link" href="#">
-                                    <Icon type="ellipsis" className="btnIcon" />
+                                    <div style={{width: '20px'}}>
+                                        <Icon type="ellipsis" className="btnIcon" />
+                                    </div>
                                 </a>
                             </Dropdown>
                         )
@@ -102,11 +104,11 @@ class AppDetail extends React.Component {
                     render: status => {
                         if(status === 'Pending') {
                             return (
-                                <Icon type="loading" style={{ color: '#347EFF' }}/>
+                                <Icon type="loading" style={{ color: 'red' }}/>
                             )
                         }else {
                             return (
-                                <span style={{color: 'red'}}>Running</span>
+                                <span>Running</span>
                             )
                         }
                     }
