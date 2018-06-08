@@ -22,7 +22,7 @@
 
 .detailLeft {
     float: left;
-    width: 30%;
+    max-width: 60%;
     margin-bottom: 16px;
 }
 
@@ -31,8 +31,8 @@
 }
 
 .detailRight {
-    float: left;
-    margin: 0 0 0 14%;
+    float: right;
+    margin: 0 10% 0 0 ;
     min-width: 530px;
     max-width: 530px;
     border-radius: 10px;

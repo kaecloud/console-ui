@@ -15,15 +15,20 @@ const columns = [
         dataIndex: 'appname',
         width: '20%',
     }, {
-        title: '更新时间',
-        dataIndex: 'updated',
-        width: '15%',
-    }, {
         title: '创建时间',
         dataIndex: 'created',
         key: 'created',
         width: '15%',
-        sorter: (a, b) => a.created - b.created,
+        defaultSortOrder: 'descend',
+        sorter: (a, b) => {
+            let c = new Date(a.created).getTime();
+            let d = new Date(b.created).getTime();
+            return c - d
+        }
+    }, {
+        title: '更新时间',
+        dataIndex: 'updated',
+        width: '15%',
     }, {
         title: '修改内容',
         dataIndex: 'content',

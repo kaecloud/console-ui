@@ -1,7 +1,7 @@
 import React from 'react';
 import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal, InputNumber } from 'antd';
 import { Link } from 'react-router-dom'; 
-import { getDetail, getPods, getReleases, appBuild, appScale, appRollback, appRenew } from 'api';
+import { getDetail, getPods, getReleases, appBuild, appDeploy, appScale, appRollback, appRenew } from 'api';
 import Typed from 'typed.js';
 import './index.css';
 const Panel = Collapse.Panel;
@@ -28,6 +28,8 @@ class AppDetail extends React.Component {
             text: '',
             example: '',
             name: '',
+            nowTag: '',
+            version: '',
             scaleNum: 1,
             data: [],
             tableData: [],
@@ -35,18 +37,40 @@ class AppDetail extends React.Component {
             visible: false,
             textVisible: false,
             scaleVisible: false,
+            renewVisible: false,
+            rollbackVisible: false,
+            buildVisible: false,
+            deployVisible: false,
             columns: [
                 {
                     title: 'tag',
                     dataIndex: 'tag',
                     width: '10%',
-                }, {
-                    title: 'updated',
-                    dataIndex: 'updated',
-                    width: '15%',
+                    render: tag => {
+                        let nowVersion = this.state.version === tag;
+                        if(nowVersion) {
+                            return (
+                                <span>{tag} <span style={{fontSize: '12px', color: 'red'}}>(当前版本)</span></span>
+                            )
+                        }else {
+                            return (
+                                <span>{tag}</span>
+                            )
+                        }
+                    }
                 }, {
                     title: 'created',
                     dataIndex: 'created',
+                    width: '15%',
+                    defaultSortOrder: 'descend',
+                    sorter: (a, b) => {
+                        let c = new Date(a.created).getTime();
+                        let d = new Date(b.created).getTime();
+                        return c - d
+                    }
+                }, {
+                    title: 'updated',
+                    dataIndex: 'updated',
                     width: '15%',
                 }, {
                     title: 'image',
@@ -68,11 +92,15 @@ class AppDetail extends React.Component {
                                 {
                                     record.build_status ? '' : (
                                         <Menu.Item key="0">
-                                            <div onClick={self.handleBuild.bind(self)}>构建</div>
+                                            <div onClick={() => {self.setState({nowTag: record.tag, buildVisible: true})}}>Build</div>
                                         </Menu.Item>
                                     )
                                 }
                                 <Menu.Item key="1">
+                                    <div onClick={() => {self.setState({nowTag: record.tag, deployVisible: true})}}>Deploy</div>
+                                </Menu.Item>
+                                <Menu.Divider />
+                                <Menu.Item key="2">
                                     <div onClick={() => {self.handleText(record.specs_text)}}>配置</div>
                                 </Menu.Item>
                             </Menu>
@@ -81,7 +109,7 @@ class AppDetail extends React.Component {
                         return (
                             <Dropdown overlay={menu} trigger={['click']}>
                                 <a className="ant-dropdown-link" href="#">
-                                    <div style={{width: '20px'}}>
+                                    <div style={{width: '40px', textAlign: 'center'}}>
                                         <Icon type="ellipsis" className="btnIcon" />
                                     </div>
                                 </a>
@@ -143,7 +171,8 @@ class AppDetail extends React.Component {
 
         getDetail(name).then(res => {
             this.setState({
-                data: res
+                data: res,
+                version: res.metadata.annotations.release_tag
             })
         });
 
@@ -167,6 +196,26 @@ class AppDetail extends React.Component {
                 tableData: res
             })
         });
+
+        
+        // var source = new EventSource('http://127.0.0.1:8844/stream');
+        // var div = document.getElementById('example');
+        
+        // source.onopen = function (event) {
+        //     div.innerHTML += '<p>Connection open ...</p>';
+        // };
+        
+        // source.onerror = function (event) {
+        //     div.innerHTML += '<p>Connection close.</p>';
+        // };
+        
+        // source.addEventListener('connecttime', function (event) {
+        //     div.innerHTML += ('<p>Start time: ' + event.data + '</p>');
+        // }, false);
+        
+        // source.onmessage = function (event) {
+        //     div.innerHTML += ('<p>Ping: ' + event.data + '</p>');
+        // };
     }
     
     // 关闭配置弹框
@@ -178,9 +227,20 @@ class AppDetail extends React.Component {
 
     // 构建
     handleBuild() {
-        let name = this.state.name;
-        let data;
-        appBuild({name: name, tag: 'v0.0.2'}).then(res => {
+        this.setState({buildVisible: false})
+        document.body.scrollTop = document.documentElement.scrollTop = 90;
+        let { name, nowTag } = this.state;
+        appBuild({name: name, tag: nowTag}).then(res => {
+            this.handleMsg(res.replace(/,/g, '<br/>'));
+        });
+    }
+
+    // 部署
+    handleDeploy() {
+        this.setState({deployVisible: false})
+        document.body.scrollTop = document.documentElement.scrollTop = 90;
+        let { name, nowTag } = this.state;
+        appDeploy({name: name, tag: nowTag}).then(res => {
             this.handleMsg(res.replace(/,/g, '<br/>'));
         });
     }
@@ -197,8 +257,9 @@ class AppDetail extends React.Component {
 
     // 更新
     handleRenew() {
+        this.setState({renewVisible: false})
+        document.body.scrollTop = document.documentElement.scrollTop = 90;
         let name = this.state.name
-        let data;
         appRenew({name: name}).then(res => {
             this.handleMsg(res);
         });
@@ -207,18 +268,19 @@ class AppDetail extends React.Component {
     // 伸缩
     handleScale() {
         this.setState({scaleVisible: false})
+        document.body.scrollTop = document.documentElement.scrollTop = 90;
         let name = this.state.name,
             num = this.state.scaleNum;
-        let data;
         appScale({name: name, replicas: num}).then(res => {
-            // this.handleMsg(res.replace(/,/g, '<br/>'));
+            this.handleMsg(res.replace(/,/g, '<br/>'));
         });
     }
 
     // 回滚
     handleRollback() {
+        this.setState({rollbackVisible: false})
+        document.body.scrollTop = document.documentElement.scrollTop = 90;
         let name = this.state.name
-        let data;
         appRollback({name: name}).then(res => {
             this.handleMsg(res);
         });
@@ -304,9 +366,9 @@ class AppDetail extends React.Component {
                             <p>滚动更新策略： 最大激增数：{detailData.rolling_update.max_surge}，最大无效数：{detailData.rolling_update.max_unavailable}</p>
                             <p>状态： {detailData.status.updated_replicas}个已更新，共计 {detailData.status.ready_replicas}个， {detailData.status.available_replicas}个可用， {detailData.status.unavailable_replicas === null ? '0' : detailData.status.unavailable_replicas}个不可用</p>
                             <Button type="primary"><Link to={`/logger?app=${name}`}>查看日志</Link></Button>
-                            <Button onClick={this.handleRenew.bind(this)}>更新</Button>
-                            <Button onClick={() => {this.setState({scaleVisible: true})}}>伸缩</Button>
-                            <Button onClick={this.handleRollback.bind(this)}>回滚</Button>
+                            <Button onClick={() => {this.setState({renewVisible: true})}}>Renew</Button>
+                            <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
+                            <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
                             <div>{this.state.example}</div>
                         </div>
                         { this.state.textVisible ? (
@@ -368,6 +430,43 @@ class AppDetail extends React.Component {
                     <span>所需容器数量：</span>   
                     <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
                 </Modal>
+
+                <Modal
+                    title="更新"
+                    visible={this.state.renewVisible}
+                    onOk={this.handleRenew.bind(this)}
+                    onCancel={() => {this.setState({renewVisible: false})}}
+                >
+                    <p>Force kubernetes to recreate the pods of specified app!</p>
+                </Modal>
+
+                <Modal
+                    title="回滚"
+                    visible={this.state.rollbackVisible}
+                    onOk={this.handleRollback.bind(this)}
+                    onCancel={() => {this.setState({rollbackVisible: false})}}
+                >
+                    <p>Rollback specified app!</p>
+                </Modal>
+
+                <Modal
+                    title="部署"
+                    visible={this.state.deployVisible}
+                    onOk={this.handleDeploy.bind(this)}
+                    onCancel={() => {this.setState({deployVisible: false})}}
+                >
+                    <p>Deployment app to kubernetes!</p>
+                </Modal>
+
+                <Modal
+                    title="构建"
+                    visible={this.state.buildVisible}
+                    onOk={this.handleBuild.bind(this)}
+                    onCancel={() => {this.setState({buildVisible: false})}}
+                >
+                    <p>Build an image for the specified release, the API will return all docker!</p>
+                </Modal>
+                {/* <div id="example"></div> */}
             </div>
         )
     }

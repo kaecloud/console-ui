@@ -75,6 +75,23 @@ export const appBuild = params => {
     }).then(res => res.data)
 }
 
+// app_deploy
+export const appDeploy = params => {
+    return axios({
+        method: 'put',
+        url: `${testUrl}${version}/app/${params.name}/deploy`,
+        data: {
+            'tag': params.tag,
+        },
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
+
 // app_scale
 export const appScale = params => {
     return axios({

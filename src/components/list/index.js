@@ -14,23 +14,22 @@ const columns = [
         title: 'Git',
         dataIndex: 'git',
     }, {
-        title: 'Updated',
-        dataIndex: 'updated',
-        defaultSortOrder: 'descend',
-        sorter: (a, b) => a.updated - b.updated,
-    }, {
         title: 'created',
         dataIndex: 'created',
+        defaultSortOrder: 'descend',
+        sorter: (a, b) => {
+            let c = new Date(a.created).getTime();
+            let d = new Date(b.created).getTime();
+            return c - d
+        }
+    }, {
+        title: 'Updated',
+        dataIndex: 'updated',
     }, {
         title: 'Type',
         dataIndex: 'type',
-        sorter: (a, b) => a.address.length - b.address.length,
     }
 ];
-
-function onChange(pagination, filters, sorter) {
-    console.log('params', pagination, filters, sorter);
-}
 
 class AppList extends React.Component {
 
@@ -56,8 +55,7 @@ class AppList extends React.Component {
                     <Panel header={<h2>应用列表</h2>} key="1">
                         <Table 
                             columns={columns} 
-                            dataSource={this.state.data} 
-                            onChange={onChange} 
+                            dataSource={this.state.data}
                             rowKey="name"
                             onRow={(record) => {
                                 return {
