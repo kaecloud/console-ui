@@ -19,6 +19,11 @@ const options = {
     typeSpeed: 40,
 }
 
+// 获取APP name
+const name = window.location.href.split('app=')[1];
+// server sent event
+const source = new EventSource(`http://192.168.1.17:5000/stream?channel=kae-app-${name}-watcher`);
+
 class AppDetail extends React.Component {
 
     constructor() {
@@ -164,7 +169,6 @@ class AppDetail extends React.Component {
     }
 
     componentDidMount() {
-        const name = window.location.href.split('app=')[1];
         this.setState({
             name: name
         });
@@ -196,26 +200,17 @@ class AppDetail extends React.Component {
                 tableData: res
             })
         });
+        
+    }
 
-        
-        // var source = new EventSource('http://127.0.0.1:8844/stream');
-        // var div = document.getElementById('example');
-        
-        // source.onopen = function (event) {
-        //     div.innerHTML += '<p>Connection open ...</p>';
-        // };
-        
-        // source.onerror = function (event) {
-        //     div.innerHTML += '<p>Connection close.</p>';
-        // };
-        
-        // source.addEventListener('connecttime', function (event) {
-        //     div.innerHTML += ('<p>Start time: ' + event.data + '</p>');
-        // }, false);
-        
-        // source.onmessage = function (event) {
-        //     div.innerHTML += ('<p>Ping: ' + event.data + '</p>');
-        // };
+    // 打开配置弹框
+    handleText(data) {
+        let text = data.replace(/\n/g, '<br/>');
+        text = text.replace(/ /g, '&nbsp;&nbsp;');
+        this.setState({ 
+            text: text,
+            visible: true
+        });
     }
     
     // 关闭配置弹框
@@ -223,6 +218,63 @@ class AppDetail extends React.Component {
         this.setState({
             visible: false,
         });
+    }
+
+    // SSE
+    serverSentEvent() {
+        let self = this;
+        source.addEventListener('pod', function (event) {
+            let tmp = JSON.parse(event.data);
+            let action = tmp.action;
+            let data = {
+                ready: tmp.object.status.containerStatuses !== undefined ? tmp.object.status.containerStatuses[0].ready : false,
+                name: tmp.object.metadata.name,
+                status: tmp.object.status.phase
+            }
+            let { podTableData } = self.state;
+            let temp = podTableData;
+            if(action === 'ADDED') {
+                for(let d of temp) {
+                    if(d.name === data.name) {
+                        // d.status = data.status;
+                        break;
+                    }else {
+                        temp.push(data);
+                        self.setState({
+                            podTableData: temp
+                        })
+                        break;
+                    }
+                }
+            }else if(action === 'MODIFIED') {
+                for(let d of temp) {
+                    // console.log('MODIFIED', data)
+                    if(d.name === data.name) {
+                        let index = temp.indexOf(d);
+                        // console.log(index)
+                        temp.splice(index, 1, data);
+                        self.setState({
+                            podTableData: temp
+                        })
+                        break;
+                    }
+                }
+            }else if(action === 'DELETED') {
+                for(let d of temp) {
+                    // console.log('DELETED', data)
+                    if(d.name === data.name) {
+                        // console.log('DELETED', data)
+                        let index = temp.indexOf(d);
+                        // console.log(index)
+                        temp.splice(index, 1);
+                        self.setState({
+                            podTableData: temp
+                        })
+                        break;
+                    }
+                }
+            }
+        }, false);
     }
 
     // 构建
@@ -242,16 +294,6 @@ class AppDetail extends React.Component {
         let { name, nowTag } = this.state;
         appDeploy({name: name, tag: nowTag}).then(res => {
             this.handleMsg(res.replace(/,/g, '<br/>'));
-        });
-    }
-
-    // 打开配置弹框
-    handleText(data) {
-        let text = data.replace(/\n/g, '<br/>');
-        text = text.replace(/ /g, '&nbsp;&nbsp;');
-        this.setState({ 
-            text: text,
-            visible: true
         });
     }
 
@@ -288,6 +330,7 @@ class AppDetail extends React.Component {
 
     // 显示信息
     handleMsg(data) {
+        this.serverSentEvent();
         this.setState({
             textVisible: true
         })
@@ -299,7 +342,7 @@ class AppDetail extends React.Component {
                     this.setState({
                         textVisible: false
                     })
-                    location.reload();
+                    // location.reload();
                 }, 2000);
             }
         });
@@ -466,7 +509,7 @@ class AppDetail extends React.Component {
                 >
                     <p>Build an image for the specified release, the API will return all docker!</p>
                 </Modal>
-                {/* <div id="example"></div> */}
+                <div id="example"></div>
             </div>
         )
     }
