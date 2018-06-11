@@ -11,7 +11,7 @@ class App extends React.Component {
         return (
             <div>
                 <Header />
-                <Nav />
+                {/* <Nav /> */}
                 <Pages />
             </div> 
         )

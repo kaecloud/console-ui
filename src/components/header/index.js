@@ -1,6 +1,7 @@
 import React from 'react';
 import { Divider, Icon, Button, Modal } from 'antd';
 import { appList, getUserId } from 'api';
+import { Link } from 'react-router-dom';
 import './index.css';
 
 class Header extends React.Component {
@@ -64,7 +65,7 @@ class Header extends React.Component {
         return (
             <div className="headerStyle">
                 <div className="container">
-                    <div className="logo">KAE</div>
+                    <div className="logo"><Link to={`/`}>KAE</Link></div>
                     { this.state.hasLogin ? <div className="login">{this.state.username}</div> : <div className="login"><Button onClick={this.handleVisible.bind(this)}>登录<Icon type="login" /></Button></div> }
                 </div>
                 <Modal

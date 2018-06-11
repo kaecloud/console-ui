@@ -19,11 +19,6 @@ const options = {
     typeSpeed: 40,
 }
 
-// 获取APP name
-const name = window.location.href.split('app=')[1];
-// server sent event
-const source = new EventSource(`http://192.168.1.17:5000/stream?channel=kae-app-${name}-watcher`);
-
 class AppDetail extends React.Component {
 
     constructor() {
@@ -169,6 +164,11 @@ class AppDetail extends React.Component {
     }
 
     componentDidMount() {
+        // 获取APP name
+        const name = window.location.href.split('app=')[1];
+        // server sent event
+        const source = new EventSource(`http://192.168.1.17:5000/stream?channel=kae-app-${name}-watcher`);
+
         this.setState({
             name: name
         });
@@ -275,12 +275,15 @@ class AppDetail extends React.Component {
                 }
             }
         }, false);
+
+        source.onerror(err => {
+            console.log(err)
+        });
     }
 
     // 构建
     handleBuild() {
         this.setState({buildVisible: false})
-        document.body.scrollTop = document.documentElement.scrollTop = 90;
         let { name, nowTag } = this.state;
         appBuild({name: name, tag: nowTag}).then(res => {
             this.handleMsg(res.replace(/,/g, '<br/>'));
@@ -290,7 +293,6 @@ class AppDetail extends React.Component {
     // 部署
     handleDeploy() {
         this.setState({deployVisible: false})
-        document.body.scrollTop = document.documentElement.scrollTop = 90;
         let { name, nowTag } = this.state;
         appDeploy({name: name, tag: nowTag}).then(res => {
             this.handleMsg(res.replace(/,/g, '<br/>'));
@@ -300,7 +302,6 @@ class AppDetail extends React.Component {
     // 更新
     handleRenew() {
         this.setState({renewVisible: false})
-        document.body.scrollTop = document.documentElement.scrollTop = 90;
         let name = this.state.name
         appRenew({name: name}).then(res => {
             this.handleMsg(res);
@@ -310,7 +311,6 @@ class AppDetail extends React.Component {
     // 伸缩
     handleScale() {
         this.setState({scaleVisible: false})
-        document.body.scrollTop = document.documentElement.scrollTop = 90;
         let name = this.state.name,
             num = this.state.scaleNum;
         appScale({name: name, replicas: num}).then(res => {
@@ -321,7 +321,6 @@ class AppDetail extends React.Component {
     // 回滚
     handleRollback() {
         this.setState({rollbackVisible: false})
-        document.body.scrollTop = document.documentElement.scrollTop = 90;
         let name = this.state.name
         appRollback({name: name}).then(res => {
             this.handleMsg(res);
