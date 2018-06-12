@@ -1,5 +1,5 @@
 import React from 'react';
-import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal, InputNumber } from 'antd';
+import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal, InputNumber, notification } from 'antd';
 import { Link } from 'react-router-dom'; 
 import { getDetail, getPods, getReleases, appBuild, appDeploy, appScale, appRollback, appRenew } from 'api';
 import Typed from 'typed.js';
@@ -287,7 +287,7 @@ class AppDetail extends React.Component {
         this.setState({buildVisible: false})
         let { name, nowTag } = this.state;
         appBuild({name: name, tag: nowTag}).then(res => {
-            this.handleMsg(res.replace(/,/g, '<br/>'));
+            this.handleMsg(res, 'Build');
         });
     }
 
@@ -296,7 +296,7 @@ class AppDetail extends React.Component {
         this.setState({deployVisible: false})
         let { name, nowTag } = this.state;
         appDeploy({name: name, tag: nowTag}).then(res => {
-            this.handleMsg(res.replace(/,/g, '<br/>'));
+            this.handleMsg(res, 'Deploy');
         });
     }
 
@@ -305,7 +305,7 @@ class AppDetail extends React.Component {
         this.setState({renewVisible: false})
         let name = this.state.name
         appRenew({name: name}).then(res => {
-            this.handleMsg(res);
+            this.handleMsg(res, 'Renew');
         });
     }
 
@@ -315,7 +315,7 @@ class AppDetail extends React.Component {
         let name = this.state.name,
             num = this.state.scaleNum;
         appScale({name: name, replicas: num}).then(res => {
-            this.handleMsg(res.replace(/,/g, '<br/>'));
+            this.handleMsg(res, 'Scale');
         });
     }
 
@@ -324,28 +324,54 @@ class AppDetail extends React.Component {
         this.setState({rollbackVisible: false})
         let name = this.state.name
         appRollback({name: name}).then(res => {
-            this.handleMsg(res);
+            this.handleMsg(res, 'Rollback');
         });
     }
 
     // 显示信息
-    handleMsg(data) {
-        this.serverSentEvent();
-        this.setState({
-            textVisible: true
-        })
-        var typed = new Typed('.text', {
-            strings: [data],
-            typeSpeed: 40,
-            onComplete: () => {
-                setTimeout(() => {
-                    this.setState({
-                        textVisible: false
-                    })
-                    // location.reload();
-                }, 2000);
-            }
-        });
+    handleMsg(data, action) {
+        // // SSE
+        // this.serverSentEvent();
+        
+
+        // // Typed显示
+        // this.setState({
+        //     textVisible: true
+        // })
+        // var typed = new Typed('.text', {
+        //     strings: [data],
+        //     typeSpeed: 40,
+        //     onComplete: () => {
+        //         setTimeout(() => {
+        //             this.setState({
+        //                 textVisible: false
+        //             })
+        //             // location.reload();
+        //         }, 2000);
+        //     }
+        // });
+
+        // 提示成功或失败
+        let msg = JSON.parse(data);
+        // let msg = {error: '1', msg: '1111111'}
+        if(msg.error === null) {
+            notification.success({
+                message: '成功！',
+                description: `${action} Success!`,
+            });
+        }else {
+            // 报错信息以html格式显示
+            const description = (
+                <div>
+                    <p>{msg.msg}</p>
+                </div>
+            );
+            notification.error({
+                message: '失败！',
+                description,
+                duration: 0,
+            });
+        }
     }
 
 
