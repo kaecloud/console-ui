@@ -45,7 +45,7 @@ class AppDetail extends React.Component {
                 {
                     title: 'tag',
                     dataIndex: 'tag',
-                    width: '10%',
+                    width: '14%',
                     render: tag => {
                         let nowVersion = this.state.version === tag;
                         if(nowVersion) {
@@ -75,17 +75,18 @@ class AppDetail extends React.Component {
                 }, {
                     title: 'image',
                     dataIndex: 'image',
-                    width: '30%',
+                    width: '35%',
                 }, {
                     title: 'build_status',
                     dataIndex: 'build_status',
-                    width: '20%',
+                    width: '10%',
                     render(build_status) {
                         return build_status + ''
                     }
                 }, {
                     title: 'Action',
                     dataIndex: 'action',
+                    width: '16%',
                     render(text, record) {
                         const menu = (
                             <Menu>

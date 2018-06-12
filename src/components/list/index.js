@@ -65,7 +65,6 @@ class AppList extends React.Component {
                         />
                     </Panel>
                 </Collapse>
-                
             </div>
         )
     }
