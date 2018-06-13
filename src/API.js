@@ -137,5 +137,26 @@ export const appRollback = params => {
     }).then(res => res.data)
 }
 
+// 获取job列表
+export const jobList = params => {
+    return axios.get(`${testUrl}${version}/job`, {
+        params: params
+    }).then(res => res.data)
+}
+
+// create_job
+export const createJob = params => {
+    return axios({
+        method: 'post',
+        url: `${testUrl}${version}/job`,
+        data: params,
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
 
 

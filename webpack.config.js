@@ -3,6 +3,7 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
+    mode: 'development',
     entry: {
         app: path.join(__dirname, './src/index.js')
     },
@@ -19,7 +20,8 @@ module.exports = {
             pages: path.resolve(__dirname, './src/pages'),
             api: path.resolve(__dirname, './src/API')
 		}
-	},
+    },
+    devtool: 'inline-source-map',
 
     module: {
         rules: [
@@ -50,7 +52,7 @@ module.exports = {
     },
 
     devServer: {
-        contentBase: path.join(__dirname, 'public'),
+        // contentBase: path.join(__dirname, 'public'),
         port: 9090,
         host: '0.0.0.0',
         overlay: true,
@@ -61,9 +63,11 @@ module.exports = {
     },
 
     plugins: [
-        new webpack.DefinePlugin({
-			'process.env.NODE_ENV': JSON.stringify('development')
-		}),
+        new webpack.HotModuleReplacementPlugin(),
+        new webpack.optimize.ModuleConcatenationPlugin(),
+        // new webpack.DefinePlugin({
+		// 	'process.env.NODE_ENV': JSON.stringify('development')
+		// }),
         new HtmlWebpackPlugin({
             filename: 'index.html',
             template: './src/index.html',
