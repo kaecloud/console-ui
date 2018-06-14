@@ -168,7 +168,7 @@ class AppDetail extends React.Component {
         // 获取APP name
         const name = window.location.href.split('app=')[1];
         // server sent event
-        const source = new EventSource(`http://192.168.1.17:5000/stream?channel=kae-app-${name}-watcher`);
+        const source = new EventSource(`http://192.168.1.17:5000/stream?channel=kae-app-${name}-watcher`, { withCredentials: true });
 
         this.setState({
             name: name
@@ -330,27 +330,9 @@ class AppDetail extends React.Component {
 
     // 显示信息
     handleMsg(data, action) {
-        // // SSE
-        // this.serverSentEvent();
+        // SSE
+        this.serverSentEvent();
         
-
-        // // Typed显示
-        // this.setState({
-        //     textVisible: true
-        // })
-        // var typed = new Typed('.text', {
-        //     strings: [data],
-        //     typeSpeed: 40,
-        //     onComplete: () => {
-        //         setTimeout(() => {
-        //             this.setState({
-        //                 textVisible: false
-        //             })
-        //             // location.reload();
-        //         }, 2000);
-        //     }
-        // });
-
         // 提示成功或失败
         let msg = JSON.parse(data);
         // let msg = {error: '1', msg: '1111111'}

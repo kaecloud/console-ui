@@ -21,7 +21,7 @@ class Header extends React.Component {
         const app = document.getElementById('app');
         const job = document.getElementById('job');
         // 判断是否含有app/job -> 初始化class
-        let hasjob = window.location.href.indexOf('jobs') !== -1
+        let hasjob = window.location.href.indexOf('job') !== -1
         if(!hasjob) {
             app.parentNode.className = 'on';
         }else {

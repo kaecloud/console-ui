@@ -15,7 +15,6 @@ export const appList = params => {
     return axios.get(`${testUrl}${version}/app`, {
         params: params
     }).then(res => res.data)
-    
 }
 
 // 获取detail
@@ -157,6 +156,28 @@ export const createJob = params => {
             return data;
         }],
     }).then(res => res.data)
+}
+
+// job_restart
+export const restartJob = params => {
+    return axios({
+        method: 'put',
+        url: `${testUrl}${version}/job/${params.name}/restart`,
+        data: {
+            'jobname': params.name,
+        },
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
+
+// job_delete
+export const deleteJob = params => {
+    return axios.delete(`${testUrl}${version}/job/${params.name}`).then(res => res.data)
 }
 
 

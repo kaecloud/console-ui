@@ -1,6 +1,7 @@
 import React from 'react';
 import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox } from 'antd';
-import {jobList, createJob, getUserId} from 'api';
+import {jobList, createJob, getUserId, restartJob, deleteJob} from 'api';
+import {Link} from 'react-router-dom';
 
 import brace from 'brace';
 import AceEditor from 'react-ace';
@@ -36,47 +37,17 @@ class AppJob extends React.Component {
 
     constructor() {
         super();
+        let self = this;
         this.state = {
             isForm: true,
             visible: false,
+            logVisible: false,
             formData: {},
             username: '',
+            logMsg: '',
+            showMsg: '',
             username: '1',
-            data: [
-                {
-                    "created": "2018-03-21 14:54:06",
-                    "git": "git@github.com:projecteru2/console.git",
-                    "id": 10001,
-                    "name": "test-111",
-                    "status": "Hidden",
-                    "specs_text": "hahaha",
-                    "updated": "2018-03-21 14:54:07"
-                }, {
-                    "created": "2018-03-11 14:54:06",
-                    "git": "git@github.com:projecteru2/console.git",
-                    "id": 10001,
-                    "name": "test-222",
-                    "status": "Fav",
-                    "specs_text": "hahaha",
-                    "updated": "2018-03-21 14:54:07"
-                }, {
-                    "created": "2018-03-18 14:54:06",
-                    "git": "git@github.com:projecteru2/console.git",
-                    "id": 10001,
-                    "name": "test-333",
-                    "status": "Running",
-                    "specs_text": "333",
-                    "updated": "2018-03-20 14:54:07"
-                }, {
-                    "created": "2018-03-23 14:54:06",
-                    "git": "git@github.com:projecteru2/console.git",
-                    "id": 10001,
-                    "name": "test-444",
-                    "status": "Running",
-                    "specs_text": "444",
-                    "updated": "2018-03-21 14:54:07"
-                }
-            ],
+            data: [],
             columns: [
                 {
                     title: 'name',
@@ -90,6 +61,9 @@ class AppJob extends React.Component {
                     }, {
                         text: 'Hidden',
                         value: 'Hidden',
+                    }, {
+                        text: 'Complete',
+                        value: 'Complete',
                     }, {
                         text: 'Fav',
                         value: 'Fav',
@@ -116,9 +90,9 @@ class AppJob extends React.Component {
                 }, {
                     title: 'log',
                     dataIndex: 'log',
-                    render() {
+                    render(text, record) {
                         return (
-                            <span style={{color: '#347EFF', cursor: 'pointer'}}>log</span>
+                            <span style={{color: '#347EFF', cursor: 'pointer'}} onClick={() => {self.handleShowMessage(record.name)}}>log</span>
                         )
                     }
                 }, {
@@ -128,11 +102,11 @@ class AppJob extends React.Component {
                         const menu = (
                             <Menu>
                                 <Menu.Item key="1">
-                                    <div onClick={() => {}}>Restart</div>
+                                    <div onClick={() => {self.handleRestart(record.name)}}>Restart</div>
                                 </Menu.Item>
                                 <Menu.Divider />
                                 <Menu.Item key="2">
-                                    <div onClick={() => {}}>Delete</div>
+                                    <div onClick={() => {self.handleDelete(record.name)}}>Delete</div>
                                 </Menu.Item>
                             </Menu>
                         );
@@ -159,7 +133,6 @@ class AppJob extends React.Component {
         this.props.form.validateFields((err, values) => {
             if (!err) {
                 if(isForm) {
-                    console.log(values)
                     let job;
                     if(values.gpus === 0) {
                         job = {
@@ -181,12 +154,12 @@ class AppJob extends React.Component {
                             gpu: values.gpus
                         }
                     }
-                    console.log(job)
+                    // console.log(job)
                     createJob(job);
                 }else {
-                    console.log({
-                        specs_text: yamlConfig
-                    })
+                    // console.log({
+                    //     specs_text: yamlConfig
+                    // })
                     createJob({
                         specs_text: yamlConfig
                     });
@@ -210,6 +183,77 @@ class AppJob extends React.Component {
         }
     }
 
+    handleRestart(name) {
+        restartJob({name: name}).then(res => {
+
+        });
+    }
+
+    handleDelete(name) {
+        deleteJob({name: name}).then(res => {
+            
+        });
+    }
+
+    handleShowMessage(name) {
+        let showMsg = [];
+        // console.log(name);
+        this.setState({logVisible: true})
+        const source = new EventSource(`http://192.168.1.17:5000/api/v1/job/${name}/log/events`, { withCredentials: true });
+        source.addEventListener('message', e=> {
+            let msg = JSON.parse(e.data).data
+            showMsg.push(<p key={msg}>{msg}</p>)
+            this.setState({
+                showMsg: showMsg
+            })
+        });
+        source.addEventListener('close', e => {
+            let msg = JSON.parse(e.data)
+            if(msg.error !== undefined) {
+                msg = msg.error.split('\n');
+                let arr = [];
+                msg.forEach((d, index) => {
+                    arr.push(<p key={index}>{d}</p>)
+                })
+                const errMsg = (
+                    <div style={{color: 'red'}}>
+                        {arr}
+                    </div>
+                )
+                this.setState({
+                    logMsg: errMsg
+                })
+            }else {
+                msg = msg.data;
+                const closeMsg = (
+                    <span>{msg}</span>
+                )
+                this.setState({
+                    logMsg: closeMsg
+                })
+            }
+            source.close();
+        });
+
+
+        // // Typed显示
+        // this.setState({
+        //     textVisible: true
+        // })
+        // var typed = new Typed('.text', {
+        //     strings: [data],
+        //     typeSpeed: 40,
+        //     onComplete: () => {
+        //         setTimeout(() => {
+        //             this.setState({
+        //                 textVisible: false
+        //             })
+        //             // location.reload();
+        //         }, 2000);
+        //     }
+        // });
+    }
+
     componentDidMount() {
         // // 测试数据
         // getUserId().then(res => {
@@ -223,13 +267,7 @@ class AppJob extends React.Component {
         //     })
         // });
 
-        // const source = new EventSource(`http://192.168.1.17:5000/test-sse`);
-        // source.addEventListener('close', ev => {
-        //     source.close();
-        // }, false);
-
         // 获取username和data
-        
         getUserId().then(res => {
             let username = res.nickname;
             jobList().then(res => {
@@ -385,6 +423,15 @@ class AppJob extends React.Component {
                         </Modal>
                     </Panel>
                 </Collapse>
+                <Modal
+                    title="logger"
+                    visible={this.state.logVisible}
+                    onCancel={() => {this.setState({logVisible: false, showMsg: '', logMsg: ''})}}
+                    footer={null}
+                >
+                    <div>{this.state.showMsg}</div>
+                    <div>{this.state.logMsg}</div>
+                </Modal>
             </div>
         )
     }
