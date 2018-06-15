@@ -3,6 +3,18 @@
     width: 80%;
 }
 
+.jobList .reload {
+    color: #1890ff;
+    margin-left: 20px;
+    font-size: 20px;
+    cursor: pointer;
+}
+
+.jobList .reload:hover {
+    transform: rotate(360deg);
+    transition: transform 1s;
+}
+
 .ant-collapse-borderless{
     margin-bottom: 20px;
     background-color: #fff;

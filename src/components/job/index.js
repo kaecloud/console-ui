@@ -1,5 +1,5 @@
 import React from 'react';
-import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox } from 'antd';
+import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
 import {jobList, createJob, getUserId, restartJob, deleteJob} from 'api';
 import {Link} from 'react-router-dom';
 
@@ -56,9 +56,6 @@ class AppJob extends React.Component {
                     title: 'status',
                     dataIndex: 'status',
                     filters: [{
-                        text: 'All',
-                        value: 'All',
-                    }, {
                         text: 'Hidden',
                         value: 'Hidden',
                     }, {
@@ -137,9 +134,9 @@ class AppJob extends React.Component {
                     if(values.gpus === 0) {
                         job = {
                             jobname: values.jobname,
-                            // git: values.git,
+                            git: values.git,
                             commit: values.commitId,
-                            autoRestart: true,
+                            autoRestart: values.autoRestart,
                             image: values.image,
                             command: values.command
                         }
@@ -148,14 +145,28 @@ class AppJob extends React.Component {
                             jobname: values.jobname,
                             git: values.git,
                             commit: values.commitId,
-                            autoRestart: true,
+                            autoRestart: values.autoRestart,
                             image: values.image,
                             command: values.command,
                             gpu: values.gpus
                         }
                     }
                     // console.log(job)
-                    createJob(job);
+                    createJob(job).then(res => {
+                        if(JSON.parse(res).error === null) {
+                            this.getJobDetail();
+                            notification.success({
+                                message: '成功！',
+                                description: `Create Success!`,
+                            });
+                        }else {
+                            notification.error({
+                                message: '失败！',
+                                description: 'Create Fail',
+                                duration: 0,
+                            });
+                        }
+                    });
                 }else {
                     // console.log({
                     //     specs_text: yamlConfig
@@ -185,13 +196,45 @@ class AppJob extends React.Component {
 
     handleRestart(name) {
         restartJob({name: name}).then(res => {
-
+            if(JSON.parse(res).error === null) {
+                notification.success({
+                    message: '成功！',
+                    description: `Restart Success!`,
+                });
+                this.getJobDetail();
+            } else {
+                notification.error({
+                    message: '失败！',
+                    description: 'Restart Fail',
+                    duration: 0,
+                });
+            }
         });
     }
 
     handleDelete(name) {
         deleteJob({name: name}).then(res => {
-            
+            if(res.error === null) {
+                notification.success({
+                    message: '成功！',
+                    description: `Delete Success!`,
+                });
+                let {data} = this.state;
+                data.map((d, index) => {
+                    if(d.name === name) {
+                        data.splice(index, 1);
+                        this.setState({
+                            data: data
+                        })
+                    }
+                })
+            } else {
+                notification.error({
+                    message: '失败！',
+                    description: 'Delete Fail',
+                    duration: 0,
+                });
+            }
         });
     }
 
@@ -254,6 +297,21 @@ class AppJob extends React.Component {
         // });
     }
 
+    getJobDetail() {
+        getUserId().then(res => {
+            let username = res.nickname;
+            jobList().then(res => {
+                let data = res;
+                data.map(d => {
+                    d.user = username
+                })
+                this.setState({
+                    data: data
+                })
+            }); 
+        });
+    }
+
     componentDidMount() {
         // // 测试数据
         // getUserId().then(res => {
@@ -268,18 +326,7 @@ class AppJob extends React.Component {
         // });
 
         // 获取username和data
-        getUserId().then(res => {
-            let username = res.nickname;
-            jobList().then(res => {
-                let data = res;
-                data.map(d => {
-                    d.user = username
-                })
-                this.setState({
-                    data: data
-                })
-            }); 
-        });
+        this.getJobDetail();
     }
 
     render() {
@@ -324,7 +371,7 @@ class AppJob extends React.Component {
                 >
                     {getFieldDecorator('autoRestart', {
                         valuePropName: 'checked',
-                        initialValue: true,
+                        initialValue: false,
                     })(
                         <Checkbox></Checkbox>
                     )}
@@ -353,9 +400,7 @@ class AppJob extends React.Component {
                     {...formItemLayout}
                     label="Commit id"
                 >
-                    {getFieldDecorator('commitId', {
-                        rules: [{ required: true}]
-                    })(
+                    {getFieldDecorator('commitId')(
                         <Input/>
                     )}
                 </FormItem>
@@ -401,12 +446,13 @@ class AppJob extends React.Component {
             <div className="jobList">
                 <Collapse bordered={false} defaultActiveKey={['1']}>
                     <Panel header={<h2>job列表</h2>} key="1">
+                        <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}} onClick={() => {this.setState({visible: true})}}>Create Job</Button>    
+                        <Icon type="reload" className="reload" onClick={this.getJobDetail.bind(this)}/>
                         <Table 
                             columns={columns} 
                             dataSource={this.state.data}
                             rowKey="name"
                         />
-                        <Button type="primary" style={{position: 'relative', top: '-50px'}} onClick={() => {this.setState({visible: true})}}>Create Job</Button>
 
                         <Modal
                             title="Create Job"

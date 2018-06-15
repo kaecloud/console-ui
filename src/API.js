@@ -163,9 +163,6 @@ export const restartJob = params => {
     return axios({
         method: 'put',
         url: `${testUrl}${version}/job/${params.name}/restart`,
-        data: {
-            'jobname': params.name,
-        },
         headers: {
 			'Content-Type': 'application/json'
         },
