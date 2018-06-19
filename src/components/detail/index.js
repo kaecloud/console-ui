@@ -167,8 +167,12 @@ class AppDetail extends React.Component {
     componentDidMount() {
         // 获取APP name
         const name = window.location.href.split('app=')[1];
+
+        // 测试地址
+        const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000'
+
         // server sent event
-        const source = new EventSource(`http://192.168.1.17:5000/stream?channel=kae-app-${name}-watcher`, { withCredentials: true });
+        const source = new EventSource(`${testUrl}/stream?channel=kae-app-${name}-watcher`, { withCredentials: true });
 
         this.setState({
             name: name

@@ -62,7 +62,11 @@ class Header extends React.Component {
         setTimeout(() => {
             this.setState({ loading: false, visible: false });
         }, 2000);
-        window.location.href = 'http://192.168.1.17:5000' + this.state.url;
+
+        // 测试地址
+        const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000'
+
+        window.location.href = testUrl + this.state.url;
     }
 
     handleCancel() {

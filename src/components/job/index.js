@@ -153,19 +153,28 @@ class AppJob extends React.Component {
                     }
                     // console.log(job)
                     createJob(job).then(res => {
-                        if(JSON.parse(res).error === null) {
-                            this.getJobDetail();
-                            notification.success({
-                                message: '成功！',
-                                description: `Create Success!`,
-                            });
+                        this.getJobDetail();
+                        notification.success({
+                            message: '成功！',
+                            description: `Create Success!`,
+                        });
+                        this.setState({
+                            visible: false
+                        });
+                    }).catch(err => {
+                        let res = err.response;
+                        let errorMsg;
+                        if(res.data.indexOf('<p>') !== -1 ) {
+                            errorMsg = res.data.split('<p>')[1].split('</p>')[0]; 
                         }else {
-                            notification.error({
-                                message: '失败！',
-                                description: 'Create Fail',
-                                duration: 0,
-                            });
+                            let data = JSON.parse(res.data);
+                            errorMsg = data.error;
                         }
+                        notification.error({
+                            message: '失败！',
+                            description: `${res.status}: ${errorMsg}`,
+                            duration: 0,
+                        });
                     });
                 }else {
                     // console.log({
@@ -173,12 +182,11 @@ class AppJob extends React.Component {
                     // })
                     createJob({
                         specs_text: yamlConfig
+                    }).then(res => {
+                        this.getJobDetail();
                     });
                 }
             }
-        });
-        this.setState({
-            visible: false
         });
     }
 
@@ -201,15 +209,20 @@ class AppJob extends React.Component {
                     message: '成功！',
                     description: `Restart Success!`,
                 });
-                this.getJobDetail();
-            } else {
-                notification.error({
-                    message: '失败！',
-                    description: 'Restart Fail',
-                    duration: 0,
-                });
             }
+        }).catch(err => {
+            let res = err.response;
+            let errorMsg;
+            if(res.data.indexOf('<p>') !== -1 ) {
+                errorMsg = res.data.split('<p>')[1].split('</p>')[0]; 
+            }
+            notification.error({
+                message: '失败！',
+                description: `${res.status}: ${errorMsg}`,
+                duration: 0,
+            });
         });
+        this.getJobDetail();
     }
 
     handleDelete(name) {
@@ -241,14 +254,24 @@ class AppJob extends React.Component {
     handleShowMessage(name) {
         let showMsg = [];
         // console.log(name);
-        this.setState({logVisible: true})
-        const source = new EventSource(`http://192.168.1.17:5000/api/v1/job/${name}/log/events`, { withCredentials: true });
+        this.setState({logVisible: true});
+        // 测试地址
+        const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000'
+        const source = new EventSource(`${testUrl}/api/v1/job/${name}/log/events`, { withCredentials: true });
         source.addEventListener('message', e=> {
             let msg = JSON.parse(e.data).data
             showMsg.push(<p key={msg}>{msg}</p>)
             this.setState({
                 showMsg: showMsg
             })
+        });
+        source.addEventListener('error', e=> {
+            let msg = JSON.parse(e.data).data
+            notification.error({
+                message: '错误信息',
+                description: `${msg}`,
+                duration: 0,
+            });
         });
         source.addEventListener('close', e => {
             let msg = JSON.parse(e.data)
