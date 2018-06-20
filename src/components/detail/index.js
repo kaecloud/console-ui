@@ -19,16 +19,6 @@ const options = {
     typeSpeed: 40,
 }
 
-// 获取APP name
-const name = window.location.href.split('app=')[1];
-
-// 测试地址
-const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000'
-
-// server sent event
-// const source = new EventSource(`${testUrl}/stream?channel=kae-app-${name}-watcher`, { withCredentials: true });
-const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events`, { withCredentials: true });
-
 class AppDetail extends React.Component {
 
     constructor() {
@@ -51,6 +41,7 @@ class AppDetail extends React.Component {
             rollbackVisible: false,
             buildVisible: false,
             deployVisible: false,
+            source: Object,
             columns: [
                 {
                     title: 'tag',
@@ -176,9 +167,18 @@ class AppDetail extends React.Component {
 
     componentDidMount() {
         
+        // 获取APP name
+        const name = window.location.href.split('app=')[1];
+
+        // 测试地址
+        const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000'
+
+        // server sent event
+        const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events`, { withCredentials: true });
 
         this.setState({
-            name: name
+            name: name,
+            source: source
         });
 
         getDetail(name).then(res => {
@@ -231,7 +231,7 @@ class AppDetail extends React.Component {
     // SSE
     serverSentEvent() {
         let self = this;
-        source.addEventListener('pod', function (event) {
+        self.state.source.addEventListener('pod', function (event) {
             let tmp = JSON.parse(event.data);
             let action = tmp.action;
             let data = {
