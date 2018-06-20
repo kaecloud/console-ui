@@ -19,6 +19,16 @@ const options = {
     typeSpeed: 40,
 }
 
+// 获取APP name
+const name = window.location.href.split('app=')[1];
+
+// 测试地址
+const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000'
+
+// server sent event
+// const source = new EventSource(`${testUrl}/stream?channel=kae-app-${name}-watcher`, { withCredentials: true });
+const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events`, { withCredentials: true });
+
 class AppDetail extends React.Component {
 
     constructor() {
@@ -165,14 +175,7 @@ class AppDetail extends React.Component {
     }
 
     componentDidMount() {
-        // 获取APP name
-        const name = window.location.href.split('app=')[1];
-
-        // 测试地址
-        const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000'
-
-        // server sent event
-        const source = new EventSource(`${testUrl}/stream?channel=kae-app-${name}-watcher`, { withCredentials: true });
+        
 
         this.setState({
             name: name
@@ -280,10 +283,6 @@ class AppDetail extends React.Component {
                 }
             }
         }, false);
-
-        source.onerror(err => {
-            console.log(err)
-        });
     }
 
     // 构建
