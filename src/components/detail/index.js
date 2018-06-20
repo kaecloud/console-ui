@@ -1,6 +1,6 @@
 import React from 'react';
 import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal, InputNumber, notification } from 'antd';
-import { Link } from 'react-router-dom'; 
+import { Link } from 'react-router-dom';
 import { getDetail, getPods, getReleases, appBuild, appDeploy, appScale, appRollback, appRenew } from 'api';
 import Typed from 'typed.js';
 import './index.css';
@@ -106,7 +106,7 @@ class AppDetail extends React.Component {
                                 </Menu.Item>
                             </Menu>
                         );
-            
+
                         return (
                             <Dropdown overlay={menu} trigger={['click']}>
                                 <a className="ant-dropdown-link" href="#">
@@ -172,7 +172,7 @@ class AppDetail extends React.Component {
         const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000'
 
         // server sent event
-        const source = new EventSource(`${testUrl}/stream?channel=kae-app-${name}-watcher`, { withCredentials: true });
+        const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events`, { withCredentials: true });
 
         this.setState({
             name: name
@@ -205,19 +205,19 @@ class AppDetail extends React.Component {
                 tableData: res
             })
         });
-        
+
     }
 
     // 打开配置弹框
     handleText(data) {
         let text = data.replace(/\n/g, '<br/>');
         text = text.replace(/ /g, '&nbsp;&nbsp;');
-        this.setState({ 
+        this.setState({
             text: text,
             visible: true
         });
     }
-    
+
     // 关闭配置弹框
     handleCancel() {
         this.setState({
@@ -336,7 +336,7 @@ class AppDetail extends React.Component {
     handleMsg(data, action) {
         // SSE
         this.serverSentEvent();
-        
+
         // 提示成功或失败
         let msg = JSON.parse(data);
         // let msg = {error: '1', msg: '1111111'}
@@ -375,7 +375,7 @@ class AppDetail extends React.Component {
                 strategy: '',
                 min_ready_seconds: ''
             };
-            
+
         if(data.length !== 0) {
             // 详情的数据
             detailData = {
@@ -441,9 +441,9 @@ class AppDetail extends React.Component {
 
                 <Collapse bordered={false} defaultActiveKey={['1']}>
                     <Panel header={<h2>副本集</h2>} key="1">
-                        <Table 
-                            columns={podColumns} 
-                            dataSource={this.state.podTableData} 
+                        <Table
+                            columns={podColumns}
+                            dataSource={this.state.podTableData}
                             rowKey="name"
                         />
                     </Panel>
@@ -453,9 +453,9 @@ class AppDetail extends React.Component {
 
                 <Collapse bordered={false} defaultActiveKey={['1']}>
                     <Panel header={<h2>版本信息</h2>} key="1">
-                        <Table 
-                            columns={columns} 
-                            dataSource={this.state.tableData} 
+                        <Table
+                            columns={columns}
+                            dataSource={this.state.tableData}
                             rowKey="id"
                         />
                     </Panel>
@@ -482,7 +482,7 @@ class AppDetail extends React.Component {
                     onOk={this.handleScale.bind(this)}
                     onCancel={() => {this.setState({scaleVisible: false})}}
                 >
-                    <span>所需容器数量：</span>   
+                    <span>所需容器数量：</span>
                     <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
                 </Modal>
 
