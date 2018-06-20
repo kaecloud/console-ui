@@ -138,7 +138,8 @@ class AppJob extends React.Component {
                             commit: values.commitId,
                             autoRestart: values.autoRestart,
                             image: values.image,
-                            command: values.command
+                            command: values.command,
+                            shell: values.shell
                         }
                     }else {
                         job = {
@@ -148,7 +149,7 @@ class AppJob extends React.Component {
                             autoRestart: values.autoRestart,
                             image: values.image,
                             command: values.command,
-                            gpu: values.gpus
+                            shell: values.shell
                         }
                     }
                     // console.log(job)
@@ -393,6 +394,17 @@ class AppJob extends React.Component {
                     label="autoRestart"
                 >
                     {getFieldDecorator('autoRestart', {
+                        valuePropName: 'checked',
+                        initialValue: false,
+                    })(
+                        <Checkbox></Checkbox>
+                    )}
+                </FormItem>
+                <FormItem
+                    {...formItemLayout}
+                    label="shell"
+                >
+                    {getFieldDecorator('shell', {
                         valuePropName: 'checked',
                         initialValue: false,
                     })(
