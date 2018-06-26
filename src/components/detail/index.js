@@ -291,6 +291,8 @@ class AppDetail extends React.Component {
         let { name, nowTag } = this.state;
         appBuild({name: name, tag: nowTag}).then(res => {
             this.handleMsg(res, 'Build');
+        }).catch(err => {
+            this.handleError(err);
         });
     }
 
@@ -300,6 +302,8 @@ class AppDetail extends React.Component {
         let { name, nowTag } = this.state;
         appDeploy({name: name, tag: nowTag}).then(res => {
             this.handleMsg(res, 'Deploy');
+        }).catch(err => {
+            this.handleError(err);
         });
     }
 
@@ -309,6 +313,8 @@ class AppDetail extends React.Component {
         let name = this.state.name
         appRenew({name: name}).then(res => {
             this.handleMsg(res, 'Renew');
+        }).catch(err => {
+            this.handleError(err);
         });
     }
 
@@ -319,6 +325,8 @@ class AppDetail extends React.Component {
             num = this.state.scaleNum;
         appScale({name: name, replicas: num}).then(res => {
             this.handleMsg(res, 'Scale');
+        }).catch(err => {
+            this.handleError(err);
         });
     }
 
@@ -328,6 +336,8 @@ class AppDetail extends React.Component {
         let name = this.state.name
         appRollback({name: name}).then(res => {
             this.handleMsg(res, 'Rollback');
+        }).catch(err => {
+            this.handleError(err);
         });
     }
 
@@ -359,6 +369,22 @@ class AppDetail extends React.Component {
         }
     }
 
+    // 显示错误
+    handleError(err) {
+        let res = err.response;
+        let errorMsg;
+        if(res.data.indexOf('<p>') !== -1 ) {
+            errorMsg = res.data.split('<p>')[1].split('</p>')[0]; 
+        }else {
+            let data = JSON.parse(res.data);
+            errorMsg = data.error;
+        }
+        notification.error({
+            message: '失败！',
+            description: `${res.status}: ${errorMsg}`,
+            duration: 0,
+        });
+    } 
 
     render() {
         const { data, name, columns, podColumns } = this.state;
