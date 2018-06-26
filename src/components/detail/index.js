@@ -373,15 +373,22 @@ class AppDetail extends React.Component {
     handleError(err) {
         let res = err.response;
         let errorMsg;
-        if(res.data.indexOf('<p>') !== -1 ) {
-            errorMsg = res.data.split('<p>')[1].split('</p>')[0]; 
+        let status;
+        if(!res) {
+            errorMsg = err.message;
+            status = 500;
         }else {
-            let data = JSON.parse(res.data);
-            errorMsg = data.error;
+            status = res.status;
+            if(res.data.indexOf('<p>') !== -1 ) {
+                errorMsg = res.data.split('<p>')[1].split('</p>')[0]; 
+            }else {
+                let data = JSON.parse(res.data);
+                errorMsg = data.error;
+            }
         }
         notification.error({
             message: '失败！',
-            description: `${res.status}: ${errorMsg}`,
+            description: `${status}: ${errorMsg}`,
             duration: 0,
         });
     } 
