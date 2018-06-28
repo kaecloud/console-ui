@@ -7,6 +7,10 @@ import AppLog from '../log';
 import AppJob from '../job';
 
 class Pages extends React.Component {
+    constructor(props) {
+        super(props);
+    }
+
     render() {
         return (
             <Switch>

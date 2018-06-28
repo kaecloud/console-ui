@@ -171,24 +171,26 @@ class AppDetail extends React.Component {
         const name = window.location.href.split('app=')[1];
 
         // 测试地址
-        const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000'
+        const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000';
+
+        const cluster = 'kubernetes';
 
         // server sent event
-        const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events`, { withCredentials: true });
+        const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events?cluster=${cluster}`, { withCredentials: true });
 
         this.setState({
             name: name,
             source: source
         });
 
-        getDetail(name).then(res => {
+        getDetail({name: name, cluster: 'kubernetes'}).then(res => {
             this.setState({
                 data: res,
                 version: res.metadata.annotations.release_tag
             })
         });
 
-        getPods(name).then(res => {
+        getPods({name: name, cluster: 'kubernetes'}).then(res => {
             let arr = [];
             res.items.map(d => {
                 let temp = {
@@ -300,7 +302,7 @@ class AppDetail extends React.Component {
     handleDeploy() {
         this.setState({deployVisible: false})
         let { name, nowTag } = this.state;
-        appDeploy({name: name, tag: nowTag}).then(res => {
+        appDeploy({name: name, tag: nowTag, cluster: 'kubernetes'}).then(res => {
             this.handleMsg(res, 'Deploy');
         }).catch(err => {
             this.handleError(err);
@@ -311,7 +313,7 @@ class AppDetail extends React.Component {
     handleRenew() {
         this.setState({renewVisible: false})
         let name = this.state.name
-        appRenew({name: name}).then(res => {
+        appRenew({name: name, cluster: 'kubernetes'}).then(res => {
             this.handleMsg(res, 'Renew');
         }).catch(err => {
             this.handleError(err);
@@ -323,7 +325,7 @@ class AppDetail extends React.Component {
         this.setState({scaleVisible: false})
         let name = this.state.name,
             num = this.state.scaleNum;
-        appScale({name: name, replicas: num}).then(res => {
+        appScale({name: name, replicas: num, cluster: 'kubernetes'}).then(res => {
             this.handleMsg(res, 'Scale');
         }).catch(err => {
             this.handleError(err);
@@ -334,7 +336,7 @@ class AppDetail extends React.Component {
     handleRollback() {
         this.setState({rollbackVisible: false})
         let name = this.state.name
-        appRollback({name: name}).then(res => {
+        appRollback({name: name, cluster: 'kubernetes'}).then(res => {
             this.handleMsg(res, 'Rollback');
         }).catch(err => {
             this.handleError(err);

@@ -12,48 +12,41 @@ const version = '/api/v1'
 
 // 获取app列表
 export const appList = params => {
-    return axios.get(`${testUrl}${version}/app`, {
-        params: params
-    }).then(res => res.data)
+    return axios.get(`${testUrl}${version}/app`).then(res => res.data)
+}
+
+// app_cluster
+export const getCluster = params => {
+    return axios.get(`${testUrl}${version}/cluster`).then(res => res.data)
 }
 
 // 获取detail
 export const getDetail = params => {
-    return axios.get(`${testUrl}${version}/app/${params}/deployment`, {
-        params: params
-    }).then(res => res.data)
+    return axios.get(`${testUrl}${version}/app/${params.name}/deployment?cluster=${params.cluster}`).then(res => res.data)
     .catch(err => console.log(err))
 }
 
 // 获取releases
 export const getReleases = params => {
-    return axios.get(`${testUrl}${version}/app/${params}/releases`, {
-        params: params
-    }).then(res => res.data)
+    return axios.get(`${testUrl}${version}/app/${params}/releases`).then(res => res.data)
     .catch(err => console.log(err))
 }
 
 // 获取日志
 export const getLogger = params => {
-    return axios.get(`${testUrl}${version}/app/${params}/oplogs`, {
-        params: params
-    }).then(res => res.data)
+    return axios.get(`${testUrl}${version}/app/${params}/oplogs`).then(res => res.data)
     .catch(err => console.log(err))
 }
 
 // 获取用户ID
 export const getUserId = params => {
-    return axios.get(`${testUrl}/user/me`, {
-        params: params
-    }).then(res => res.data)
+    return axios.get(`${testUrl}/user/me`).then(res => res.data)
     .catch(err => console.log(err))
 }
 
 // 获取副本
 export const getPods = params => {
-    return axios.get(`${testUrl}${version}/app/${params}/pods`, {
-        params: params
-    }).then(res => res.data)
+    return axios.get(`${testUrl}${version}/app/${params.name}/pods?cluster=${params.cluster}`).then(res => res.data)
     .catch(err => console.log(err))
 }
 
@@ -81,6 +74,7 @@ export const appDeploy = params => {
         url: `${testUrl}${version}/app/${params.name}/deploy`,
         data: {
             'tag': params.tag,
+            'cluster': params.cluster
         },
         headers: {
 			'Content-Type': 'application/json'
@@ -98,6 +92,7 @@ export const appScale = params => {
         url: `${testUrl}${version}/app/${params.name}/scale`,
         data: {
             'replicas': params.replicas,
+            'cluster': params.cluster
         },
         headers: {
 			'Content-Type': 'application/json'
@@ -113,6 +108,9 @@ export const appRenew = params => {
     return axios({
         method: 'put',
         url: `${testUrl}${version}/app/${params.name}/renew`,
+        data: {
+            'cluster': params.cluster,
+        },
         headers: {
 			'Content-Type': 'application/json'
         },
@@ -127,6 +125,9 @@ export const appRollback = params => {
     return axios({
         method: 'put',
         url: `${testUrl}${version}/app/${params.name}/rollback`,
+        data: {
+            'cluster': params.cluster,
+        },
         headers: {
 			'Content-Type': 'application/json'
         },
@@ -138,9 +139,7 @@ export const appRollback = params => {
 
 // 获取job列表
 export const jobList = params => {
-    return axios.get(`${testUrl}${version}/job`, {
-        params: params
-    }).then(res => res.data)
+    return axios.get(`${testUrl}${version}/job`).then(res => res.data)
 }
 
 // create_job
@@ -176,5 +175,6 @@ export const restartJob = params => {
 export const deleteJob = params => {
     return axios.delete(`${testUrl}${version}/job/${params.name}`).then(res => res.data)
 }
+
 
 
