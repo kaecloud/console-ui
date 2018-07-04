@@ -39,24 +39,21 @@ class Sidebar extends React.Component {
     }
 
     onChange(value) {
-        // console.log(value[0]);
         emitter.emit('clusterChange', value[0]);
     }
 
     render() {
         const {options, defaultValue} = this.state;
-        const appName = window.location.href.split('app=')[1];
-
-        // console.log(options, defaultValue)
+        const name = window.location.href.split('app=')[1];
         return (
             <div id="sidebar">
-                {appName ? 
+                {name ? 
                     <div>
                         <p><strong>appName:</strong></p>
-                        <p style={{marginLeft: '20px'}}>{appName}</p>
+                        <p style={{marginLeft: '20px'}}>{name.split('&cluster=')[0]}</p>
                     </div>
                  : ''}
-                <p><strong>Cluster</strong></p>
+                <p><strong>Cluster:</strong></p>
                 <Cascader 
                     size="small"
                     placeholder="Select cluster"

@@ -50,16 +50,12 @@ class AppLog extends React.Component {
     constructor() {
         super();
         this.state = {
-            name: '',
             tableData: []
         }
     }
 
     componentDidMount() {
         const name = window.location.href.split('app=')[1];
-        this.setState({
-            name: name
-        });
         getLogger(name).then(res => {
             this.setState({
                 tableData: res
@@ -71,7 +67,6 @@ class AppLog extends React.Component {
 
         return (
             <div className="logStyle">
-                <h1><strong>{this.state.name}</strong>:日志信息</h1>
                 <Collapse bordered={false} defaultActiveKey={['1']}>
                     <Panel header={<h2>logger</h2>} key="1">
                         <Table 

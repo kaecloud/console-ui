@@ -168,26 +168,46 @@ class AppDetail extends React.Component {
     }
 
     componentDidMount() {
+        let that = this;
         
         // 获取APP name
-        const name = window.location.href.split('app=')[1];
+        const name = window.location.href.split('app=')[1].split('&cluster=')[0];
+
+        const defaultCluster = window.location.href.split('app=')[1].split('&cluster=')[1];
 
         // 测试地址
         const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000';
 
-        this.eventEmitter = emitter.addListener("clusterChange",(cluster)=>{
-            // console.log(cluster)
+        that.eventEmitter = emitter.addListener("clusterChange",(cluster)=>{
+            getMsg(name, cluster);
+        });
+
+        that.setState({
+            name: name,
+        });
+
+        getReleases(name).then(res => {
+            that.setState({
+                tableData: res
+            })
+        });
+
+        getMsg(name, defaultCluster);
+
+        function getMsg(name, cluster) {
             // server sent event
             const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events?cluster=${cluster}`, { withCredentials: true });
-            this.setState({
+            that.setState({
                 nowCluster: cluster,
                 source: source
             })
             getDetail({name: name, cluster: cluster}).then(res => {
-                this.setState({
+                that.setState({
                     data: res,
                     version: res.metadata.annotations.release_tag
                 })
+            }).catch(err => {
+                that.handleError(err);
             });
             getPods({name: name, cluster: cluster}).then(res => {
                 let arr = [];
@@ -199,21 +219,13 @@ class AppDetail extends React.Component {
                     }
                     arr.push(temp);
                 })
-                this.setState({
+                that.setState({
                     podTableData: arr
                 })
+            }).catch(err => {
+                that.handleError(err);
             });
-        });
-
-        this.setState({
-            name: name,
-        });
-
-        getReleases(name).then(res => {
-            this.setState({
-                tableData: res
-            })
-        });
+        }
     }
 
     componentWillMount() {
@@ -251,6 +263,7 @@ class AppDetail extends React.Component {
             let temp = podTableData;
             if(action === 'ADDED') {
                 for(let d of temp) {
+                    console.log(d.name === data.name)
                     if(d.name === data.name) {
                         // d.status = data.status;
                         break;
@@ -267,7 +280,7 @@ class AppDetail extends React.Component {
                     // console.log('MODIFIED', data)
                     if(d.name === data.name) {
                         let index = temp.indexOf(d);
-                        // console.log(index)
+                        console.log(index)
                         temp.splice(index, 1, data);
                         self.setState({
                             podTableData: temp
