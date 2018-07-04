@@ -1,9 +1,8 @@
 import React from 'react';
 import {getCluster} from 'api';
-import { Menu, Icon } from 'antd';
+import { Cascader } from 'antd';
 
-const SubMenu = Menu.SubMenu;
-const MenuItemGroup = Menu.ItemGroup;
+import emitter from '../event.js';
 
 import './index.css';
 
@@ -11,38 +10,62 @@ class Sidebar extends React.Component {
     constructor() {
         super();
         this.state = {
-            clusters: []
+            defaultValue: [''],
+            options: []
         }   
     }
 
     componentDidMount() {
+        
+    }
+
+    componentWillMount(){
         getCluster().then(res => {
-            console.log(res);
+            // console.log(res);
+            let clusters = [];
+            res.map(d => {
+                clusters.push({
+                    code: d,
+                    name: d
+                })
+            });
             this.setState({
-                clusters: res
-            })
+                defaultValue: new Array(res[0]),
+                options: clusters
+            });
+            emitter.emit('clusterChange', res[0]);
         })
+        // console.log(this.state.defaultValue)
+    }
+
+    onChange(value) {
+        // console.log(value[0]);
+        emitter.emit('clusterChange', value[0]);
     }
 
     render() {
-        const {clusters} = this.state;
-        let arr = [];
-        clusters.forEach((c, index) => {
-            arr.push(<Menu.Item key={index} onClick={this.props.handleClick}>{c}</Menu.Item>)
-        });
+        const {options, defaultValue} = this.state;
+        const appName = window.location.href.split('app=')[1];
 
+        // console.log(options, defaultValue)
         return (
             <div id="sidebar">
-                <Menu
-                    defaultSelectedKeys={['0']}
-                    defaultOpenKeys={['sub1']}
-                    style={{ width: '100%', border: 'none', marginTop: '20px' }}
-                    mode="inline"
-                >
-                    <SubMenu key="sub1" title={<span><Icon type="appstore" /><span>Cluster</span></span>}>
-                        {arr}
-                    </SubMenu>
-                </Menu>
+                {appName ? 
+                    <div>
+                        <p><strong>appName:</strong></p>
+                        <p style={{marginLeft: '20px'}}>{appName}</p>
+                    </div>
+                 : ''}
+                <p><strong>Cluster</strong></p>
+                <Cascader 
+                    size="small"
+                    placeholder="Select cluster"
+                    allowClear={false}
+                    style={{width: '80%', marginLeft: '20px'}}
+                    filedNames={{ label: 'name', value: 'code' }} 
+                    options={options} 
+                    onChange={this.onChange.bind(this)}
+                />
             </div>
         )
     }

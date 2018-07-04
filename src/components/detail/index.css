@@ -1,7 +1,5 @@
 .detailPage {
-    margin: 0 8% 50px 0;
     float: right;
-    width: 72%;
 }
 
 .ant-collapse-borderless{
@@ -23,7 +21,7 @@
 
 .detailLeft {
     float: left;
-    max-width: 60%;
+    min-width: 60%;
     margin-bottom: 16px;
 }
 

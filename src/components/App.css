@@ -3,3 +3,9 @@
 body {
     background: #eee;
 }
+
+.box-container {
+    width: 1100px;
+    height: 90%;
+    margin: 0 auto;
+}

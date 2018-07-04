@@ -3,6 +3,7 @@ import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal, InputNum
 import { Link } from 'react-router-dom';
 import { getDetail, getPods, getReleases, appBuild, appDeploy, appScale, appRollback, appRenew } from 'api';
 import Typed from 'typed.js';
+import emitter from "../event";
 import './index.css';
 const Panel = Collapse.Panel;
 
@@ -30,6 +31,7 @@ class AppDetail extends React.Component {
             name: '',
             nowTag: '',
             version: '',
+            nowCluster: '',
             scaleNum: 1,
             data: [],
             tableData: [],
@@ -173,36 +175,38 @@ class AppDetail extends React.Component {
         // 测试地址
         const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000';
 
-        const cluster = 'kubernetes';
-
-        // server sent event
-        const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events?cluster=${cluster}`, { withCredentials: true });
+        this.eventEmitter = emitter.addListener("clusterChange",(cluster)=>{
+            // console.log(cluster)
+            // server sent event
+            const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events?cluster=${cluster}`, { withCredentials: true });
+            this.setState({
+                nowCluster: cluster,
+                source: source
+            })
+            getDetail({name: name, cluster: cluster}).then(res => {
+                this.setState({
+                    data: res,
+                    version: res.metadata.annotations.release_tag
+                })
+            });
+            getPods({name: name, cluster: cluster}).then(res => {
+                let arr = [];
+                res.items.map(d => {
+                    let temp = {
+                        name: d.metadata.name,
+                        status: d.status.phase,
+                        ready: d.status.container_statuses[0].ready + ''
+                    }
+                    arr.push(temp);
+                })
+                this.setState({
+                    podTableData: arr
+                })
+            });
+        });
 
         this.setState({
             name: name,
-            source: source
-        });
-
-        getDetail({name: name, cluster: 'kubernetes'}).then(res => {
-            this.setState({
-                data: res,
-                version: res.metadata.annotations.release_tag
-            })
-        });
-
-        getPods({name: name, cluster: 'kubernetes'}).then(res => {
-            let arr = [];
-            res.items.map(d => {
-                let temp = {
-                    name: d.metadata.name,
-                    status: d.status.phase,
-                    ready: d.status.container_statuses[0].ready + ''
-                }
-                arr.push(temp);
-            })
-            this.setState({
-                podTableData: arr
-            })
         });
 
         getReleases(name).then(res => {
@@ -210,7 +214,9 @@ class AppDetail extends React.Component {
                 tableData: res
             })
         });
+    }
 
+    componentWillMount() {
     }
 
     // 打开配置弹框
@@ -301,8 +307,8 @@ class AppDetail extends React.Component {
     // 部署
     handleDeploy() {
         this.setState({deployVisible: false})
-        let { name, nowTag } = this.state;
-        appDeploy({name: name, tag: nowTag, cluster: 'kubernetes'}).then(res => {
+        let { name, nowTag, nowCluster } = this.state;
+        appDeploy({name: name, tag: nowTag, cluster: nowCluster}).then(res => {
             this.handleMsg(res, 'Deploy');
         }).catch(err => {
             this.handleError(err);
@@ -312,8 +318,8 @@ class AppDetail extends React.Component {
     // 更新
     handleRenew() {
         this.setState({renewVisible: false})
-        let name = this.state.name
-        appRenew({name: name, cluster: 'kubernetes'}).then(res => {
+        let {name, nowCluster} = this.state;
+        appRenew({name: name, cluster: nowCluster}).then(res => {
             this.handleMsg(res, 'Renew');
         }).catch(err => {
             this.handleError(err);
@@ -323,9 +329,8 @@ class AppDetail extends React.Component {
     // 伸缩
     handleScale() {
         this.setState({scaleVisible: false})
-        let name = this.state.name,
-            num = this.state.scaleNum;
-        appScale({name: name, replicas: num, cluster: 'kubernetes'}).then(res => {
+        let {name, scaleNum, nowCluster} = this.state;
+        appScale({name: name, replicas: scaleNum, cluster: nowCluster}).then(res => {
             this.handleMsg(res, 'Scale');
         }).catch(err => {
             this.handleError(err);
@@ -335,8 +340,8 @@ class AppDetail extends React.Component {
     // 回滚
     handleRollback() {
         this.setState({rollbackVisible: false})
-        let name = this.state.name
-        appRollback({name: name, cluster: 'kubernetes'}).then(res => {
+        let {name, nowCluster} = this.state
+        appRollback({name: name, cluster: nowCluster}).then(res => {
             this.handleMsg(res, 'Rollback');
         }).catch(err => {
             this.handleError(err);
@@ -438,124 +443,125 @@ class AppDetail extends React.Component {
         }
 
         return (
-            <div className="detailPage">
-                <h1><strong>{name}</strong>:详情页面</h1>
-                <Collapse bordered={false} defaultActiveKey={['1']}>
-                    <Panel header={<h2>详情</h2>} key="1">
-                        <div className="detailLeft">
-                            <p>名称：{name}</p>
-                            <p>命名空间：{data.space ? data.space : 'default'}</p>
-                            <p>标签： {labels}</p>
-                            <p>注释： {annotations ? annotations : '无'}</p>
-                            <p>创建时间： {detailData.created}</p>
-                            <p>选择器： {match_labels}</p>
-                            <p>策略： {detailData.strategy}</p>
-                            <p>最小就绪秒数： {detailData.min_ready_seconds}</p>
-                            <p>历史版本限制值： {detailData.history}</p>
-                            <p>滚动更新策略： 最大激增数：{detailData.rolling_update.max_surge}，最大无效数：{detailData.rolling_update.max_unavailable}</p>
-                            <p>状态： {detailData.status.updated_replicas}个已更新，共计 {detailData.status.ready_replicas}个， {detailData.status.available_replicas}个可用， {detailData.status.unavailable_replicas === null ? '0' : detailData.status.unavailable_replicas}个不可用</p>
-                            <Button type="primary"><Link to={`/logger?app=${name}`}>查看日志</Link></Button>
-                            <Button onClick={() => {this.setState({renewVisible: true})}}>Renew</Button>
-                            <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
-                            <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
-                            <div>{this.state.example}</div>
-                        </div>
-                        { this.state.textVisible ? (
-                            <div className="detailRight">
-                                <div className="title-bar"></div>
-                                <div className="text-body">
-                                    <span className="text"></span>
-                                </div>
+            <div>
+                <div className="detailPage">
+                    <Collapse bordered={false} defaultActiveKey={['1']}>
+                        <Panel header={<h2>详情</h2>} key="1">
+                            <div className="detailLeft">
+                                <p>名称：{name}</p>
+                                <p>命名空间：{data.space ? data.space : 'default'}</p>
+                                <p>标签： {labels}</p>
+                                <p>注释： {annotations ? annotations : '无'}</p>
+                                <p>创建时间： {detailData.created}</p>
+                                <p>选择器： {match_labels}</p>
+                                <p>策略： {detailData.strategy}</p>
+                                <p>最小就绪秒数： {detailData.min_ready_seconds}</p>
+                                <p>历史版本限制值： {detailData.history}</p>
+                                <p>滚动更新策略： 最大激增数：{detailData.rolling_update.max_surge}，最大无效数：{detailData.rolling_update.max_unavailable}</p>
+                                <p>状态： {detailData.status.updated_replicas}个已更新，共计 {detailData.status.ready_replicas}个， {detailData.status.available_replicas}个可用， {detailData.status.unavailable_replicas === null ? '0' : detailData.status.unavailable_replicas}个不可用</p>
+                                <Button type="primary"><Link to={`/logger?app=${name}`}>查看日志</Link></Button>
+                                <Button onClick={() => {this.setState({renewVisible: true})}}>Renew</Button>
+                                <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
+                                <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
+                                <div>{this.state.example}</div>
                             </div>
-                        ) : ''}
-                    </Panel>
-                </Collapse>
+                            { this.state.textVisible ? (
+                                <div className="detailRight">
+                                    <div className="title-bar"></div>
+                                    <div className="text-body">
+                                        <span className="text"></span>
+                                    </div>
+                                </div>
+                            ) : ''}
+                        </Panel>
+                    </Collapse>
 
-                <div style={{ height: '40px' }}></div>
+                    <div style={{ height: '40px' }}></div>
 
-                <Collapse bordered={false} defaultActiveKey={['1']}>
-                    <Panel header={<h2>副本集</h2>} key="1">
-                        <Table
-                            columns={podColumns}
-                            dataSource={this.state.podTableData}
-                            rowKey="name"
-                        />
-                    </Panel>
-                </Collapse>
+                    <Collapse bordered={false} defaultActiveKey={['1']}>
+                        <Panel header={<h2>副本集</h2>} key="1">
+                            <Table
+                                columns={podColumns}
+                                dataSource={this.state.podTableData}
+                                rowKey="name"
+                            />
+                        </Panel>
+                    </Collapse>
 
-                <div style={{ height: '40px' }}></div>
+                    <div style={{ height: '40px' }}></div>
 
-                <Collapse bordered={false} defaultActiveKey={['1']}>
-                    <Panel header={<h2>版本信息</h2>} key="1">
-                        <Table
-                            columns={columns}
-                            dataSource={this.state.tableData}
-                            rowKey="id"
-                        />
-                    </Panel>
-                </Collapse>
+                    <Collapse bordered={false} defaultActiveKey={['1']}>
+                        <Panel header={<h2>版本信息</h2>} key="1">
+                            <Table
+                                columns={columns}
+                                dataSource={this.state.tableData}
+                                rowKey="id"
+                            />
+                        </Panel>
+                    </Collapse>
 
-                <Modal
-                    title="配置信息"
-                    visible={this.state.visible}
-                    onOk={this.handleCancel.bind(this)}
-                    onCancel={this.handleCancel.bind(this)}
-                    footer={[
-                        <Button key="back" onClick={this.handleCancel.bind(this)}>取消</Button>,
-                        <Button key="login" type="primary" onClick={this.handleCancel.bind(this)}>
-                            确定
-                        </Button>,
-                    ]}
-                >
-                    <div dangerouslySetInnerHTML={{__html: this.state.text}}></div>
-                </Modal>
+                    <Modal
+                        title="配置信息"
+                        visible={this.state.visible}
+                        onOk={this.handleCancel.bind(this)}
+                        onCancel={this.handleCancel.bind(this)}
+                        footer={[
+                            <Button key="back" onClick={this.handleCancel.bind(this)}>取消</Button>,
+                            <Button key="login" type="primary" onClick={this.handleCancel.bind(this)}>
+                                确定
+                            </Button>,
+                        ]}
+                    >
+                        <div dangerouslySetInnerHTML={{__html: this.state.text}}></div>
+                    </Modal>
 
-                <Modal
-                    title="伸缩 部署"
-                    visible={this.state.scaleVisible}
-                    onOk={this.handleScale.bind(this)}
-                    onCancel={() => {this.setState({scaleVisible: false})}}
-                >
-                    <span>所需容器数量：</span>
-                    <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
-                </Modal>
+                    <Modal
+                        title="伸缩 部署"
+                        visible={this.state.scaleVisible}
+                        onOk={this.handleScale.bind(this)}
+                        onCancel={() => {this.setState({scaleVisible: false})}}
+                    >
+                        <span>所需容器数量：</span>
+                        <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
+                    </Modal>
 
-                <Modal
-                    title="更新"
-                    visible={this.state.renewVisible}
-                    onOk={this.handleRenew.bind(this)}
-                    onCancel={() => {this.setState({renewVisible: false})}}
-                >
-                    <p>Force kubernetes to recreate the pods of specified app!</p>
-                </Modal>
+                    <Modal
+                        title="更新"
+                        visible={this.state.renewVisible}
+                        onOk={this.handleRenew.bind(this)}
+                        onCancel={() => {this.setState({renewVisible: false})}}
+                    >
+                        <p>Force kubernetes to recreate the pods of specified app!</p>
+                    </Modal>
 
-                <Modal
-                    title="回滚"
-                    visible={this.state.rollbackVisible}
-                    onOk={this.handleRollback.bind(this)}
-                    onCancel={() => {this.setState({rollbackVisible: false})}}
-                >
-                    <p>Rollback specified app!</p>
-                </Modal>
+                    <Modal
+                        title="回滚"
+                        visible={this.state.rollbackVisible}
+                        onOk={this.handleRollback.bind(this)}
+                        onCancel={() => {this.setState({rollbackVisible: false})}}
+                    >
+                        <p>Rollback specified app!</p>
+                    </Modal>
 
-                <Modal
-                    title="部署"
-                    visible={this.state.deployVisible}
-                    onOk={this.handleDeploy.bind(this)}
-                    onCancel={() => {this.setState({deployVisible: false})}}
-                >
-                    <p>Deployment app to kubernetes!</p>
-                </Modal>
+                    <Modal
+                        title="部署"
+                        visible={this.state.deployVisible}
+                        onOk={this.handleDeploy.bind(this)}
+                        onCancel={() => {this.setState({deployVisible: false})}}
+                    >
+                        <p>Deployment app to kubernetes!</p>
+                    </Modal>
 
-                <Modal
-                    title="构建"
-                    visible={this.state.buildVisible}
-                    onOk={this.handleBuild.bind(this)}
-                    onCancel={() => {this.setState({buildVisible: false})}}
-                >
-                    <p>Build an image for the specified release, the API will return all docker!</p>
-                </Modal>
-                <div id="example"></div>
+                    <Modal
+                        title="构建"
+                        visible={this.state.buildVisible}
+                        onOk={this.handleBuild.bind(this)}
+                        onCancel={() => {this.setState({buildVisible: false})}}
+                    >
+                        <p>Build an image for the specified release, the API will return all docker!</p>
+                    </Modal>
+                    <div id="example"></div>
+                </div>
             </div>
         )
     }

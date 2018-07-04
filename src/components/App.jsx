@@ -8,28 +8,16 @@ import Pages from './pages';
 import './App.css';
 
 class App extends React.Component {
-    constructor() {
-        super();
-        this.state = {
-            nowCluster: ''
-        }
-    }
-
-    handleClick(e) {
-        let nowCluster = e.item.props.children
-        this.setState({
-            nowCluster: nowCluster
-        })
-    }
 
     render() {
-        const {nowCluster} = this.state;
         return (
-            <div>
+            <div style={{height: "100%"}}>
                 <Header />
                 {/* <Nav /> */}
-                <Sidebar handleClick={this.handleClick.bind(this)}/>
-                <Pages nowCluster={nowCluster}/>
+                <div className="box-container">
+                    <Sidebar/>
+                    <Pages/>
+                </div>
             </div> 
         )
     }
