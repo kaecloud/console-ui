@@ -2,7 +2,6 @@ import React from 'react';
 import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal, InputNumber, notification } from 'antd';
 import { Link } from 'react-router-dom';
 import { getDetail, getPods, getReleases, appBuild, appDeploy, appScale, appRollback, appRenew, getCluster } from 'api';
-import Typed from 'typed.js';
 import emitter from "../event";
 import './index.css';
 const Panel = Collapse.Panel;
@@ -15,11 +14,54 @@ const spanStyle = {
     borderRadius: '6px'
 }
 
-const options = {
-    strings: ["<i>First</i> sentence.", "&amp; a second sentence."],
-    typeSpeed: 40,
-}
+function extractDataFromPod(pod) {
+    var msToHuman = function(ms) {
+        var numdays, numhours, numminutes;
+        var seconds = ms / 1000;
+        numdays = Math.floor(seconds / 86400);
+        if (numdays > 0) {
+            return numdays + 'd';
+        }
+        numhours = Math.floor(seconds / 3600);
+        if (numhours > 0) {
+            return numhours + 'h';
+        }
+        numminutes = Math.floor(seconds / 60);
+        if (numminutes > 0) {
+            return numminutes + 'm';
+        }
+        return seconds + 's';
+    }
+    // get ready count
+    let restart_count = 0;
+    let ready_count = 0;
+    let ready_total = pod.spec.containers.length;
+    if (pod.status.container_statuses) {
+        for (let cont_status of pod.status.container_statuses) {
+            if (cont_status.ready) {
+                ready_count++;
+            }
+            if (cont_status.restart_count > restart_count) {
+                restart_count = cont_status.restart_count;
+            }
+        }
+    }
+    let start_time_str = pod.status.start_time;
+    if (start_time_str && !start_time_str.endsWith("GMT")) {
+        start_time_str += " GMT";
+    }
+    let start_time = new Date(start_time_str);
+    let interval = Date.now() - start_time;
 
+    let data = {
+        ready: ready_count + "/" + ready_total,
+        name: pod.metadata.name,
+        status: pod.status.phase,
+        restarts: restart_count,
+        age: msToHuman(interval)
+    }
+    return data
+}
 class AppDetail extends React.Component {
 
     constructor() {
@@ -124,43 +166,33 @@ class AppDetail extends React.Component {
             ],
             podColumns: [
                 {
-                    title: 'name',
+                    title: 'NAME',
                     dataIndex: 'name',
-                    width: '30%'
+                    width: '20%'
                 },
                 {
-                    title: 'status',
-                    dataIndex: 'status',
-                    align: 'center',
-                    width: '30%',
-                    render: status => {
-                        if(status === 'Pending') {
-                            return (
-                                <Icon type="loading" style={{ color: 'red' }}/>
-                            )
-                        }else {
-                            return (
-                                <span>Running</span>
-                            )
-                        }
-                    }
-                },
-                {
-                    title: 'ready',
+                    title: 'READY',
                     dataIndex: 'ready',
                     align: 'center',
-                    width: '30%',
-                    render: ready => {
-                        if(ready) {
-                            return (
-                                <Icon type="check-circle" style={{ color: 'green' }}/>
-                            )
-                        }else {
-                            return (
-                                <Icon type="close-circle" style={{ color: 'red' }}/>
-                            )
-                        }
-                    }
+                    width: '20%'
+                },
+                {
+                    title: 'STATUS',
+                    dataIndex: 'status',
+                    align: 'center',
+                    width: '20%'
+                },
+                {
+                    title: 'RESTARTS',
+                    dataIndex: 'restarts',
+                    align: 'center',
+                    width: '20%'
+                },
+                {
+                    title: 'AGE',
+                    dataIndex: 'age',
+                    align: 'center',
+                    width: '20%'
                 }
             ]
         }
@@ -219,11 +251,7 @@ class AppDetail extends React.Component {
             getPods({name: name, cluster: cluster}).then(res => {
                 let arr = [];
                 res.items.map(d => {
-                    let temp = {
-                        name: d.metadata.name,
-                        status: d.status.phase,
-                        ready: d.status.container_statuses[0].ready + ''
-                    }
+                    let temp = extractDataFromPod(d);
                     arr.push(temp);
                 })
                 that.setState({
@@ -261,12 +289,8 @@ class AppDetail extends React.Component {
         self.state.source.addEventListener('pod', function (event) {
             let tmp = JSON.parse(event.data);
             let action = tmp.action;
-            let data = {
-                ready: tmp.object.status.containerStatuses !== undefined ? tmp.object.status.containerStatuses[0].ready : false,
-                name: tmp.object.metadata.name,
-                status: tmp.object.status.phase
-            }
-            console.log(action, data);
+            let data = extractDataFromPod(tmp.object);
+
             let { podTableData } = self.state;
             let temp = podTableData;
             if(action === 'ADDED') {
