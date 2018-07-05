@@ -192,7 +192,14 @@ class AppDetail extends React.Component {
             })
         });
 
-        getMsg(name, defaultCluster);
+        if(defaultCluster) {
+            getMsg(name, defaultCluster);
+        }else {
+            notification.warning({
+                message: '提示',
+                description: `请选择Cluster!`,
+            });
+        }
 
         function getMsg(name, cluster) {
             // server sent event
