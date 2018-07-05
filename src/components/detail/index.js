@@ -32,6 +32,7 @@ function extractDataFromPod(pod) {
         }
         return seconds + 's';
     }
+    let status = pod.status.phase;
     // get ready count
     let restart_count = 0;
     let ready_count = 0;
@@ -40,6 +41,12 @@ function extractDataFromPod(pod) {
         for (let cont_status of pod.status.container_statuses) {
             if (cont_status.ready) {
                 ready_count++;
+            } else {
+                if (cont_status.state.terminated) {
+                    status = cont_status.state.terminated.reason
+                } else if (cont_status.state.waiting) {
+                    status = cont_status.state.waiting.reason
+                }
             }
             if (cont_status.restart_count > restart_count) {
                 restart_count = cont_status.restart_count;
@@ -56,9 +63,11 @@ function extractDataFromPod(pod) {
     let data = {
         ready: ready_count + "/" + ready_total,
         name: pod.metadata.name,
-        status: pod.status.phase,
+        status: status,
         restarts: restart_count,
-        age: msToHuman(interval)
+        age: msToHuman(interval),
+        ip: pod.status.pod_ip,
+        node: pod.status.host_ip
     }
     return data
 }
@@ -168,31 +177,37 @@ class AppDetail extends React.Component {
                 {
                     title: 'NAME',
                     dataIndex: 'name',
-                    width: '20%'
+                    width: '15%'
                 },
                 {
                     title: 'READY',
                     dataIndex: 'ready',
-                    align: 'center',
-                    width: '20%'
+                    width: '10%'
                 },
                 {
                     title: 'STATUS',
                     dataIndex: 'status',
-                    align: 'center',
-                    width: '20%'
+                    width: '10%'
                 },
                 {
                     title: 'RESTARTS',
                     dataIndex: 'restarts',
-                    align: 'center',
-                    width: '20%'
+                    width: '10%'
                 },
                 {
                     title: 'AGE',
                     dataIndex: 'age',
-                    align: 'center',
-                    width: '20%'
+                    width: '15%'
+                },
+                {
+                    title: 'IP',
+                    dataIndex: 'ip',
+                    width: '15%'
+                },
+                {
+                    title: 'NODE',
+                    dataIndex: 'node',
+                    width: '15%'
                 }
             ]
         }
@@ -293,46 +308,43 @@ class AppDetail extends React.Component {
 
             let { podTableData } = self.state;
             let temp = podTableData;
-            if(action === 'ADDED') {
-                let hasElem = findElem(temp, 'name', data.name);
-                if(hasElem === -1) {
-                    temp.push(data);
-                    let set = new Set(temp);
-                    self.setState({
-                        podTableData: [...set]
-                    })
-                    temp = [];
+
+            let podIndex = undefined;
+            for (const [index, value] of temp.entries()) {
+                if (value.name === data.name) {
+                    podIndex = index;
                 }
+            }
+            // console.log(podIndex, action, temp)
+
+            if(action === 'ADDED') {
+                if(podIndex === undefined) {
+                    temp.push(data);
+                } else {
+                    temp.splice(podIndex, 1, data);
+                }
+                self.setState({
+                    podTableData: temp
+                })
             }else if(action === 'MODIFIED') {
-                let hasElem = findElem(temp, 'name', data.name);
-                if(hasElem !== -1) {
-                    temp.splice(hasElem, 1, data);
-                    // console.log(index, temp);
-                    let set = new Set(temp);
+                if(podIndex !== undefined) {
+                    temp.splice(podIndex, 1, data);
                     self.setState({
-                        podTableData: [...set]
+                        podTableData: temp
                     })
                 }
             }else if(action === 'DELETED') {
-                let hasElem = findElem(temp, 'name', data.name);
-                if(hasElem !== -1) {
-                    temp.splice(hasElem, 1);
-                    let set = new Set(temp);
+                if(podIndex !== undefined) {
+                    temp.splice(podIndex, 1);
                     self.setState({
-                        podTableData: [...set]
+                        podTableData: temp
                     })
                 }
             }
-        }, false);
 
-        function findElem(arrayToSearch,attr,val){
-            for (var i=0;i<arrayToSearch.length;i++){
-                if(arrayToSearch[i][attr]==val){
-                    return i;
-                }
-            }
-            return -1;
-        }
+            // console.log(podIndex, action, temp)
+            // console.log("===================")
+        }, false);
     }
 
     // 构建
