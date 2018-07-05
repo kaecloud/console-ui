@@ -294,51 +294,45 @@ class AppDetail extends React.Component {
             let { podTableData } = self.state;
             let temp = podTableData;
             if(action === 'ADDED') {
-                for(let d of temp) {
-                    // console.log(d.name === data.name)
-                    if(d.name === data.name) {
-                        // d.status = data.status;
-                        temp = [];
-                        break;
-                    }else {
-                        temp.push(data);
-                        let set = new Set(temp);
-                        self.setState({
-                            podTableData: [...set]
-                        })
-                        temp = [];
-                        break;
-                    }
+                let hasElem = findElem(temp, 'name', data.name);
+                if(hasElem === -1) {
+                    temp.push(data);
+                    let set = new Set(temp);
+                    self.setState({
+                        podTableData: [...set]
+                    })
+                    temp = [];
                 }
             }else if(action === 'MODIFIED') {
-                for(let d of temp) {
-                    // console.log('MODIFIED', data)
-                    if(d.name === data.name) {
-                        let index = temp.indexOf(d);
-                        // console.log(index)
-                        temp.splice(index, 1, data);
-                        // console.log(index, temp);
-                        let set = new Set(temp);
-                        self.setState({
-                            podTableData: [...set]
-                        })
-                        break;
-                    }
+                let hasElem = findElem(temp, 'name', data.name);
+                if(hasElem !== -1) {
+                    temp.splice(hasElem, 1, data);
+                    // console.log(index, temp);
+                    let set = new Set(temp);
+                    self.setState({
+                        podTableData: [...set]
+                    })
                 }
             }else if(action === 'DELETED') {
-                for(let d of temp) {
-                    if(d.name === data.name) {
-                        let index = temp.indexOf(d);
-                        temp.splice(index, 1);
-                        let set = new Set(temp);
-                        self.setState({
-                            podTableData: [...set]
-                        })
-                        break;
-                    }
+                let hasElem = findElem(temp, 'name', data.name);
+                if(hasElem !== -1) {
+                    temp.splice(hasElem, 1);
+                    let set = new Set(temp);
+                    self.setState({
+                        podTableData: [...set]
+                    })
                 }
             }
         }, false);
+
+        function findElem(arrayToSearch,attr,val){
+            for (var i=0;i<arrayToSearch.length;i++){
+                if(arrayToSearch[i][attr]==val){
+                    return i;
+                }
+            }
+            return -1;
+        }
     }
 
     // 构建
