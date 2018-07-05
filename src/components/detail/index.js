@@ -1,7 +1,7 @@
 import React from 'react';
 import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal, InputNumber, notification } from 'antd';
 import { Link } from 'react-router-dom';
-import { getDetail, getPods, getReleases, appBuild, appDeploy, appScale, appRollback, appRenew } from 'api';
+import { getDetail, getPods, getReleases, appBuild, appDeploy, appScale, appRollback, appRenew, getCluster } from 'api';
 import Typed from 'typed.js';
 import emitter from "../event";
 import './index.css';
@@ -178,10 +178,6 @@ class AppDetail extends React.Component {
         // 测试地址
         const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000';
 
-        that.eventEmitter = emitter.addListener("clusterChange",(cluster)=>{
-            getMsg(name, cluster);
-        });
-
         that.setState({
             name: name,
         });
@@ -195,10 +191,14 @@ class AppDetail extends React.Component {
         if(defaultCluster) {
             getMsg(name, defaultCluster);
         }else {
-            notification.warning({
-                message: '提示',
-                description: `请选择Cluster!`,
+
+            that.eventEmitter = emitter.addListener("clusterChange",(cluster)=>{
+                getMsg(name, cluster);
             });
+
+            getCluster().then(res => {
+                getMsg(name, res[0]);
+            })
         }
 
         function getMsg(name, cluster) {
@@ -266,19 +266,23 @@ class AppDetail extends React.Component {
                 name: tmp.object.metadata.name,
                 status: tmp.object.status.phase
             }
+            console.log(action, data);
             let { podTableData } = self.state;
             let temp = podTableData;
             if(action === 'ADDED') {
                 for(let d of temp) {
-                    console.log(d.name === data.name)
+                    // console.log(d.name === data.name)
                     if(d.name === data.name) {
                         // d.status = data.status;
+                        temp = [];
                         break;
                     }else {
                         temp.push(data);
+                        let set = new Set(temp);
                         self.setState({
-                            podTableData: temp
+                            podTableData: [...set]
                         })
+                        temp = [];
                         break;
                     }
                 }
@@ -287,24 +291,24 @@ class AppDetail extends React.Component {
                     // console.log('MODIFIED', data)
                     if(d.name === data.name) {
                         let index = temp.indexOf(d);
-                        console.log(index)
+                        // console.log(index)
                         temp.splice(index, 1, data);
+                        // console.log(index, temp);
+                        let set = new Set(temp);
                         self.setState({
-                            podTableData: temp
+                            podTableData: [...set]
                         })
                         break;
                     }
                 }
             }else if(action === 'DELETED') {
                 for(let d of temp) {
-                    // console.log('DELETED', data)
                     if(d.name === data.name) {
-                        // console.log('DELETED', data)
                         let index = temp.indexOf(d);
-                        // console.log(index)
                         temp.splice(index, 1);
+                        let set = new Set(temp);
                         self.setState({
-                            podTableData: temp
+                            podTableData: [...set]
                         })
                         break;
                     }
