@@ -24,7 +24,7 @@ class Sidebar extends React.Component {
     componentWillMount(){
         getCluster().then(res => {
             let clusters = [];
-            ['123123', 'hahahah', 'kubernetes'].map(d => {
+            res.map(d => {
                 clusters.push(
                     <Menu.Item key={d}>{d}</Menu.Item>
                 )
@@ -59,12 +59,12 @@ class Sidebar extends React.Component {
                 {name ? 
                     <div>
                         <p><strong>appName:</strong></p>
-                        <p style={{marginLeft: '20px',borderBottom: '1px solid #ccc', width: '86px', cursor: 'pointer'}}>{name.split('&cluster=')[0]}</p>
+                        <p style={{marginLeft: '20px'}}>{name.split('&cluster=')[0]}</p>
                     </div>
                  : ''}
                 <p><strong>Cluster:</strong></p>
                 <Dropdown overlay={options}>
-                    <div style={{marginLeft: '20px'}}>
+                    <div style={{marginLeft: '20px',borderBottom: '1px solid #ccc', width: '86px', cursor: 'pointer'}}>
                         {nowCluster} <Icon type="down" />
                     </div>
                 </Dropdown>
