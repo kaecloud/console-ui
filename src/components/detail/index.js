@@ -234,14 +234,15 @@ class AppDetail extends React.Component {
                 tableData: res
             })
         });
+        
+
+        that.eventEmitter = emitter.addListener("clusterChange",(cluster)=>{
+            getMsg(name, cluster);
+        });
 
         if(defaultCluster) {
             getMsg(name, defaultCluster);
         }else {
-
-            that.eventEmitter = emitter.addListener("clusterChange",(cluster)=>{
-                getMsg(name, cluster);
-            });
 
             getCluster().then(res => {
                 getMsg(name, res[0]);
