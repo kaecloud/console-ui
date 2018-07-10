@@ -1,7 +1,7 @@
 import React from 'react';
 import { Collapse, Table, Icon, Divider, Dropdown, Menu, Button, Modal, InputNumber, notification } from 'antd';
 import { Link } from 'react-router-dom';
-import { getDetail, getPods, getReleases, appBuild, appDeploy, appScale, appRollback, appRenew, getCluster } from 'api';
+import { getDetail, getReleases, appBuild, appDeploy, appScale, appRollback, appRenew, getCluster } from 'api';
 import emitter from "../event";
 import './index.css';
 const Panel = Collapse.Panel;
@@ -94,7 +94,6 @@ class AppDetail extends React.Component {
             rollbackVisible: false,
             buildVisible: false,
             deployVisible: false,
-            source: Object,
             columns: [
                 {
                     title: 'tag',
@@ -250,12 +249,10 @@ class AppDetail extends React.Component {
         }
 
         function getMsg(name, cluster) {
-            // server sent event
-            const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events?cluster=${cluster}`, { withCredentials: true });
             that.setState({
-                nowCluster: cluster,
-                source: source
+                nowCluster: cluster
             })
+
             getDetail({name: name, cluster: cluster}).then(res => {
                 that.setState({
                     data: res,
@@ -264,18 +261,9 @@ class AppDetail extends React.Component {
             }).catch(err => {
                 that.handleError(err);
             });
-            getPods({name: name, cluster: cluster}).then(res => {
-                let arr = [];
-                res.items.map(d => {
-                    let temp = extractDataFromPod(d);
-                    arr.push(temp);
-                })
-                that.setState({
-                    podTableData: arr
-                })
-            }).catch(err => {
-                that.handleError(err);
-            });
+            // server sent event
+            const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events?cluster=${cluster}`, { withCredentials: true });
+            that.serverSentEvent(source)
         }
     }
 
@@ -300,9 +288,9 @@ class AppDetail extends React.Component {
     }
 
     // SSE
-    serverSentEvent() {
+    serverSentEvent(source) {
         let self = this;
-        self.state.source.addEventListener('pod', function (event) {
+        source.addEventListener('pod', function (event) {
             let tmp = JSON.parse(event.data);
             let action = tmp.action;
             let data = extractDataFromPod(tmp.object);
@@ -406,7 +394,7 @@ class AppDetail extends React.Component {
     // 显示信息
     handleMsg(data, action) {
         // SSE
-        this.serverSentEvent();
+        // this.serverSentEvent();
 
         // 提示成功或失败
         let msg = JSON.parse(data);
