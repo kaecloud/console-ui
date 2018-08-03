@@ -71,6 +71,12 @@ function extractDataFromPod(pod) {
     }
     return data
 }
+
+function getArg(name) {
+    var i = new RegExp("(\\?|&)" + name + "=([^&]+)(&|$)","i")
+        , n = location.href.match(i);
+    return n ? n[2]:false;
+}
 class AppDetail extends React.Component {
 
     constructor() {
@@ -87,6 +93,7 @@ class AppDetail extends React.Component {
             data: [],
             tableData: [],
             podTableData: [],
+            canarypodTableData: [],
             visible: false,
             textVisible: false,
             scaleVisible: false,
@@ -94,6 +101,7 @@ class AppDetail extends React.Component {
             rollbackVisible: false,
             buildVisible: false,
             deployVisible: false,
+            canaryVisibile: false,
             columns: [
                 {
                     title: 'tag',
@@ -217,15 +225,16 @@ class AppDetail extends React.Component {
         let that = this;
         
         // 获取APP name
-        const name = window.location.href.split('app=')[1].split('&cluster=')[0];
-
-        const defaultCluster = window.location.href.split('app=')[1].split('&cluster=')[1];
+        const name = getArg('app'),
+            canaryVisibile = getArg('canary'),
+            defaultCluster = getArg('cluster');
 
         // 测试地址
         const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000';
 
         that.setState({
             name: name,
+            canaryVisibile: canaryVisibile
         });
 
         getReleases(name).then(res => {
@@ -233,19 +242,16 @@ class AppDetail extends React.Component {
                 tableData: res
             })
         });
-        
 
-        that.eventEmitter = emitter.addListener("clusterChange",(cluster)=>{
-            getMsg(name, cluster);
-        });
-
-        if(defaultCluster) {
-            getMsg(name, defaultCluster);
-        }else {
-
+        if(!defaultCluster) {
             getCluster().then(res => {
                 getMsg(name, res[0]);
             })
+        }else {
+            getMsg(name, defaultCluster);
+            that.eventEmitter = emitter.addListener("clusterChange",(cluster)=>{
+                getMsg(name, cluster);
+            });            
         }
 
         function getMsg(name, cluster) {
@@ -261,9 +267,25 @@ class AppDetail extends React.Component {
             }).catch(err => {
                 that.handleError(err);
             });
+
             // server sent event
-            const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events?cluster=${cluster}`, { withCredentials: true });
-            that.serverSentEvent(source)
+            // const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events?cluster=${cluster}`, { withCredentials: true });
+            // that.serverSentEvent(source)
+            
+            // websocket
+            const wsUrl = process.env.NODE_ENV === 'production' ? 'ws://' : 'ws://192.168.1.17:5000';
+            const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/pods/events`);
+            const canaryWs = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/pods/events`);
+            ws.onopen = function(evt) { 
+                // console.log("Connection open ..."); 
+                ws.send(`{"cluster": "${cluster}"}`);
+            };
+            canaryWs.onopen = function(evt) { 
+                // console.log("Connection open ..."); 
+                canaryWs.send(`{"cluster": "${cluster}", "canary": true}`);
+            };
+            that.webSocketEvent(ws);
+            that.webSocketEvent(canaryWs, true);
         }
     }
 
@@ -287,16 +309,17 @@ class AppDetail extends React.Component {
         });
     }
 
-    // SSE
-    serverSentEvent(source) {
+    // Websocket
+    webSocketEvent(ws, canary) {
         let self = this;
-        source.addEventListener('pod', function (event) {
+        ws.addEventListener('message', function (event) {
             let tmp = JSON.parse(event.data);
+            // console.log(event);
             let action = tmp.action;
             let data = extractDataFromPod(tmp.object);
 
-            let { podTableData } = self.state;
-            let temp = podTableData;
+            let { canarypodTableData, podTableData } = self.state;
+            let temp = canary ? canarypodTableData : podTableData;
 
             let podIndex = undefined;
             for (const [index, value] of temp.entries()) {
@@ -304,17 +327,21 @@ class AppDetail extends React.Component {
                     podIndex = index;
                 }
             }
-            // console.log(podIndex, action, temp)
-
             if(action === 'ADDED') {
                 if(podIndex === undefined) {
                     temp.push(data);
                 } else {
                     temp.splice(podIndex, 1, data);
                 }
-                self.setState({
-                    podTableData: temp
-                })
+                if(canary) {
+                    self.setState({
+                        canarypodTableData: temp
+                    })
+                }else {
+                    self.setState({
+                        podTableData: temp
+                    })
+                }
             }else if(action === 'MODIFIED') {
                 if(podIndex !== undefined) {
                     temp.splice(podIndex, 1, data);
@@ -325,16 +352,68 @@ class AppDetail extends React.Component {
             }else if(action === 'DELETED') {
                 if(podIndex !== undefined) {
                     temp.splice(podIndex, 1);
-                    self.setState({
-                        podTableData: temp
-                    })
+                    if(canary) {
+                        self.setState({
+                            canarypodTableData: temp
+                        })
+                    }else {
+                        self.setState({
+                            podTableData: temp
+                        })
+                    }
                 }
             }
-
-            // console.log(podIndex, action, temp)
-            // console.log("===================")
         }, false);
     }
+
+    // SSE
+    // serverSentEvent(source) {
+    //     let self = this;
+    //     source.addEventListener('pod', function (event) {
+    //         let tmp = JSON.parse(event.data);
+    //         let action = tmp.action;
+    //         let data = extractDataFromPod(tmp.object);
+
+    //         let { podTableData } = self.state;
+    //         let temp = podTableData;
+
+    //         let podIndex = undefined;
+    //         for (const [index, value] of temp.entries()) {
+    //             if (value.name === data.name) {
+    //                 podIndex = index;
+    //             }
+    //         }
+    //         // console.log(podIndex, action, temp)
+
+    //         if(action === 'ADDED') {
+    //             if(podIndex === undefined) {
+    //                 temp.push(data);
+    //             } else {
+    //                 temp.splice(podIndex, 1, data);
+    //             }
+    //             self.setState({
+    //                 podTableData: temp
+    //             })
+    //         }else if(action === 'MODIFIED') {
+    //             if(podIndex !== undefined) {
+    //                 temp.splice(podIndex, 1, data);
+    //                 self.setState({
+    //                     podTableData: temp
+    //                 })
+    //             }
+    //         }else if(action === 'DELETED') {
+    //             if(podIndex !== undefined) {
+    //                 temp.splice(podIndex, 1);
+    //                 self.setState({
+    //                     podTableData: temp
+    //                 })
+    //             }
+    //         }
+
+    //         // console.log(podIndex, action, temp)
+    //         // console.log("===================")
+    //     }, false);
+    // }
 
     // 构建
     handleBuild() {
@@ -444,7 +523,7 @@ class AppDetail extends React.Component {
     } 
 
     render() {
-        const { data, name, columns, podColumns } = this.state;
+        const { data, name, columns, podColumns, canaryVisibile } = this.state;
 
         let labels = [],
             annotations = [],
@@ -530,6 +609,18 @@ class AppDetail extends React.Component {
                             />
                         </Panel>
                     </Collapse>
+
+                    <div style={{ height: '40px' }}></div>
+
+                    {canaryVisibile !== 'false' ? <Collapse bordered={false} defaultActiveKey={['1']}>
+                        <Panel header={<h2>canary副本集</h2>} key="1">
+                            <Table
+                                columns={podColumns}
+                                dataSource={this.state.canarypodTableData}
+                                rowKey="name"
+                            />
+                        </Panel>
+                    </Collapse>: ''}
 
                     <div style={{ height: '40px' }}></div>
 

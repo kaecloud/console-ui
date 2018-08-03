@@ -66,7 +66,7 @@ class AppList extends React.Component {
                             rowKey="name"
                             onRow={(record) => {
                                 return {
-                                    onClick: () => {this.props.history.push(`/detail?app=${record.name}&cluster=${this.state.nowCluster}`);},// 点击行
+                                    onClick: () => {this.props.history.push(`/detail?app=${record.name}&cluster=${this.state.nowCluster}&canary=${record.canary_status}`);},// 点击行
                                 };
                             }}
                         />
