@@ -1,7 +1,7 @@
 import React from 'react';
 import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
 import { Link } from 'react-router-dom';
-import { getDetail, getReleases, appBuild, appDeploy, appDeployCanary, appDeleteCanary, appSetABTestingRules, appScale, appRollback, appRenew, getCluster } from 'api';
+import { getDetail, getApp, getReleases, appBuild, appDeploy, appDeployCanary, appDeleteCanary, appSetABTestingRules, appScale, appRollback, appRenew, getCluster } from 'api';
 import emitter from "../event";
 
 import brace from 'brace';
@@ -250,17 +250,20 @@ class AppDetail extends React.Component {
 
         // 获取APP name
         const name = getArg('app'),
-            canaryVisible = getArg('canary'),
             defaultCluster = getArg('cluster');
 
         // 测试地址
         const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000';
 
         that.setState({
-            name: name,
-            canaryVisible: canaryVisible
+            name: name
         });
-
+        getApp(name).then(res => {
+            console.log(res)
+            that.setState({
+                canaryVisible: res.canary_status
+            })
+        })
         getReleases(name).then(res => {
             that.setState({
                 tableData: res
@@ -449,6 +452,9 @@ class AppDetail extends React.Component {
             cluster: nowCluster,
             rules: JSON.parse(yamlConfig)
         }).then(res => {
+            this.setState({
+                abtestingVisible: false
+            })
             this.handleMsg(res, 'SET ABTesting Rules');
         }).catch(err => {
             this.handleError(err);
@@ -599,6 +605,7 @@ class AppDetail extends React.Component {
             }
         }
 
+        console.log(this.state.canaryVisible)
         return (
             <div>
                 <div className="detailPage">
@@ -607,6 +614,7 @@ class AppDetail extends React.Component {
                             <div className="detailLeft">
                                 <p>名称：{name}</p>
                                 <p>命名空间：{data.space ? data.space : 'default'}</p>
+                                <p>Canary: {this.state.canaryVisible.toString()} </p>
                                 <p>标签： {labels}</p>
                                 <p>注释： {annotations ? annotations : '无'}</p>
                                 <p>创建时间： {detailData.created}</p>
@@ -621,8 +629,11 @@ class AppDetail extends React.Component {
                                 <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
                                 <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
 
-                                <Button onClick={() => {this.setState({deleteCanaryVisible: true})}}>DeleteCanary</Button>
-                                <Button onClick={() => {this.setState({abtestingVisible: true})}}>ABTesting</Button>
+                                {this.state.canaryVisible &&
+                                <span>
+                                    <Button onClick={() => {this.setState({deleteCanaryVisible: true})}}>DeleteCanary</Button>
+                                    <Button onClick={() => {this.setState({abtestingVisible: true})}}>ABTesting</Button>
+                                </span>}
                                 <div>{this.state.example}</div>
                             </div>
                             { this.state.textVisible ? (
@@ -650,7 +661,7 @@ class AppDetail extends React.Component {
 
                     <div style={{ height: '40px' }}></div>
 
-                    {canaryVisible !== 'false' ? <Collapse bordered={false} defaultActiveKey={['1']}>
+                    {this.state.canaryVisible && <Collapse bordered={false} defaultActiveKey={['1']}>
                         <Panel header={<h2>canary副本集</h2>} key="1">
                             <Table
                                 columns={podColumns}
@@ -658,7 +669,7 @@ class AppDetail extends React.Component {
                                 rowKey="name"
                             />
                         </Panel>
-                    </Collapse>: ''}
+                    </Collapse>}
 
                     <div style={{ height: '40px' }}></div>
 

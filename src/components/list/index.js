@@ -15,6 +15,15 @@ const columns = [
         title: 'Git',
         dataIndex: 'git',
     }, {
+        title: 'Type',
+        dataIndex: 'type',
+    }, {
+        title: 'Canary',
+        dataIndex: 'canary_status',
+        render(canary_status) {
+            return canary_status + ''
+        }
+    }, {
         title: 'created',
         dataIndex: 'created',
         defaultSortOrder: 'descend',
@@ -26,9 +35,6 @@ const columns = [
     }, {
         title: 'Updated',
         dataIndex: 'updated',
-    }, {
-        title: 'Type',
-        dataIndex: 'type',
     }
 ];
 
@@ -66,7 +72,7 @@ class AppList extends React.Component {
                             rowKey="name"
                             onRow={(record) => {
                                 return {
-                                    onClick: () => {this.props.history.push(`/detail?app=${record.name}&cluster=${this.state.nowCluster}&canary=${record.canary_status}`);},// 点击行
+                                    onClick: () => {this.props.history.push(`/detail?app=${record.name}&cluster=${this.state.nowCluster}`);},// 点击行
                                 };
                             }}
                         />

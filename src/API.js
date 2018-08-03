@@ -15,6 +15,10 @@ export const appList = params => {
     return axios.get(`${testUrl}${version}/app`).then(res => res.data)
 }
 
+export const getApp = params => {
+    return axios.get(`${testUrl}${version}/app/${params}`).then(res => res.data)
+    .catch(err => console.log(err))
+}
 // app_cluster
 export const getCluster = params => {
     return axios.get(`${testUrl}${version}/cluster`).then(res => res.data)
