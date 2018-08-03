@@ -310,11 +310,10 @@ class AppDetail extends React.Component {
     }
 
     // Websocket
-    webSocketEvent(ws, canary) {
+    webSocketEvent(socket, canary) {
         let self = this;
-        ws.addEventListener('message', function (event) {
+        socket.addEventListener('message', function (event) {
             let tmp = JSON.parse(event.data);
-            // console.log(event);
             let action = tmp.action;
             let data = extractDataFromPod(tmp.object);
 
@@ -345,9 +344,15 @@ class AppDetail extends React.Component {
             }else if(action === 'MODIFIED') {
                 if(podIndex !== undefined) {
                     temp.splice(podIndex, 1, data);
-                    self.setState({
-                        podTableData: temp
-                    })
+                    if(canary) {
+                        self.setState({
+                            canarypodTableData: temp
+                        })
+                    }else {
+                        self.setState({
+                            podTableData: temp
+                        })
+                    }
                 }
             }else if(action === 'DELETED') {
                 if(podIndex !== undefined) {
