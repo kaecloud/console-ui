@@ -85,6 +85,61 @@ export const appDeploy = params => {
     }).then(res => res.data)
 }
 
+// app_deploy canary
+export const appDeployCanary = params => {
+    return axios({
+        method: 'put',
+        url: `${testUrl}${version}/app/${params.name}/canary/deploy`,
+        data: {
+            'tag': params.tag,
+            'replicas': params.replicas,
+            'cluster': params.cluster
+        },
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
+
+// delete app canary
+export const appDeleteCanary = params => {
+    return axios({
+        method: 'delete',
+        url: `${testUrl}${version}/app/${params.name}/canary`,
+        data: {
+            'cluster': params.cluster
+        },
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
+
+// set abtesting rules
+export const appSetABTestingRules = params => {
+    console.log(params)
+    return axios({
+        method: 'put',
+        url: `${testUrl}${version}/app/${params.name}/abtesting`,
+        data: {
+            'cluster': params.cluster,
+            'rules': params.rules
+        },
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
+
 // app_scale
 export const appScale = params => {
     return axios({

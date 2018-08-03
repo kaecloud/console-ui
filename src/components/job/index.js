@@ -6,7 +6,7 @@ import {Link} from 'react-router-dom';
 import brace from 'brace';
 import AceEditor from 'react-ace';
 
-import 'brace/mode/java';
+import 'brace/mode/yaml';
 import 'brace/theme/xcode';
 
 import './index.css';
@@ -462,7 +462,7 @@ class AppJob extends React.Component {
         ) : (
             <div>
                 <AceEditor
-                    mode="java"
+                    mode="yaml"
                     theme="xcode"
                     onChange={onChange}
                     name="yaml"
