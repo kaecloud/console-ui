@@ -18,12 +18,6 @@ const columns = [
         title: 'Type',
         dataIndex: 'type',
     }, {
-        title: 'Canary',
-        dataIndex: 'canary_status',
-        render(canary_status) {
-            return canary_status + ''
-        }
-    }, {
         title: 'created',
         dataIndex: 'created',
         defaultSortOrder: 'descend',

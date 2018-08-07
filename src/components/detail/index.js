@@ -1,7 +1,10 @@
 import React from 'react';
 import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
 import { Link } from 'react-router-dom';
-import { getDetail, getApp, getReleases, appBuild, appDeploy, appDeployCanary, appDeleteCanary, appSetABTestingRules, appScale, appRollback, appRenew, getCluster } from 'api';
+import {
+    getDetail, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
+    appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
+    appRenew, getCluster } from 'api';
 import emitter from "../event";
 
 import brace from 'brace';
@@ -24,10 +27,10 @@ const spanStyle = {
     borderRadius: '6px'
 }
 
-let yamlConfig = '';
+let abtestingRulesValue = '';
 
 function onChange(newValue) {
-    yamlConfig = newValue
+    abtestingRulesValue = newValue
     // console.log(newValue)
 }
 
@@ -100,7 +103,17 @@ class AppDetail extends React.Component {
         super();
         let self = this;
         this.state = {
-            text: '',
+            infoModal: {
+                text: '',
+                title: '',
+                visible: false
+            },
+            deployModal: {
+                title: '',
+                visible: false,
+                replicas: -1,
+                canary: false
+            },
             example: '',
             name: '',
             nowTag: '',
@@ -112,15 +125,12 @@ class AppDetail extends React.Component {
             tableData: [],
             podTableData: [],
             canarypodTableData: [],
-            visible: false,
             textVisible: false,
             scaleVisible: false,
             renewVisible: false,
             rollbackVisible: false,
             buildVisible: false,
-            deployVisible: false,
             canaryVisible: false,
-            deployCanaryVisible: false,
             deleteCanaryVisible: false,
             abtestingVisible: false,
             columns: [
@@ -163,7 +173,7 @@ class AppDetail extends React.Component {
                     dataIndex: 'build_status',
                     width: '10%',
                     render(build_status) {
-                        return build_status + ''
+                        return build_status.toString()
                     }
                 }, {
                     title: 'Action',
@@ -180,14 +190,24 @@ class AppDetail extends React.Component {
                                     )
                                 }
                                 <Menu.Item key="1">
-                                    <div onClick={() => {self.setState({nowTag: record.tag, deployVisible: true})}}>Deploy</div>
+                                    <div onClick={() => {
+                                        let deployModal = self.state.deployModal
+                                        deployModal.visible = true
+                                        deployModal.title = "部署"
+                                        deployModal.canary = false
+                                        self.setState({nowTag: record.tag, deployModal: deployModal})}}>Deploy</div>
                                 </Menu.Item>
                                 <Menu.Item key="2">
-                                    <div onClick={() => {self.setState({nowTag: record.tag, deployCanaryVisible: true})}}>Canary</div>
+                                    <div onClick={() => {
+                                        let deployModal = self.state.deployModal
+                                        deployModal.visible = true
+                                        deployModal.title = "部署Canary"
+                                        deployModal.canary = true
+                                        self.setState({nowTag: record.tag, deployModal: deployModal})}}>Canary</div>
                                 </Menu.Item>
                                 <Menu.Divider />
                                 <Menu.Item key="3">
-                                    <div onClick={() => {self.handleText(record.specs_text)}}>配置</div>
+                                    <div onClick={() => {self.showInfoModal("spec", record.specs_text)}}>Spec Text</div>
                                 </Menu.Item>
                             </Menu>
                         );
@@ -258,12 +278,6 @@ class AppDetail extends React.Component {
         that.setState({
             name: name
         });
-        getApp(name).then(res => {
-            console.log(res)
-            that.setState({
-                canaryVisible: res.canary_status
-            })
-        })
         getReleases(name).then(res => {
             that.setState({
                 tableData: res
@@ -286,6 +300,12 @@ class AppDetail extends React.Component {
                 nowCluster: cluster
             })
 
+            getAppCanaryInfo({name:name, cluster:cluster}).then(res => {
+                console.log(res)
+                that.setState({
+                    canaryVisible: res.status
+                })
+            })
             getDetail({name: name, cluster: cluster}).then(res => {
                 that.setState({
                     data: res,
@@ -295,22 +315,28 @@ class AppDetail extends React.Component {
                 that.handleError(err);
             });
 
-            // server sent event
-            // const source = new EventSource(`${testUrl}/api/v1/app/${name}/pods/events?cluster=${cluster}`, { withCredentials: true });
-            // that.serverSentEvent(source)
-
+            let prodSchema = "ws:"
+            if (window.location.protocol === "https:") {
+                prodSchema = "wss:"
+            }
             // websocket
-            const wsUrl = process.env.NODE_ENV === 'production' ? 'ws://'+window.location.host : 'ws://192.168.1.17:5000';
+            const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
             const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/pods/events`);
             const canaryWs = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/pods/events`);
             ws.onopen = function(evt) {
                 // console.log("Connection open ...");
                 ws.send(`{"cluster": "${cluster}"}`);
             };
+            ws.onclose = function(evt) {
+                console.warn("pods websocket connection closed")
+            }
             canaryWs.onopen = function(evt) {
                 // console.log("Connection open ...");
                 canaryWs.send(`{"cluster": "${cluster}", "canary": true}`);
             };
+            canaryWs.onclose = function(evt) {
+                console.warn("canary pods websocket connection closed")
+            }
             that.webSocketEvent(ws);
             that.webSocketEvent(canaryWs, true);
         }
@@ -320,19 +346,30 @@ class AppDetail extends React.Component {
     }
 
     // 打开配置弹框
-    handleText(data) {
+    showInfoModal(title, data) {
+        if (!!!data) {
+            data = ""
+        }
+        if (typeof data != 'string') {
+             data = JSON.stringify(data, undefined, 2);
+        }
         let text = data.replace(/\n/g, '<br/>');
         text = text.replace(/ /g, '&nbsp;&nbsp;');
         this.setState({
-            text: text,
-            visible: true
+            infoModal: {
+                title: title,
+                text: text,
+                visible: true
+            }
         });
     }
 
     // 关闭配置弹框
-    handleCancel() {
+    hiddenInfoModal() {
         this.setState({
-            visible: false,
+            infoModal: {
+                visible: false,
+            }
         });
     }
 
@@ -400,37 +437,111 @@ class AppDetail extends React.Component {
 
     // 构建
     handleBuild() {
-        this.setState({buildVisible: false})
-        let { name, nowTag } = this.state;
-        appBuild({name: name, tag: nowTag}).then(res => {
-            this.handleMsg(res, 'Build');
-        }).catch(err => {
-            this.handleError(err);
-        });
+        let self = this
+
+        self.setState({buildVisible: false})
+        let infoModal = self.state.infoModal
+        infoModal.visible = true
+        infoModal.title = "Build Output"
+        self.setState({infoModal: infoModal})
+
+        let { name, nowTag } = self.state;
+
+        let prodSchema = "ws:"
+        if (window.location.protocol === "https:") {
+            prodSchema = "wss:"
+        }
+        const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
+        const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/build`);
+        ws.onopen = function(evt) {
+            // console.log("Connection open ...");
+            ws.send(`{"tag": "${nowTag}"}`);
+        };
+        ws.onclose = function(evt) {
+            // infoModal.visible = false
+            // self.setState({infoModal: infoModal})
+
+            console.log("Build finished")
+        }
+
+        let text = ""
+        let phase = null
+        ws.onmessage = function(evt) {
+            let data = JSON.parse(evt.data);
+            if (! data.success) {
+                text.push(<p key={data.error}>{data.error}</p>)
+            } else {
+                if (phase !== data['phase']) {
+                    text += `<p>***** PHASE ${data.phase}</p>`
+                    phase = data['phase']
+                }
+                if (data.phase.toLowerCase() === "pushing") {
+                    let raw_data = data['raw_data']
+                    if (raw_data.id && raw_data.status) {
+                        text += `<p>${raw_data.id}: ${raw_data.status}</p>`
+                    } else if (raw_data.digest) {
+                        text += `<p>${raw_data.status}: digest: ${raw_data.digest} size: ${raw_data.size}</p>`
+                    } else {
+                        text += `<p>${JSON.stringify(data)}</p>`
+                    }
+                } else {
+                    text += `<p>${data.msg}</p>`
+                }
+            }
+
+            infoModal.text = text
+            self.setState({infoModal: infoModal})
+        }
     }
 
     // 部署
     handleDeploy() {
-        this.setState({deployVisible: false})
+        let deployModal = this.state.deployModal
+        deployModal.visible = false
+        this.setState({deployModal: deployModal})
         let { name, nowTag, nowCluster } = this.state;
-        appDeploy({name: name, tag: nowTag, cluster: nowCluster}).then(res => {
-            this.handleMsg(res, 'Deploy');
-        }).catch(err => {
-            this.handleError(err);
-        });
+
+        let data = {tag: nowTag, cluster: nowCluster}
+        if (deployModal.replicas > 0) {
+            data.replicas = deployModal.replicas
+        }
+        if (deployModal.canary) {
+            appDeployCanary(name, data).then(res => {
+                this.setState({canaryVisible: true})
+                this.handleMsg(res, 'Deploy Canary');
+            }).catch(err => {
+                this.handleError(err);
+            });
+        } else {
+            appDeploy(name, data).then(res => {
+                this.handleMsg(res, 'Deploy');
+            }).catch(err => {
+                this.handleError(err);
+            });
+        }
     }
 
     // 部署canary
     handleDeployCanary() {
-        this.setState({deployCanaryVisible: false})
-        let { name, replicas, nowTag, nowCluster } = this.state;
-        appDeployCanary({name: name, tag: nowTag, replicas: replicas, cluster: nowCluster}).then(res => {
+        let deployModal = this.state.deployModal
+        deployModal.visible = false
+        this.setState({deployModal: deployModal})
+        let { name, nowTag, nowCluster } = this.state;
+        let replicas = deployModal.replicas
+
+        let data = {name: name, tag: nowTag, cluster: nowCluster}
+        if (replicas > 0) {
+            data.replicas = replicas
+        }
+
+        appDeployCanary(name, data).then(res => {
             this.setState({canaryVisible: true})
             this.handleMsg(res, 'Deploy Canary');
         }).catch(err => {
             this.handleError(err);
         });
     }
+
     // 删除canary
     handleDeleteCanary() {
         this.setState({deleteCanaryVisible: false})
@@ -450,12 +561,25 @@ class AppDetail extends React.Component {
         appSetABTestingRules({
             name: name,
             cluster: nowCluster,
-            rules: JSON.parse(yamlConfig)
+            rules: JSON.parse(abtestingRulesValue)
         }).then(res => {
             this.setState({
                 abtestingVisible: false
             })
             this.handleMsg(res, 'SET ABTesting Rules');
+        }).catch(err => {
+            this.handleError(err);
+        });
+    }
+
+    showABTestingRules() {
+        const {name, nowCluster} = this.state
+
+        appGetABTestingRules({
+            name: name,
+            cluster: nowCluster
+        }).then(res => {
+            this.showInfoModal("ABTesting Rules", res)
         }).catch(err => {
             this.handleError(err);
         });
@@ -496,9 +620,6 @@ class AppDetail extends React.Component {
 
     // 显示信息
     handleMsg(data, action) {
-        // SSE
-        // this.serverSentEvent();
-
         // 提示成功或失败
         let msg = JSON.parse(data);
         // let msg = {error: '1', msg: '1111111'}
@@ -605,7 +726,6 @@ class AppDetail extends React.Component {
             }
         }
 
-        console.log(this.state.canaryVisible)
         return (
             <div>
                 <div className="detailPage">
@@ -614,7 +734,13 @@ class AppDetail extends React.Component {
                             <div className="detailLeft">
                                 <p>名称：{name}</p>
                                 <p>命名空间：{data.space ? data.space : 'default'}</p>
-                                <p>Canary: {this.state.canaryVisible.toString()} </p>
+                                <p>Canary: {this.state.canaryVisible.toString()}
+                                </p>
+                                {this.state.canaryVisible &&
+                                <p>
+                                    ABTesting Rules: <Button onClick={this.showABTestingRules.bind(this)}>Show</Button>
+                                </p>
+                                }
                                 <p>标签： {labels}</p>
                                 <p>注释： {annotations ? annotations : '无'}</p>
                                 <p>创建时间： {detailData.created}</p>
@@ -684,18 +810,17 @@ class AppDetail extends React.Component {
                     </Collapse>
 
                     <Modal
-                        title="配置信息"
-                        visible={this.state.visible}
-                        onOk={this.handleCancel.bind(this)}
-                        onCancel={this.handleCancel.bind(this)}
+                        title={this.state.infoModal.title}
+                        visible={this.state.infoModal.visible}
+                        onOk={this.hiddenInfoModal.bind(this)}
+                        onCancel={this.hiddenInfoModal.bind(this)}
                         footer={[
-                            <Button key="back" onClick={this.handleCancel.bind(this)}>取消</Button>,
-                            <Button key="login" type="primary" onClick={this.handleCancel.bind(this)}>
+                            <Button key="login" type="primary" onClick={this.hiddenInfoModal.bind(this)}>
                                 确定
                             </Button>,
                         ]}
                     >
-                        <div dangerouslySetInnerHTML={{__html: this.state.text}}></div>
+                        <div dangerouslySetInnerHTML={{__html: this.state.infoModal.text}}></div>
                     </Modal>
 
                     <Modal
@@ -727,23 +852,22 @@ class AppDetail extends React.Component {
                     </Modal>
 
                     <Modal
-                        title="部署"
-                        visible={this.state.deployVisible}
+                        title={this.state.deployModal.title}
+                        visible={this.state.deployModal.visible}
                         onOk={this.handleDeploy.bind(this)}
-                        onCancel={() => {this.setState({deployVisible: false})}}
-                    >
-                        <p>Deployment app to kubernetes!</p>
-                    </Modal>
-
-                    <Modal
-                        title="部署Canary"
-                        visible={this.state.deployCanaryVisible}
-                        onOk={this.handleDeployCanary.bind(this)}
-                        onCancel={() => {this.setState({deployCanaryVisible: false})}}
+                        onCancel={() => {
+                              let deployModal = this.state.deployModal
+                              deployModal.visible = false
+                              this.setState({deployModal: deployModal})}}
                     >
                         <span>所需容器数量：</span>
-                        <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({replicas: num})}} />
+                        <InputNumber min={0} max={100} defaultValue={0}
+                           onChange={num => {
+                              let deployModal = this.state.deployModal
+                              deployModal.replicas = num
+                              this.setState({deployModal: deployModal})}} />
                     </Modal>
+
                     <Modal
                         title="删除Canary"
                         visible={this.state.deleteCanaryVisible}

@@ -253,29 +253,34 @@ class AppJob extends React.Component {
     }
 
     handleShowMessage(name) {
+        let self = this;
         let showMsg = [];
         // console.log(name);
         this.setState({logVisible: true});
-        // 测试地址
-        const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000'
-        const source = new EventSource(`${testUrl}/api/v1/job/${name}/log/events`, { withCredentials: true });
-        source.addEventListener('message', e=> {
-            let msg = JSON.parse(e.data).data
-            showMsg.push(<p key={msg}>{msg}</p>)
-            this.setState({
-                showMsg: showMsg
-            })
-        });
-        source.addEventListener('error', e=> {
-            let msg = JSON.parse(e.data).data
+
+        let prodSchema = "ws:"
+        if (window.location.protocol === "https:") {
+            prodSchema = "wss:"
+        }
+        const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
+        const ws = new WebSocket(`${wsUrl}/api/v1/ws/job/${name}/log/events`);
+        ws.onopen = function(evt) {
+            // console.log("Connection open ...");
+        };
+        ws.onclose = function(evt) {
+            console.log("Build finished")
+        }
+        ws.onerror = function(evt) {
+            let msg = JSON.parse(evt.data).data
             notification.error({
                 message: '错误信息',
                 description: `${msg}`,
                 duration: 0,
             });
-        });
-        source.addEventListener('close', e => {
-            let msg = JSON.parse(e.data)
+        }
+
+        ws.onmessage = function(evt) {
+            let msg = JSON.parse(evt.data)
             if(msg.error !== undefined) {
                 msg = msg.error.split('\n');
                 let arr = [];
@@ -287,21 +292,17 @@ class AppJob extends React.Component {
                         {arr}
                     </div>
                 )
-                this.setState({
+                self.setState({
                     logMsg: errMsg
                 })
             }else {
                 msg = msg.data;
-                const closeMsg = (
-                    <span>{msg}</span>
-                )
-                this.setState({
-                    logMsg: closeMsg
+                showMsg.push(<p key={msg}>{msg}</p>)
+                self.setState({
+                    showMsg: showMsg
                 })
             }
-            source.close();
-        });
-
+        }
 
         // // Typed显示
         // this.setState({

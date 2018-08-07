@@ -19,6 +19,10 @@ export const getApp = params => {
     return axios.get(`${testUrl}${version}/app/${params}`).then(res => res.data)
     .catch(err => console.log(err))
 }
+export const getAppCanaryInfo = params => {
+    return axios.get(`${testUrl}${version}/app/${params.name}/canary?cluster=${params.cluster}`).then(res => res.data)
+    .catch(err => console.log(err))
+}
 // app_cluster
 export const getCluster = params => {
     return axios.get(`${testUrl}${version}/cluster`).then(res => res.data)
@@ -54,32 +58,12 @@ export const getPods = params => {
     .catch(err => console.log(err))
 }
 
-// app_build
-export const appBuild = params => {
-    return axios({
-        method: 'put',
-        url: `${testUrl}${version}/app/${params.name}/build`,
-        data: {
-            'tag': params.tag,
-        },
-        headers: {
-			'Content-Type': 'application/json'
-        },
-        transformResponse: [function (data) {
-            return data;
-        }],
-    }).then(res => res.data)
-}
-
 // app_deploy
-export const appDeploy = params => {
+export const appDeploy = (name, params) => {
     return axios({
         method: 'put',
-        url: `${testUrl}${version}/app/${params.name}/deploy`,
-        data: {
-            'tag': params.tag,
-            'cluster': params.cluster
-        },
+        url: `${testUrl}${version}/app/${name}/deploy`,
+        data: params,
         headers: {
 			'Content-Type': 'application/json'
         },
@@ -90,15 +74,11 @@ export const appDeploy = params => {
 }
 
 // app_deploy canary
-export const appDeployCanary = params => {
+export const appDeployCanary = (name, params) => {
     return axios({
         method: 'put',
-        url: `${testUrl}${version}/app/${params.name}/canary/deploy`,
-        data: {
-            'tag': params.tag,
-            'replicas': params.replicas,
-            'cluster': params.cluster
-        },
+        url: `${testUrl}${version}/app/${name}/canary/deploy`,
+        data: params,
         headers: {
 			'Content-Type': 'application/json'
         },
@@ -144,6 +124,12 @@ export const appSetABTestingRules = params => {
     }).then(res => res.data)
 }
 
+// set abtesting rules
+export const appGetABTestingRules = params => {
+    console.log(params)
+    return axios.get(`${testUrl}${version}/app/${params.name}/abtesting?cluster=${params.cluster}`).then(res => res.data)
+    .catch(err => console.log(err))
+}
 // app_scale
 export const appScale = params => {
     return axios({
