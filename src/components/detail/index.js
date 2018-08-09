@@ -319,26 +319,36 @@ class AppDetail extends React.Component {
             if (window.location.protocol === "https:") {
                 prodSchema = "wss:"
             }
-            // websocket
+            // pods watcher
+            createPodsWatcher(name, cluster, false)
+            // canary pods watcher
+            createPodsWatcher(name, cluster, true)
+        }
+
+        function createPodsWatcher(name, cluster, canary) {
+            let prodSchema = "ws:"
+            if (window.location.protocol === "https:") {
+                prodSchema = "wss:"
+            }
+            const canaryStr = canary? "canary": ""
+
             const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
             const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/pods/events`);
-            const canaryWs = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/pods/events`);
             ws.onopen = function(evt) {
                 // console.log("Connection open ...");
-                ws.send(`{"cluster": "${cluster}"}`);
+                ws.send(`{"cluster": "${cluster}", "canary": ${canary}}`);
             };
             ws.onclose = function(evt) {
-                console.warn("pods websocket connection closed")
+                console.warn(`"${canaryStr} pods websocket connection closed"`)
+                setTimeout(function() {
+                    createPodsWatcher(name, cluster, canary)
+                }, 3000);
             }
-            canaryWs.onopen = function(evt) {
-                // console.log("Connection open ...");
-                canaryWs.send(`{"cluster": "${cluster}", "canary": true}`);
-            };
-            canaryWs.onclose = function(evt) {
-                console.warn("canary pods websocket connection closed")
+            ws.onerror = function(evt) {
+                console.error(`"${canaryStr} pods websocket connection got an error"`)
+                ws.close()
             }
-            that.webSocketEvent(ws);
-            that.webSocketEvent(canaryWs, true);
+            that.webSocketEvent(ws, canary);
         }
     }
 

@@ -303,23 +303,6 @@ class AppJob extends React.Component {
                 })
             }
         }
-
-        // // Typed显示
-        // this.setState({
-        //     textVisible: true
-        // })
-        // var typed = new Typed('.text', {
-        //     strings: [data],
-        //     typeSpeed: 40,
-        //     onComplete: () => {
-        //         setTimeout(() => {
-        //             this.setState({
-        //                 textVisible: false
-        //             })
-        //             // location.reload();
-        //         }, 2000);
-        //     }
-        // });
     }
 
     getJobDetail() {
