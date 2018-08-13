@@ -735,10 +735,9 @@ class AppDetail extends React.Component {
             status = 500;
         }else {
             status = res.status;
-            if(res.data.indexOf('<p>') !== -1 ) {
-                errorMsg = res.data.split('<p>')[1].split('</p>')[0];
-            }else {
-                errorMsg = res.data;
+            errorMsg = res.data;
+            if (res.data.error) {
+                errorMsg = res.data.error
             }
         }
         notification.error({
