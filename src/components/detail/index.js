@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import {
     getDetail, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
     appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
-    appRenew, getCluster } from 'api';
+    appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret } from 'api';
 import emitter from "../event";
 
 import brace from 'brace';
@@ -18,6 +18,17 @@ const Panel = Collapse.Panel;
 const { TextArea } = Input;
 const FormItem = Form.Item;
 const Option = Select.Option;
+
+const formItemLayout = {
+    labelCol: {
+        xs: { span: 24 },
+        sm: { span: 5 },
+    },
+    wrapperCol: {
+        xs: { span: 30 },
+        sm: { span: 18 },
+    },
+};
 
 const spanStyle = {
     padding: '0 4px',
@@ -114,6 +125,10 @@ class AppDetail extends React.Component {
                 replicas: -1,
                 canary: false
             },
+            secretModal: {
+                visible: false,
+                data: ""
+            },
             example: '',
             name: '',
             nowTag: '',
@@ -130,6 +145,8 @@ class AppDetail extends React.Component {
             renewVisible: false,
             rollbackVisible: false,
             buildVisible: false,
+            configmapVisible: false,
+            secretVisible: false,
             canaryVisible: false,
             deleteCanaryVisible: false,
             abtestingVisible: false,
@@ -504,6 +521,61 @@ class AppDetail extends React.Component {
         }
     }
 
+    showConfigMap() {
+        const {name, nowCluster} = this.state
+
+        appGetConfigMap(name, {cluster: nowCluster}).then(res => {
+            this.showInfoModal("ConfigMap", res)
+        }).catch(err => {
+            this.handleError(err);
+        });
+    }
+    handleConfigMap(e) {
+        let { name, nowCluster } = this.state;
+        e.preventDefault();
+        this.props.form.validateFields((err, values) => {
+            if (!err) {
+                let data = {
+                    data: values.data,
+                    cluster: nowCluster
+                }
+                if (values.filename) {
+                    data.config_name = values.filename
+                }
+
+                appPostConfigMap(name, data).then(res=> {
+                    this.setState({configmapVisible: false})
+                    this.handleMsg(res, "Create ConfigMap")
+                }).catch(err => {
+                    this.handle(err)
+                })
+            }
+        })
+    }
+
+    showSecret() {
+        const {name, nowCluster} = this.state
+
+        appGetSecret(name, {cluster: nowCluster}).then(res => {
+            this.showInfoModal("Secret", res)
+        }).catch(err => {
+            this.handleError(err);
+        });
+    }
+
+    handleSecret() {
+        let secretModal = this.state.secretModal
+        secretModal.visible = false
+        this.setState({secretModal: secretModal})
+        let { name, nowCluster } = this.state;
+        let data = {data: secretModal.data, cluster: nowCluster}
+        appPostSecret(name, data).then(res=> {
+            this.handleMsg(res, "Create Secret")
+        }).catch(err => {
+            this.handle(err)
+        })
+    }
+
     // 部署
     handleDeploy() {
         let deployModal = this.state.deployModal
@@ -677,6 +749,8 @@ class AppDetail extends React.Component {
     }
 
     render() {
+
+        const { getFieldDecorator } = this.props.form;
         const { data, name, columns, podColumns, canaryVisible} = this.state;
 
         const modalContent = (
@@ -744,7 +818,12 @@ class AppDetail extends React.Component {
                             <div className="detailLeft">
                                 <p>名称：{name}</p>
                                 <p>命名空间：{data.space ? data.space : 'default'}</p>
-                                <p>Canary: {this.state.canaryVisible.toString()}
+                                <p>Canary: {this.state.canaryVisible.toString()}</p>
+                                <p>Config: <Button onClick={() => { this.setState({configmapVisible: true})}}>Set</Button>
+                                   <Button onClick={this.showConfigMap.bind(this)}>Show</Button>
+                                </p>
+                                <p>Secret: <Button onClick={() => { this.setState({secretVisible: true})}}>Set</Button>
+                                   <Button onClick={this.showSecret.bind(this)}>Show</Button>
                                 </p>
                                 {this.state.canaryVisible &&
                                 <p>
@@ -764,6 +843,8 @@ class AppDetail extends React.Component {
                                 <Button onClick={() => {this.setState({renewVisible: true})}}>Renew</Button>
                                 <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
                                 <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
+
+                                <Button onClick={() => {this.setState({secretVisible: true})}}>Secret</Button>
 
                                 {this.state.canaryVisible &&
                                 <span>
@@ -904,6 +985,37 @@ class AppDetail extends React.Component {
                     >
                         <p>Build an image for the specified release, the API will return all docker!</p>
                     </Modal>
+                    <Modal
+                        title="创建ConfigMap"
+                        visible={this.state.configmapVisible}
+                        onCancel={() => { this.setState({configmapVisible: false})}}
+                        footer={null}
+                    >
+                        <Form style={{marginTop: '20px'}} onSubmit={this.handleConfigMap.bind(this)}>
+                            <FormItem
+                                {...formItemLayout}
+                                label="File Name"
+                            >
+                                {getFieldDecorator('filename')(
+                                    <Input placeholder="config file name"/>
+                                )}
+                            </FormItem>
+                            <FormItem
+                                {...formItemLayout}
+                                label="Data"
+                            >
+                                {getFieldDecorator('data', {
+                                    rules: [{required: true, message: 'Please input you config content'}]
+                                })(
+                                    <TextArea rows={4} />
+                                )}
+                            </FormItem>
+                            <Button type="primary" htmlType="submit" className="create-job-button">
+                                Submit
+                            </Button>
+                        </Form>
+                    </Modal>
+
                     <div id="example"></div>
                 </div>
             </div>
@@ -911,4 +1023,4 @@ class AppDetail extends React.Component {
     }
 }
 
-export default AppDetail;
+export default Form.create()(AppDetail);

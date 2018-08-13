@@ -182,6 +182,44 @@ export const appRollback = params => {
     }).then(res => res.data)
 }
 
+// create or replace configmap
+export const appPostConfigMap = (name, params) => {
+    return axios({
+        method: 'post',
+        url: `${testUrl}${version}/app/${name}/configmap`,
+        data: params,
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
+
+export const appGetConfigMap = (name, params) => {
+    return axios.get(`${testUrl}${version}/app/${name}/configmap?cluster=${params.cluster}`).then(res => res.data)
+    .catch(err => console.log(err))
+}
+
+export const appPostSecret = (name, params) => {
+    return axios({
+        method: 'post',
+        url: `${testUrl}${version}/app/${name}/secret`,
+        data: params,
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
+
+export const appGetSecret = (name, params) => {
+    return axios.get(`${testUrl}${version}/app/${name}/secret?cluster=${params.cluster}`).then(res => res.data)
+    .catch(err => console.log(err))
+}
 // 获取job列表
 export const jobList = params => {
     return axios.get(`${testUrl}${version}/job`).then(res => res.data)
