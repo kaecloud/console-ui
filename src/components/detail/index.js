@@ -1,5 +1,5 @@
 import React from 'react';
-import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
+import {Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
 import { Link } from 'react-router-dom';
 import {
     getDetail, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
@@ -112,6 +112,8 @@ class AppDetail extends React.Component {
 
     constructor() {
         super();
+        this.handleSecret = this.handleSecret.bind(this)
+
         let self = this;
         this.state = {
             infoModal: {
@@ -124,10 +126,6 @@ class AppDetail extends React.Component {
                 visible: false,
                 replicas: -1,
                 canary: false
-            },
-            secretModal: {
-                visible: false,
-                data: ""
             },
             example: '',
             name: '',
@@ -563,13 +561,19 @@ class AppDetail extends React.Component {
         });
     }
 
-    handleSecret() {
-        let secretModal = this.state.secretModal
-        secretModal.visible = false
-        this.setState({secretModal: secretModal})
+    handleSecret(keys, values) {
+        this.setState({secretVisible: false})
         let { name, nowCluster } = this.state;
-        let data = {data: secretModal.data, cluster: nowCluster}
-        appPostSecret(name, data).then(res=> {
+        let params = {data: {}, cluster: nowCluster}
+        for (const [idx, key] of keys.entries()) {
+            let val = values[idx]
+
+            if ((! key) || (! val)) {
+                continue
+            }
+            params.data[key] = val
+        }
+        appPostSecret(name, params).then(res=> {
             this.handleMsg(res, "Create Secret")
         }).catch(err => {
             this.handle(err)
@@ -843,8 +847,6 @@ class AppDetail extends React.Component {
                                 <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
                                 <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
 
-                                <Button onClick={() => {this.setState({secretVisible: true})}}>Secret</Button>
-
                                 {this.state.canaryVisible &&
                                 <span>
                                     <Button onClick={() => {this.setState({deleteCanaryVisible: true})}}>DeleteCanary</Button>
@@ -1015,11 +1017,101 @@ class AppDetail extends React.Component {
                         </Form>
                     </Modal>
 
+                    <Modal
+                        title="创建Secret"
+                        visible={this.state.secretVisible}
+                        onCancel={() => { this.setState({secretVisible: false})}}
+                        footer={null}
+                    >
+                        <SecretForm handler={this.handleSecret} />
+                    </Modal>
                     <div id="example"></div>
                 </div>
             </div>
         )
     }
+}
+
+class SecretForm extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {keys:[], values: [] };
+    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  createUI(){
+     return this.state.values.map((el, i) =>
+         <div key={i}>
+           <Row>
+             <Col span={8}>
+              <FormItem>
+                  <Input placeholder="key" value={this.state.keys[i]||''} onChange={this.handleKeyChange.bind(this, i)}/>
+              </FormItem>
+            </Col>
+            <Col span={1}>
+              <FormItem>
+                <div> ： </div>
+              </FormItem>
+            </Col>
+             <Col span={11}>
+              <FormItem>
+                  <Input placeholder="value" value={el||''} onChange={this.handleValChange.bind(this, i)}/>
+              </FormItem>
+            </Col>
+            <Col span={2}>
+              <Button icon="minus" shape="circle" onClick={this.removeClick.bind(this, i)}/>
+            </Col>
+    	  </Row>
+         </div>
+     )
+  }
+
+  handleValChange(i, event) {
+     let values = [...this.state.values];
+     values[i] = event.target.value;
+     this.setState({ values });
+  }
+
+  handleKeyChange(i, event) {
+     let keys = [...this.state.keys];
+     keys[i] = event.target.value;
+     this.setState({ keys });
+  }
+
+  addClick(){
+    this.setState(prevState => ({ keys: [...prevState.keys, ''], values: [...prevState.values, '']}))
+  }
+
+  removeClick(i){
+     let values = [...this.state.values];
+     values.splice(i,1);
+     let keys = [...this.state.keys]
+     keys.splice(i, 1)
+     this.setState({ values: values, keys: keys });
+  }
+
+  handleSubmit(event) {
+    event.preventDefault();
+    this.props.handler(this.state.keys, this.state.values)
+  }
+
+  render() {
+    return (
+      <form onSubmit={this.handleSubmit}>
+          {this.createUI()}
+          <Row>
+            <Button onClick={this.addClick.bind(this)} > + </Button>
+          </Row>
+          <Row>
+            <FormItem>
+              <Button type="primary" htmlType="submit" >
+                Submit
+              </Button>
+            </FormItem>
+          </Row>
+      </form>
+    );
+  }
 }
 
 export default Form.create()(AppDetail);
