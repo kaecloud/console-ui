@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 import {
     getDetail, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
     appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
-    appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret } from 'api';
+    appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret,
+    appPostReleaseSpec } from 'api';
 import emitter from "../event";
 
 import brace from 'brace';
@@ -18,6 +19,7 @@ const Panel = Collapse.Panel;
 const { TextArea } = Input;
 const FormItem = Form.Item;
 const Option = Select.Option;
+const confirm = Modal.confirm;
 
 const formItemLayout = {
     labelCol: {
@@ -36,13 +38,6 @@ const spanStyle = {
     background: '#eee',
     border: '1px solid #ccc',
     borderRadius: '6px'
-}
-
-let abtestingRulesValue = '';
-
-function onChange(newValue) {
-    abtestingRulesValue = newValue
-    // console.log(newValue)
 }
 
 function extractDataFromPod(pod) {
@@ -127,6 +122,18 @@ class AppDetail extends React.Component {
                 replicas: -1,
                 canary: false
             },
+            aceModal: {
+                title: '',
+                visible: false,
+                initial_val: '',
+                mode: 'json',
+                handler: null
+            },
+            configmap: {
+                name: 'config',
+                value: ''
+            },
+            secretData: { },
             example: '',
             name: '',
             nowTag: '',
@@ -140,14 +147,10 @@ class AppDetail extends React.Component {
             canarypodTableData: [],
             textVisible: false,
             scaleVisible: false,
-            renewVisible: false,
             rollbackVisible: false,
-            buildVisible: false,
             configmapVisible: false,
             secretVisible: false,
             canaryVisible: false,
-            deleteCanaryVisible: false,
-            abtestingVisible: false,
             columns: [
                 {
                     title: 'tag',
@@ -200,7 +203,10 @@ class AppDetail extends React.Component {
                                 {
                                     record.build_status ? '' : (
                                         <Menu.Item key="0">
-                                            <div onClick={() => {self.setState({nowTag: record.tag, buildVisible: true})}}>Build</div>
+                                            <div onClick={() => {
+                                                      self.setState({nowTag: record.tag})
+                                                      self.handleBuild.bind(self)()}}>Build</div>
+                                            }
                                         </Menu.Item>
                                     )
                                 }
@@ -222,7 +228,15 @@ class AppDetail extends React.Component {
                                 </Menu.Item>
                                 <Menu.Divider />
                                 <Menu.Item key="3">
-                                    <div onClick={() => {self.showInfoModal("spec", record.specs_text)}}>Spec Text</div>
+                                    <div onClick={() => {
+                                        let aceModal = {
+                                            title: "Spec",
+                                            mode: "yaml",
+                                            visible: true,
+                                            initial_val: record.specs_text,
+                                            handler: self.updateReleaseSpec.bind(self)
+                                        }
+                                        self.setState({aceModal: aceModal, nowTag: record.tag})}}>Spec Text</div>
                                 </Menu.Item>
                             </Menu>
                         );
@@ -370,7 +384,6 @@ class AppDetail extends React.Component {
     componentWillMount() {
     }
 
-    // 打开配置弹框
     showInfoModal(title, data) {
         if (!!!data) {
             data = ""
@@ -389,7 +402,6 @@ class AppDetail extends React.Component {
         });
     }
 
-    // 关闭配置弹框
     hiddenInfoModal() {
         this.setState({
             infoModal: {
@@ -460,63 +472,83 @@ class AppDetail extends React.Component {
         }, false);
     }
 
+    updateReleaseSpec(spec) {
+        let {name, nowTag} = this.state
+        let data = {
+            specs_text: spec
+        }
+        appPostReleaseSpec(name, nowTag, data).then(res=> {
+            let aceModal = this.state.aceModal
+            aceModal.visible = false
+            this.setState({aceModal: aceModal})
+            this.handleMsg(res, "Update Release Spec")
+        }).catch(err => {
+            this.handleError(err)
+        })
+    }
     // 构建
     handleBuild() {
         let self = this
 
-        self.setState({buildVisible: false})
-        let infoModal = self.state.infoModal
-        infoModal.visible = true
-        infoModal.title = "Build Output"
-        self.setState({infoModal: infoModal})
+        confirm({
+            title: 'Build',
+            content: 'Are you sure to build image for specified release?',
+            onOk() {
+                let infoModal = self.state.infoModal
+                infoModal.visible = true
+                infoModal.title = "Build Output"
+                self.setState({infoModal: infoModal})
 
-        let { name, nowTag } = self.state;
+                let { name, nowTag } = self.state;
 
-        let prodSchema = "ws:"
-        if (window.location.protocol === "https:") {
-            prodSchema = "wss:"
-        }
-        const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
-        const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/build`);
-        ws.onopen = function(evt) {
-            // console.log("Connection open ...");
-            ws.send(`{"tag": "${nowTag}"}`);
-        };
-        ws.onclose = function(evt) {
-            // infoModal.visible = false
-            // self.setState({infoModal: infoModal})
-
-            console.log("Build finished")
-        }
-
-        let text = ""
-        let phase = null
-        ws.onmessage = function(evt) {
-            let data = JSON.parse(evt.data);
-            if (! data.success) {
-                text.push(<p key={data.error}>{data.error}</p>)
-            } else {
-                if (phase !== data['phase']) {
-                    text += `<p>***** PHASE ${data.phase}</p>`
-                    phase = data['phase']
+                let prodSchema = "ws:"
+                if (window.location.protocol === "https:") {
+                    prodSchema = "wss:"
                 }
-                if (data.phase.toLowerCase() === "pushing") {
-                    let raw_data = data['raw_data']
-                    if (raw_data.id && raw_data.status) {
-                        text += `<p>${raw_data.id}: ${raw_data.status}</p>`
-                    } else if (raw_data.digest) {
-                        text += `<p>${raw_data.status}: digest: ${raw_data.digest} size: ${raw_data.size}</p>`
+                const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
+                const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/build`);
+                ws.onopen = function(evt) {
+                    // console.log("Connection open ...");
+                    ws.send(`{"tag": "${nowTag}"}`);
+                };
+                ws.onclose = function(evt) {
+                    // infoModal.visible = false
+                    // self.setState({infoModal: infoModal})
+
+                    console.log("Build finished")
+                }
+
+                let text = ""
+                let phase = null
+                ws.onmessage = function(evt) {
+                    let data = JSON.parse(evt.data);
+                    if (! data.success) {
+                        text.push(<p key={data.error}>{data.error}</p>)
                     } else {
-                        text += `<p>${JSON.stringify(data)}</p>`
+                        if (phase !== data['phase']) {
+                            text += `<p>***** PHASE ${data.phase}</p>`
+                            phase = data['phase']
+                        }
+                        if (data.phase.toLowerCase() === "pushing") {
+                            let raw_data = data['raw_data']
+                            if (raw_data.id && raw_data.status) {
+                                text += `<p>${raw_data.id}: ${raw_data.status}</p>`
+                            } else if (raw_data.digest) {
+                                text += `<p>${raw_data.status}: digest: ${raw_data.digest} size: ${raw_data.size}</p>`
+                            } else {
+                                text += `<p>${JSON.stringify(data)}</p>`
+                            }
+                        } else {
+                            text += `<p>${data.msg}</p>`
+                        }
                     }
-                } else {
-                    text += `<p>${data.msg}</p>`
-                }
-            }
 
-            infoModal.text = text
-            self.setState({infoModal: infoModal})
-        }
+                    infoModal.text = text
+                    self.setState({infoModal: infoModal})
+                }
+            },
+            onCancel() {},
+        });
     }
 
     showConfigMap() {
@@ -545,7 +577,7 @@ class AppDetail extends React.Component {
                     this.setState({configmapVisible: false})
                     this.handleMsg(res, "Create ConfigMap")
                 }).catch(err => {
-                    this.handle(err)
+                    this.handleError(err)
                 })
             }
         })
@@ -555,28 +587,21 @@ class AppDetail extends React.Component {
         const {name, nowCluster} = this.state
 
         appGetSecret(name, {cluster: nowCluster}).then(res => {
+            this.setState({secretData: res})
             this.showInfoModal("Secret", res)
         }).catch(err => {
             this.handleError(err);
         });
     }
 
-    handleSecret(keys, values) {
+    handleSecret(data) {
         this.setState({secretVisible: false})
         let { name, nowCluster } = this.state;
-        let params = {data: {}, cluster: nowCluster}
-        for (const [idx, key] of keys.entries()) {
-            let val = values[idx]
-
-            if ((! key) || (! val)) {
-                continue
-            }
-            params.data[key] = val
-        }
+        let params = {data: data, cluster: nowCluster}
         appPostSecret(name, params).then(res=> {
             this.handleMsg(res, "Create Secret")
         }).catch(err => {
-            this.handle(err)
+            this.handleError(err)
         })
     }
 
@@ -630,27 +655,37 @@ class AppDetail extends React.Component {
 
     // 删除canary
     handleDeleteCanary() {
-        this.setState({deleteCanaryVisible: false})
-        let { name, nowCluster } = this.state;
-        appDeleteCanary({name: name, cluster: nowCluster}).then(res => {
-            this.setState({canaryVisible: false})
-            this.handleMsg(res, 'Delete Canary');
-        }).catch(err => {
-            this.handleError(err);
+        let self = this
+
+        confirm({
+            title: 'Delete Canary',
+            content: 'Are you sure to delete canary version?',
+            onOk() {
+                let { name, nowCluster } = self.state;
+                appDeleteCanary({name: name, cluster: nowCluster}).then(res => {
+                    self.setState({canaryVisible: false})
+                    self.handleMsg(res, 'Delete Canary');
+                }).catch(err => {
+                    self.handleError(err);
+                });
+            },
+            onCancel() {},
         });
     }
 
-    handleABTestingSubmit(e) {
+    handleABTestingSubmit(abtestingRulesValue) {
         const {name, nowCluster} = this.state
 
-        e.preventDefault();
         appSetABTestingRules({
             name: name,
             cluster: nowCluster,
             rules: JSON.parse(abtestingRulesValue)
         }).then(res => {
+            let aceModal = {
+                visible: false
+            }
             this.setState({
-                abtestingVisible: false
+                aceModal: aceModal
             })
             this.handleMsg(res, 'SET ABTesting Rules');
         }).catch(err => {
@@ -673,13 +708,22 @@ class AppDetail extends React.Component {
 
     // 更新
     handleRenew() {
-        this.setState({renewVisible: false})
-        let {name, nowCluster} = this.state;
-        appRenew({name: name, cluster: nowCluster}).then(res => {
-            this.handleMsg(res, 'Renew');
-        }).catch(err => {
-            this.handleError(err);
+        let self = this
+
+        confirm({
+            title: 'Recreate Pods',
+            content: 'Are you sure to force kubernetes to recreate the pods of specified app?',
+            onOk() {
+                let {name, nowCluster} = self.state;
+                appRenew({name: name, cluster: nowCluster}).then(res => {
+                    self.handleMsg(res, 'Renew');
+                }).catch(err => {
+                    self.handleError(err);
+                });
+            },
+            onCancel() {},
         });
+
     }
 
     // 伸缩
@@ -753,26 +797,9 @@ class AppDetail extends React.Component {
 
     render() {
 
+        let self = this
         const { getFieldDecorator } = this.props.form;
         const { data, name, columns, podColumns, canaryVisible} = this.state;
-
-        const modalContent = (
-            <div>
-                <AceEditor
-                    mode="json"
-                    theme="xcode"
-                    onChange={onChange}
-                    name="json"
-                    fontSize={18}
-                    width="450px"
-                    height="600px"
-                    editorProps={{$blockScrolling: true}}
-                />
-                <Button type="primary" className="create-job-button" onClick={this.handleABTestingSubmit.bind(this)}>
-                    Submit
-                </Button>
-            </div>
-        )
 
         let labels = [],
             annotations = [],
@@ -843,14 +870,22 @@ class AppDetail extends React.Component {
                                 <p>滚动更新策略： 最大激增数：{detailData.rolling_update.max_surge}，最大无效数：{detailData.rolling_update.max_unavailable}</p>
                                 <p>状态： {detailData.status.updated_replicas}个已更新，共计 {detailData.status.ready_replicas}个， {detailData.status.available_replicas}个可用， {detailData.status.unavailable_replicas === null ? '0' : detailData.status.unavailable_replicas}个不可用</p>
                                 <Button type="primary"><Link to={`/logger?app=${name}`}>查看日志</Link></Button>
-                                <Button onClick={() => {this.setState({renewVisible: true})}}>Renew</Button>
+                                <Button onClick={this.handleRenew.bind(this)}>Renew</Button>
                                 <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
                                 <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
 
                                 {this.state.canaryVisible &&
                                 <span>
-                                    <Button onClick={() => {this.setState({deleteCanaryVisible: true})}}>DeleteCanary</Button>
-                                    <Button onClick={() => {this.setState({abtestingVisible: true})}}>ABTesting</Button>
+                                    <Button onClick={this.handleDeleteCanary.bind(this)}>DeleteCanary</Button>
+                                    <Button onClick={() => {
+                                        let aceModal = {
+                                            title: "Set A/B Testing Rules",
+                                            visible: true,
+                                            mode: "json",
+                                            initial_val: '',
+                                            handler: this.handleABTestingSubmit.bind(this)
+                                        }
+                                        this.setState({aceModal: aceModal})}}>ABTesting</Button>
                                 </span>}
                                 <div>{this.state.example}</div>
                             </div>
@@ -926,15 +961,6 @@ class AppDetail extends React.Component {
                     </Modal>
 
                     <Modal
-                        title="更新"
-                        visible={this.state.renewVisible}
-                        onOk={this.handleRenew.bind(this)}
-                        onCancel={() => {this.setState({renewVisible: false})}}
-                    >
-                        <p>Force kubernetes to recreate the pods of specified app!</p>
-                    </Modal>
-
-                    <Modal
                         title="回滚"
                         visible={this.state.rollbackVisible}
                         onOk={this.handleRollback.bind(this)}
@@ -960,32 +986,19 @@ class AppDetail extends React.Component {
                               this.setState({deployModal: deployModal})}} />
                     </Modal>
 
-                    <Modal
-                        title="删除Canary"
-                        visible={this.state.deleteCanaryVisible}
-                        onOk={this.handleDeleteCanary.bind(this)}
-                        onCancel={() => {this.setState({deleteCanaryVisible: false})}}
-                    >
-                        <p>Are you sure to delete canary version?</p>
-                    </Modal>
 
                     <Modal
-                        title="Set A/B Testing Rules"
-                        visible={this.state.abtestingVisible}
-                        onCancel={() => {this.setState({abtestingVisible: false})}}
+                        title={this.state.aceModal.title}
+                        visible={this.state.aceModal.visible}
+                        onCancel={() => {
+                            let aceModal = this.state.aceModal
+                            aceModal.visible = false
+                            this.setState({aceModal: aceModal})}}
                         footer={null}
                     >
-                        {modalContent}
+                        <AceEditorForm value={this.state.aceModal.initial_val} mode={this.state.aceModal.mode} handler={this.state.aceModal.handler} />
                     </Modal>
 
-                    <Modal
-                        title="构建"
-                        visible={this.state.buildVisible}
-                        onOk={this.handleBuild.bind(this)}
-                        onCancel={() => {this.setState({buildVisible: false})}}
-                    >
-                        <p>Build an image for the specified release, the API will return all docker!</p>
-                    </Modal>
                     <Modal
                         title="创建ConfigMap"
                         visible={this.state.configmapVisible}
@@ -997,8 +1010,9 @@ class AppDetail extends React.Component {
                                 {...formItemLayout}
                                 label="File Name"
                             >
-                                {getFieldDecorator('filename')(
-                                    <Input placeholder="config file name"/>
+                                {getFieldDecorator('filename', {
+                                })(
+                                    <Input placeholder="config file name" />
                                 )}
                             </FormItem>
                             <FormItem
@@ -1023,7 +1037,7 @@ class AppDetail extends React.Component {
                         onCancel={() => { this.setState({secretVisible: false})}}
                         footer={null}
                     >
-                        <SecretForm handler={this.handleSecret} />
+                        <SecretForm value={this.state.secretData} handler={this.handleSecret} />
                     </Modal>
                     <div id="example"></div>
                 </div>
@@ -1032,10 +1046,63 @@ class AppDetail extends React.Component {
     }
 }
 
+class AceEditorForm extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {value: this.props.value };
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.onChange = this.onChange.bind(this);
+  }
+
+  onChange(newValue) {
+      this.setState({value: newValue})
+      // console.log(newValue)
+  }
+
+  handleSubmit(event) {
+    event.preventDefault();
+    this.props.handler(this.state.value)
+  }
+
+  render() {
+
+    return (
+      <form onSubmit={this.handleSubmit}>
+            <AceEditor
+                mode={this.props.mode}
+                value={this.state.value}
+                theme="xcode"
+                onChange={this.onChange}
+                name="json"
+                fontSize={18}
+                width="450px"
+                height="600px"
+                editorProps={{$blockScrolling: true}}
+            />
+          <Row>
+            <FormItem>
+              <Button type="primary" htmlType="submit" >
+                Submit
+              </Button>
+            </FormItem>
+          </Row>
+      </form>
+    );
+  }
+}
+
 class SecretForm extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {keys:[], values: [] };
+    let keys = []
+    let values = []
+
+    console.log(Object.entries(this.props.value))
+    for (const [k, v] of Object.entries(this.props.value)) {
+        keys.push(k)
+        values.push(v)
+    }
+    this.state = {keys:keys, values: values };
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
@@ -1092,7 +1159,17 @@ class SecretForm extends React.Component {
 
   handleSubmit(event) {
     event.preventDefault();
-    this.props.handler(this.state.keys, this.state.values)
+
+    let data = {}
+    for (const [idx, key] of this.state.keys.entries()) {
+        let val = this.state.values[idx]
+
+        if ((! key) || (! val)) {
+            continue
+        }
+        data[key] = val
+    }
+    this.props.handler(data)
   }
 
   render() {

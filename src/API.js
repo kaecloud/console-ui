@@ -165,6 +165,21 @@ export const appRenew = params => {
     }).then(res => res.data)
 }
 
+// update release spec
+export const appPostReleaseSpec = (name, tag, params) => {
+    return axios({
+        method: 'post',
+        url: `${testUrl}${version}/app/${name}/version/${tag}/spec`,
+        data: params,
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
+
 // app_rollback
 export const appRollback = params => {
     return axios({
