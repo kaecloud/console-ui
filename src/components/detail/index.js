@@ -1,4 +1,6 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
+
 import {Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
 import { Link } from 'react-router-dom';
 import {
@@ -103,11 +105,11 @@ function getArg(name) {
         , n = location.href.match(i);
     return n ? n[2]:false;
 }
+
 class AppDetail extends React.Component {
 
     constructor() {
         super();
-        this.handleSecret = this.handleSecret.bind(this)
 
         let self = this;
         this.state = {
@@ -122,17 +124,7 @@ class AppDetail extends React.Component {
                 replicas: -1,
                 canary: false
             },
-            aceModal: {
-                title: '',
-                visible: false,
-                initial_val: '',
-                mode: 'json',
-                handler: null
-            },
-            configmap: {
-                name: 'config',
-                value: ''
-            },
+            configMapData: { },
             secretData: { },
             example: '',
             name: '',
@@ -148,150 +140,14 @@ class AppDetail extends React.Component {
             textVisible: false,
             scaleVisible: false,
             rollbackVisible: false,
-            configmapVisible: false,
-            secretVisible: false,
-            canaryVisible: false,
-            columns: [
-                {
-                    title: 'tag',
-                    dataIndex: 'tag',
-                    width: '14%',
-                    render: tag => {
-                        let nowVersion = this.state.version === tag;
-                        if(nowVersion) {
-                            return (
-                                <span>{tag} <span style={{fontSize: '12px', color: 'red'}}>(当前版本)</span></span>
-                            )
-                        }else {
-                            return (
-                                <span>{tag}</span>
-                            )
-                        }
-                    }
-                }, {
-                    title: 'created',
-                    dataIndex: 'created',
-                    width: '15%',
-                    defaultSortOrder: 'descend',
-                    sorter: (a, b) => {
-                        let c = new Date(a.created).getTime();
-                        let d = new Date(b.created).getTime();
-                        return c - d
-                    }
-                }, {
-                    title: 'updated',
-                    dataIndex: 'updated',
-                    width: '15%',
-                }, {
-                    title: 'image',
-                    dataIndex: 'image',
-                    width: '35%',
-                }, {
-                    title: 'build_status',
-                    dataIndex: 'build_status',
-                    width: '10%',
-                    render(build_status) {
-                        return build_status.toString()
-                    }
-                }, {
-                    title: 'Action',
-                    dataIndex: 'action',
-                    width: '16%',
-                    render(text, record) {
-                        const menu = (
-                            <Menu>
-                                {
-                                    record.build_status ? '' : (
-                                        <Menu.Item key="0">
-                                            <div onClick={() => {
-                                                      self.setState({nowTag: record.tag})
-                                                      self.handleBuild.bind(self)()}}>Build</div>
-                                            }
-                                        </Menu.Item>
-                                    )
-                                }
-                                <Menu.Item key="1">
-                                    <div onClick={() => {
-                                        let deployModal = self.state.deployModal
-                                        deployModal.visible = true
-                                        deployModal.title = "部署"
-                                        deployModal.canary = false
-                                        self.setState({nowTag: record.tag, deployModal: deployModal})}}>Deploy</div>
-                                </Menu.Item>
-                                <Menu.Item key="2">
-                                    <div onClick={() => {
-                                        let deployModal = self.state.deployModal
-                                        deployModal.visible = true
-                                        deployModal.title = "部署Canary"
-                                        deployModal.canary = true
-                                        self.setState({nowTag: record.tag, deployModal: deployModal})}}>Canary</div>
-                                </Menu.Item>
-                                <Menu.Divider />
-                                <Menu.Item key="3">
-                                    <div onClick={() => {
-                                        let aceModal = {
-                                            title: "Spec",
-                                            mode: "yaml",
-                                            visible: true,
-                                            initial_val: record.specs_text,
-                                            handler: self.updateReleaseSpec.bind(self)
-                                        }
-                                        self.setState({aceModal: aceModal, nowTag: record.tag})}}>Spec Text</div>
-                                </Menu.Item>
-                            </Menu>
-                        );
+            canaryVisible: false
 
-                        return (
-                            <Dropdown overlay={menu} trigger={['click']}>
-                                <a className="ant-dropdown-link" href="#">
-                                    <div style={{width: '40px', textAlign: 'center'}}>
-                                        <Icon type="ellipsis" className="btnIcon" />
-                                    </div>
-                                </a>
-                            </Dropdown>
-                        )
-                    }
-                }
-            ],
-            podColumns: [
-                {
-                    title: 'NAME',
-                    dataIndex: 'name',
-                    width: '15%'
-                },
-                {
-                    title: 'READY',
-                    dataIndex: 'ready',
-                    width: '10%'
-                },
-                {
-                    title: 'STATUS',
-                    dataIndex: 'status',
-                    width: '10%'
-                },
-                {
-                    title: 'RESTARTS',
-                    dataIndex: 'restarts',
-                    width: '10%'
-                },
-                {
-                    title: 'AGE',
-                    dataIndex: 'age',
-                    width: '15%'
-                },
-                {
-                    title: 'IP',
-                    dataIndex: 'ip',
-                    width: '15%'
-                },
-                {
-                    title: 'NODE',
-                    dataIndex: 'node',
-                    width: '15%'
-                }
-            ]
         }
+
+
         this.handleMsg = this.handleMsg.bind(this);
+        this.showAceEditorModal = this.showAceEditorModal.bind(this)
+
     }
 
     componentDidMount() {
@@ -344,10 +200,6 @@ class AppDetail extends React.Component {
                 that.handleError(err);
             });
 
-            let prodSchema = "ws:"
-            if (window.location.protocol === "https:") {
-                prodSchema = "wss:"
-            }
             // pods watcher
             createPodsWatcher(name, cluster, false)
             // canary pods watcher
@@ -408,6 +260,22 @@ class AppDetail extends React.Component {
                 visible: false,
             }
         });
+    }
+
+    showAceEditorModal(config) {
+        let self = this
+
+        let div = document.createElement('div');
+        document.body.appendChild(div);
+
+        function destroy(...args: any[]) {
+          const unmountResult = ReactDOM.unmountComponentAtNode(div);
+          if (unmountResult && div.parentNode) {
+            div.parentNode.removeChild(div);
+          }
+        }
+
+        ReactDOM.render(<AceEditorModal config={config} destroy={destroy} />, div)
     }
 
     // Websocket
@@ -472,34 +340,31 @@ class AppDetail extends React.Component {
         }, false);
     }
 
-    updateReleaseSpec(spec) {
+    updateReleaseSpec(spec, destroy) {
         let {name, nowTag} = this.state
         let data = {
             specs_text: spec
         }
         appPostReleaseSpec(name, nowTag, data).then(res=> {
-            let aceModal = this.state.aceModal
-            aceModal.visible = false
-            this.setState({aceModal: aceModal})
+            destroy()
             this.handleMsg(res, "Update Release Spec")
         }).catch(err => {
             this.handleError(err)
         })
     }
     // 构建
-    handleBuild() {
+    handleBuild(tag) {
         let self = this
+        let { name } = self.state;
 
         confirm({
             title: 'Build',
-            content: 'Are you sure to build image for specified release?',
+            content: `Are you sure to build image for app ${name} release ${tag}?`,
             onOk() {
                 let infoModal = self.state.infoModal
                 infoModal.visible = true
                 infoModal.title = "Build Output"
                 self.setState({infoModal: infoModal})
-
-                let { name, nowTag } = self.state;
 
                 let prodSchema = "ws:"
                 if (window.location.protocol === "https:") {
@@ -509,7 +374,7 @@ class AppDetail extends React.Component {
                 const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/build`);
                 ws.onopen = function(evt) {
                     // console.log("Connection open ...");
-                    ws.send(`{"tag": "${nowTag}"}`);
+                    ws.send(`{"tag": "${tag}"}`);
                 };
                 ws.onclose = function(evt) {
                     // infoModal.visible = false
@@ -523,7 +388,7 @@ class AppDetail extends React.Component {
                 ws.onmessage = function(evt) {
                     let data = JSON.parse(evt.data);
                     if (! data.success) {
-                        text.push(<p key={data.error}>{data.error}</p>)
+                        text += `<p key=${data.error}>${data.error}</p>`
                     } else {
                         if (phase !== data['phase']) {
                             text += `<p>***** PHASE ${data.phase}</p>`
@@ -555,32 +420,46 @@ class AppDetail extends React.Component {
         const {name, nowCluster} = this.state
 
         appGetConfigMap(name, {cluster: nowCluster}).then(res => {
+            this.setState({configMapData: res})
             this.showInfoModal("ConfigMap", res)
         }).catch(err => {
             this.handleError(err);
         });
     }
-    handleConfigMap(e) {
-        let { name, nowCluster } = this.state;
-        e.preventDefault();
-        this.props.form.validateFields((err, values) => {
-            if (!err) {
-                let data = {
-                    data: values.data,
-                    cluster: nowCluster
-                }
-                if (values.filename) {
-                    data.config_name = values.filename
-                }
 
-                appPostConfigMap(name, data).then(res=> {
-                    this.setState({configmapVisible: false})
-                    this.handleMsg(res, "Create ConfigMap")
-                }).catch(err => {
-                    this.handleError(err)
-                })
-            }
-        })
+    handleConfigMap() {
+        let self = this
+        let { name, nowCluster } = this.state;
+
+        let div = document.createElement('div');
+        document.body.appendChild(div);
+
+        function destroy(...args: any[]) {
+          const unmountResult = ReactDOM.unmountComponentAtNode(div);
+          if (unmountResult && div.parentNode) {
+            div.parentNode.removeChild(div);
+          }
+        }
+
+        function submitForm(params) {
+            params.cluster = nowCluster
+            console.log(params)
+
+            appPostConfigMap(name, params).then(res=> {
+                destroy()
+                self.handleMsg(res, "Create ConfigMap")
+            }).catch(err => {
+                self.handleError(err)
+            })
+        }
+        let config = {
+            initialValue: this.state.configMapData,
+            handler: submitForm
+        }
+
+        const WrappedConfigMapModal = Form.create()(ConfigMapModal);
+
+        ReactDOM.render(<WrappedConfigMapModal config={config} destroy={destroy} />, div)
     }
 
     showSecret() {
@@ -594,15 +473,31 @@ class AppDetail extends React.Component {
         });
     }
 
-    handleSecret(data) {
-        this.setState({secretVisible: false})
-        let { name, nowCluster } = this.state;
-        let params = {data: data, cluster: nowCluster}
-        appPostSecret(name, params).then(res=> {
-            this.handleMsg(res, "Create Secret")
-        }).catch(err => {
-            this.handleError(err)
-        })
+    handleSecret() {
+        let self = this
+
+        let div = document.createElement('div');
+        document.body.appendChild(div);
+
+        function destroy(...args: any[]) {
+          const unmountResult = ReactDOM.unmountComponentAtNode(div);
+          if (unmountResult && div.parentNode) {
+            div.parentNode.removeChild(div);
+          }
+        }
+
+        function submitForm(data) {
+            let { name, nowCluster } = self.state;
+            let params = {data: data, cluster: nowCluster}
+            appPostSecret(name, params).then(res=> {
+                self.handleMsg(res, "Create Secret")
+                destroy()
+            }).catch(err => {
+                self.handleError(err)
+            })
+        }
+
+        ReactDOM.render(<SecretFormModal value={this.state.secretData} handler={submitForm} destroy={destroy} />, div)
     }
 
     // 部署
@@ -673,7 +568,7 @@ class AppDetail extends React.Component {
         });
     }
 
-    handleABTestingSubmit(abtestingRulesValue) {
+    handleABTestingSubmit(abtestingRulesValue, destroy) {
         const {name, nowCluster} = this.state
 
         appSetABTestingRules({
@@ -681,12 +576,7 @@ class AppDetail extends React.Component {
             cluster: nowCluster,
             rules: JSON.parse(abtestingRulesValue)
         }).then(res => {
-            let aceModal = {
-                visible: false
-            }
-            this.setState({
-                aceModal: aceModal
-            })
+            destroy()
             this.handleMsg(res, 'SET ABTesting Rules');
         }).catch(err => {
             this.handleError(err);
@@ -798,8 +688,149 @@ class AppDetail extends React.Component {
     render() {
 
         let self = this
-        const { getFieldDecorator } = this.props.form;
-        const { data, name, columns, podColumns, canaryVisible} = this.state;
+        const { data, name, canaryVisible} = this.state;
+        let podColumns = [
+            {
+                title: 'NAME',
+                dataIndex: 'name',
+                width: '15%'
+            },
+            {
+                title: 'READY',
+                dataIndex: 'ready',
+                width: '10%'
+            },
+            {
+                title: 'STATUS',
+                dataIndex: 'status',
+                width: '10%'
+            },
+            {
+                title: 'RESTARTS',
+                dataIndex: 'restarts',
+                width: '10%'
+            },
+            {
+                title: 'AGE',
+                dataIndex: 'age',
+                width: '15%'
+            },
+            {
+                title: 'IP',
+                dataIndex: 'ip',
+                width: '15%'
+            },
+            {
+                title: 'NODE',
+                dataIndex: 'node',
+                width: '15%'
+            }
+        ]
+
+        let releaseColumns = [
+            {
+                title: 'tag',
+                dataIndex: 'tag',
+                width: '14%',
+                render: tag => {
+                    let nowVersion = this.state.version === tag;
+                    if(nowVersion) {
+                        return (
+                            <span>{tag} <span style={{fontSize: '12px', color: 'red'}}>(当前版本)</span></span>
+                        )
+                    }else {
+                        return (
+                            <span>{tag}</span>
+                        )
+                    }
+                }
+            }, {
+                title: 'created',
+                dataIndex: 'created',
+                width: '15%',
+                defaultSortOrder: 'descend',
+                sorter: (a, b) => {
+                    let c = new Date(a.created).getTime();
+                    let d = new Date(b.created).getTime();
+                    return c - d
+                }
+            }, {
+                title: 'updated',
+                dataIndex: 'updated',
+                width: '15%',
+            }, {
+                title: 'image',
+                dataIndex: 'image',
+                width: '35%',
+            }, {
+                title: 'build_status',
+                dataIndex: 'build_status',
+                width: '10%',
+                render(build_status) {
+                    return build_status.toString()
+                }
+            }, {
+                title: 'Action',
+                dataIndex: 'action',
+                width: '16%',
+                render(text, record) {
+                    const menu = (
+                        <Menu>
+                            {
+                                record.build_status ? '' : (
+                                    <Menu.Item key="0">
+                                        <div onClick={() => {
+                                                  self.handleBuild.bind(self)(record.tag)}}>Build</div>
+                                    </Menu.Item>
+                                )
+                            }
+                            <Menu.Item key="1">
+                                <div onClick={() => {
+                                    let deployModal = self.state.deployModal
+                                    deployModal.visible = true
+                                    deployModal.title = "部署"
+                                    deployModal.canary = false
+                                    self.setState({nowTag: record.tag})
+                                    console.log(record.tag, self.state.nowTag, this)
+                                    self.setState({nowTag: record.tag, deployModal: deployModal})
+                                    }}>Deploy</div>
+                            </Menu.Item>
+                            <Menu.Item key="2">
+                                <div onClick={() => {
+                                    let deployModal = self.state.deployModal
+                                    deployModal.visible = true
+                                    deployModal.title = "部署Canary"
+                                    deployModal.canary = true
+                                    self.setState({nowTag: record.tag, deployModal: deployModal})}}>Canary</div>
+                            </Menu.Item>
+                            <Menu.Divider />
+                            <Menu.Item key="3">
+                                <div onClick={() => {
+                                    let config = {
+                                        title: "Spec",
+                                        mode: "yaml",
+                                        visible: true,
+                                        initialValue: record.specs_text,
+                                        handler: self.updateReleaseSpec.bind(this)
+                                    }
+                                    self.setState({nowTag: record.tag})
+                                    self.showAceEditorModal(config) }} >Spec Text</div>
+                            </Menu.Item>
+                        </Menu>
+                    );
+
+                    return (
+                        <Dropdown overlay={menu} trigger={['click']}>
+                            <a className="ant-dropdown-link" href="#">
+                                <div style={{width: '40px', textAlign: 'center'}}>
+                                    <Icon type="ellipsis" className="btnIcon" />
+                                </div>
+                            </a>
+                        </Dropdown>
+                    )
+                }
+            }
+        ]
 
         let labels = [],
             annotations = [],
@@ -849,10 +880,10 @@ class AppDetail extends React.Component {
                                 <p>名称：{name}</p>
                                 <p>命名空间：{data.space ? data.space : 'default'}</p>
                                 <p>Canary: {this.state.canaryVisible.toString()}</p>
-                                <p>Config: <Button onClick={() => { this.setState({configmapVisible: true})}}>Set</Button>
+                                <p>Config: <Button onClick={this.handleConfigMap.bind(this)}>Set</Button>
                                    <Button onClick={this.showConfigMap.bind(this)}>Show</Button>
                                 </p>
-                                <p>Secret: <Button onClick={() => { this.setState({secretVisible: true})}}>Set</Button>
+                                <p>Secret: <Button onClick={this.handleSecret.bind(this)}>Set</Button>
                                    <Button onClick={this.showSecret.bind(this)}>Show</Button>
                                 </p>
                                 {this.state.canaryVisible &&
@@ -878,14 +909,13 @@ class AppDetail extends React.Component {
                                 <span>
                                     <Button onClick={this.handleDeleteCanary.bind(this)}>DeleteCanary</Button>
                                     <Button onClick={() => {
-                                        let aceModal = {
+                                        let config = {
                                             title: "Set A/B Testing Rules",
-                                            visible: true,
                                             mode: "json",
-                                            initial_val: '',
+                                            initialValue: '',
                                             handler: this.handleABTestingSubmit.bind(this)
                                         }
-                                        this.setState({aceModal: aceModal})}}>ABTesting</Button>
+                                        this.showAceEditorModal(config)}}>ABTesting</Button>
                                 </span>}
                                 <div>{this.state.example}</div>
                             </div>
@@ -929,7 +959,7 @@ class AppDetail extends React.Component {
                     <Collapse bordered={false} defaultActiveKey={['1']}>
                         <Panel header={<h2>版本信息</h2>} key="1">
                             <Table
-                                columns={columns}
+                                columns={releaseColumns}
                                 dataSource={this.state.tableData}
                                 rowKey="id"
                             />
@@ -986,59 +1016,6 @@ class AppDetail extends React.Component {
                               this.setState({deployModal: deployModal})}} />
                     </Modal>
 
-
-                    <Modal
-                        title={this.state.aceModal.title}
-                        visible={this.state.aceModal.visible}
-                        onCancel={() => {
-                            let aceModal = this.state.aceModal
-                            aceModal.visible = false
-                            this.setState({aceModal: aceModal})}}
-                        footer={null}
-                    >
-                        <AceEditorForm value={this.state.aceModal.initial_val} mode={this.state.aceModal.mode} handler={this.state.aceModal.handler} />
-                    </Modal>
-
-                    <Modal
-                        title="创建ConfigMap"
-                        visible={this.state.configmapVisible}
-                        onCancel={() => { this.setState({configmapVisible: false})}}
-                        footer={null}
-                    >
-                        <Form style={{marginTop: '20px'}} onSubmit={this.handleConfigMap.bind(this)}>
-                            <FormItem
-                                {...formItemLayout}
-                                label="File Name"
-                            >
-                                {getFieldDecorator('filename', {
-                                })(
-                                    <Input placeholder="config file name" />
-                                )}
-                            </FormItem>
-                            <FormItem
-                                {...formItemLayout}
-                                label="Data"
-                            >
-                                {getFieldDecorator('data', {
-                                    rules: [{required: true, message: 'Please input you config content'}]
-                                })(
-                                    <TextArea rows={4} />
-                                )}
-                            </FormItem>
-                            <Button type="primary" htmlType="submit" className="create-job-button">
-                                Submit
-                            </Button>
-                        </Form>
-                    </Modal>
-
-                    <Modal
-                        title="创建Secret"
-                        visible={this.state.secretVisible}
-                        onCancel={() => { this.setState({secretVisible: false})}}
-                        footer={null}
-                    >
-                        <SecretForm value={this.state.secretData} handler={this.handleSecret} />
-                    </Modal>
                     <div id="example"></div>
                 </div>
             </div>
@@ -1046,30 +1023,41 @@ class AppDetail extends React.Component {
     }
 }
 
-class AceEditorForm extends React.Component {
+class AceEditorModal extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {value: this.props.value };
+
+    this.state = {
+        visible: true,
+        value: this.props.config.initialValue,
+        config: this.props.config,
+        destroy: this.props.destroy
+    };
     this.handleSubmit = this.handleSubmit.bind(this);
     this.onChange = this.onChange.bind(this);
   }
 
   onChange(newValue) {
       this.setState({value: newValue})
-      // console.log(newValue)
   }
 
   handleSubmit(event) {
     event.preventDefault();
-    this.props.handler(this.state.value)
+    this.state.config.handler(this.state.value, this.state.destroy)
   }
 
   render() {
 
     return (
+        <Modal
+            title={this.state.config.title}
+            visible={this.state.visible}
+            onCancel={this.state.destroy}
+            footer={null}
+        >
       <form onSubmit={this.handleSubmit}>
             <AceEditor
-                mode={this.props.mode}
+                mode={this.state.config.mode}
                 value={this.state.value}
                 theme="xcode"
                 onChange={this.onChange}
@@ -1087,11 +1075,80 @@ class AceEditorForm extends React.Component {
             </FormItem>
           </Row>
       </form>
+        </Modal>
     );
   }
 }
 
-class SecretForm extends React.Component {
+class ConfigMapModal extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+        visible: true,
+        config: this.props.config,
+        initialValue: this.props.config.initialValue,
+        destroy: this.props.destroy
+    };
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.onChange = this.onChange.bind(this);
+  }
+
+  onChange(newValue) {
+      this.setState({value: newValue})
+  }
+
+  handleSubmit(event) {
+    event.preventDefault();
+    this.props.form.validateFields((err, values) => {
+        if (!err) {
+            this.state.config.handler(values)
+        }
+    })
+  }
+
+  render() {
+    const { getFieldDecorator } = this.props.form;
+
+    return (
+        <Modal
+            title="创建ConfigMap"
+            visible={this.state.visible}
+            onCancel={this.state.destroy}
+            footer={null}
+        >
+            <Form style={{marginTop: '20px'}} onSubmit={this.handleSubmit.bind(this)}>
+                <FormItem
+                    {...formItemLayout}
+                    label="File Name"
+                >
+                    {getFieldDecorator('config_name', {
+                        initialValue: this.state.initialValue.config_name
+                    })(
+                        <Input placeholder="config file name" />
+                    )}
+                </FormItem>
+                <FormItem
+                    {...formItemLayout}
+                    label="Data"
+                >
+                    {getFieldDecorator('data', {
+                        initialValue: this.state.initialValue.data,
+                        rules: [{required: true, message: 'Please input you config content'}]
+                    })(
+                        <TextArea rows={4} />
+                    )}
+                </FormItem>
+                <Button type="primary" htmlType="submit" className="create-job-button">
+                    Submit
+                </Button>
+            </Form>
+        </Modal>
+    );
+  }
+}
+
+class SecretFormModal extends React.Component {
   constructor(props) {
     super(props);
     let keys = []
@@ -1102,7 +1159,12 @@ class SecretForm extends React.Component {
         keys.push(k)
         values.push(v)
     }
-    this.state = {keys:keys, values: values };
+    this.state = {
+        keys:keys,
+        values: values,
+        visible: true,
+        destroy: this.props.destroy
+    };
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
@@ -1174,6 +1236,12 @@ class SecretForm extends React.Component {
 
   render() {
     return (
+    <Modal
+        title="创建Secret"
+        visible={this.state.visible}
+        onCancel={this.state.destroy}
+        footer={null}
+    >
       <form onSubmit={this.handleSubmit}>
           {this.createUI()}
           <Row>
@@ -1187,6 +1255,8 @@ class SecretForm extends React.Component {
             </FormItem>
           </Row>
       </form>
+
+    </Modal>
     );
   }
 }
