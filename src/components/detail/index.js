@@ -601,31 +601,41 @@ class AppDetail extends React.Component {
         });
     }
 
-    handleABTestingSubmit(abtestingRulesValue, destroy) {
+    handleSetABTestingRules() {
+        let self = this
         const {name, nowCluster} = this.state
 
-        appSetABTestingRules({
-            name: name,
-            cluster: nowCluster,
-            rules: JSON.parse(abtestingRulesValue)
-        }).then(res => {
-            destroy()
-            this.handleMsg(res, 'SET ABTesting Rules');
-        }).catch(err => {
-            this.handleError(err);
-        });
-    }
+        function handleABTestingSubmit(abtestingRulesValue, destroy) {
+            appSetABTestingRules({
+                name: name,
+                cluster: nowCluster,
+                rules: JSON.parse(abtestingRulesValue)
+            }).then(res => {
+                destroy()
+                self.handleMsg(res, 'SET ABTesting Rules');
+            }).catch(err => {
+                self.handleError(err);
+            });
+        }
 
-    showABTestingRules() {
-        const {name, nowCluster} = this.state
+        function setRulesHelper(initialValue) {
+            let config = {
+                title: "Set A/B Testing Rules",
+                mode: "json",
+                initialValue: initialValue,
+                handler: handleABTestingSubmit
+            }
+            self.showAceEditorModal(config)
+        }
 
         appGetABTestingRules({
             name: name,
             cluster: nowCluster
         }).then(res => {
-            this.showInfoModal("ABTesting Rules", res)
+            setRulesHelper(JSON.stringify(res, null, 2))
         }).catch(err => {
-            this.handleError(err);
+            let res = ""
+            setRulesHelper(res)
         });
     }
 
@@ -912,7 +922,14 @@ class AppDetail extends React.Component {
                             <div className="detailLeft">
                                 <p>名称：{name}</p>
                                 <p>命名空间：{data.space ? data.space : 'default'}</p>
-                                <p>Canary: {this.state.canaryVisible.toString()}</p>
+                                <p>Canary: <strong>{this.state.canaryVisible.toString()}</strong>
+                                    {this.state.canaryVisible &&
+                                        <span>
+                                          <Divider type="vertical" />
+                                          <Button onClick={this.handleDeleteCanary.bind(this)}>DeleteCanary</Button>
+                                        </span>
+                                    }
+                                </p>
                                 <p>Config: <Button onClick={this.handleConfigMap.bind(this)}>Set</Button>
                                    <Button onClick={this.showConfigMap.bind(this)}>Show</Button>
                                 </p>
@@ -921,7 +938,7 @@ class AppDetail extends React.Component {
                                 </p>
                                 {this.state.canaryVisible &&
                                 <p>
-                                    ABTesting Rules: <Button onClick={this.showABTestingRules.bind(this)}>Show</Button>
+                                    ABTesting Rules: <Button onClick={this.handleSetABTestingRules.bind(this) }>Set</Button>
                                 </p>
                                 }
                                 <p>标签： {labels}</p>
@@ -938,18 +955,6 @@ class AppDetail extends React.Component {
                                 <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
                                 <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
 
-                                {this.state.canaryVisible &&
-                                <span>
-                                    <Button onClick={this.handleDeleteCanary.bind(this)}>DeleteCanary</Button>
-                                    <Button onClick={() => {
-                                        let config = {
-                                            title: "Set A/B Testing Rules",
-                                            mode: "json",
-                                            initialValue: '',
-                                            handler: this.handleABTestingSubmit.bind(this)
-                                        }
-                                        this.showAceEditorModal(config)}}>ABTesting</Button>
-                                </span>}
                                 <div>{this.state.example}</div>
                             </div>
                             { this.state.textVisible ? (
