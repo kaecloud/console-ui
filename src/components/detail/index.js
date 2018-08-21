@@ -122,10 +122,11 @@ class AppDetail extends React.Component {
                 title: '',
                 visible: false,
                 replicas: -1,
+                tag: '',
                 canary: false
             },
-            configMapData: { },
-            secretData: { },
+            configMapData: null,
+            secretData: null,
             example: '',
             name: '',
             nowTag: '',
@@ -186,7 +187,6 @@ class AppDetail extends React.Component {
             })
 
             getAppCanaryInfo({name:name, cluster:cluster}).then(res => {
-                console.log(res)
                 that.setState({
                     canaryVisible: res.status
                 })
@@ -216,7 +216,6 @@ class AppDetail extends React.Component {
             const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
             const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/pods/events`);
             ws.onopen = function(evt) {
-                // console.log("Connection open ...");
                 ws.send(`{"cluster": "${cluster}", "canary": ${canary}}`);
             };
             ws.onclose = function(evt) {
@@ -373,7 +372,6 @@ class AppDetail extends React.Component {
                 const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
                 const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/build`);
                 ws.onopen = function(evt) {
-                    // console.log("Connection open ...");
                     ws.send(`{"tag": "${tag}"}`);
                 };
                 ws.onclose = function(evt) {
@@ -431,35 +429,51 @@ class AppDetail extends React.Component {
         let self = this
         let { name, nowCluster } = this.state;
 
-        let div = document.createElement('div');
-        document.body.appendChild(div);
+        function createConfigMap(configMapData) {
+            let div = document.createElement('div');
+            document.body.appendChild(div);
 
-        function destroy(...args: any[]) {
-          const unmountResult = ReactDOM.unmountComponentAtNode(div);
-          if (unmountResult && div.parentNode) {
-            div.parentNode.removeChild(div);
-          }
+            function destroy(...args: any[]) {
+              const unmountResult = ReactDOM.unmountComponentAtNode(div);
+              if (unmountResult && div.parentNode) {
+                div.parentNode.removeChild(div);
+              }
+            }
+
+            function submitForm(params) {
+                params.cluster = nowCluster
+                console.log(params)
+
+                appPostConfigMap(name, params).then(res=> {
+                    destroy()
+                    self.handleMsg(res, "Create ConfigMap")
+                }).catch(err => {
+                    self.handleError(err)
+                })
+            }
+            let config = {
+                initialValue: configMapData,
+                handler: submitForm
+            }
+
+            const WrappedConfigMapModal = Form.create()(ConfigMapModal);
+
+            ReactDOM.render(<WrappedConfigMapModal config={config} destroy={destroy} />, div)
         }
 
-        function submitForm(params) {
-            params.cluster = nowCluster
-            console.log(params)
-
-            appPostConfigMap(name, params).then(res=> {
-                destroy()
-                self.handleMsg(res, "Create ConfigMap")
+        // we need initial value of form, so if configMapData is null, we need to get it from backend
+        if (self.state.configMapData === null) {
+            appGetConfigMap(name, {cluster: nowCluster}).then(res => {
+                self.setState({configMapData: res})
+                createConfigMap(res)
             }).catch(err => {
-                self.handleError(err)
-            })
+                let res = {}
+                self.setState({configMapData: res})
+                createConfigMap(res)
+            });
+        } else {
+            createConfigMap(self.state.configMapData)
         }
-        let config = {
-            initialValue: this.state.configMapData,
-            handler: submitForm
-        }
-
-        const WrappedConfigMapModal = Form.create()(ConfigMapModal);
-
-        ReactDOM.render(<WrappedConfigMapModal config={config} destroy={destroy} />, div)
     }
 
     showSecret() {
@@ -476,28 +490,46 @@ class AppDetail extends React.Component {
     handleSecret() {
         let self = this
 
-        let div = document.createElement('div');
-        document.body.appendChild(div);
+        function createSecret(secretData){
+            let div = document.createElement('div');
+            document.body.appendChild(div);
 
-        function destroy(...args: any[]) {
-          const unmountResult = ReactDOM.unmountComponentAtNode(div);
-          if (unmountResult && div.parentNode) {
-            div.parentNode.removeChild(div);
-          }
+            function destroy(...args: any[]) {
+              const unmountResult = ReactDOM.unmountComponentAtNode(div);
+              if (unmountResult && div.parentNode) {
+                div.parentNode.removeChild(div);
+              }
+            }
+
+            function submitForm(data) {
+                let { name, nowCluster } = self.state;
+                let params = {data: data, cluster: nowCluster}
+                appPostSecret(name, params).then(res=> {
+                    self.handleMsg(res, "Create Secret")
+                    destroy()
+                }).catch(err => {
+                    self.handleError(err)
+                })
+            }
+
+            ReactDOM.render(<SecretFormModal value={secretData} handler={submitForm} destroy={destroy} />, div)
         }
 
-        function submitForm(data) {
-            let { name, nowCluster } = self.state;
-            let params = {data: data, cluster: nowCluster}
-            appPostSecret(name, params).then(res=> {
-                self.handleMsg(res, "Create Secret")
-                destroy()
+        // we need initial value of form, so if secretData is null, we need to get it from backend
+        if (self.state.secretData === null) {
+            const {name, nowCluster} = self.state
+
+            appGetSecret(name, {cluster: nowCluster}).then(res => {
+                self.setState({secretData: res})
+                createSecret(res)
             }).catch(err => {
-                self.handleError(err)
-            })
+                let res = {}
+                self.setState({secretData: res})
+                createSecret(res)
+            });
+        } else {
+            createSecret(self.state.secretData)
         }
-
-        ReactDOM.render(<SecretFormModal value={this.state.secretData} handler={submitForm} destroy={destroy} />, div)
     }
 
     // 部署
@@ -505,9 +537,9 @@ class AppDetail extends React.Component {
         let deployModal = this.state.deployModal
         deployModal.visible = false
         this.setState({deployModal: deployModal})
-        let { name, nowTag, nowCluster } = this.state;
+        let { name, nowCluster } = this.state;
 
-        let data = {tag: nowTag, cluster: nowCluster}
+        let data = {tag: deployModal.tag, cluster: nowCluster}
         if (deployModal.replicas > 0) {
             data.replicas = deployModal.replicas
         }
@@ -532,10 +564,11 @@ class AppDetail extends React.Component {
         let deployModal = this.state.deployModal
         deployModal.visible = false
         this.setState({deployModal: deployModal})
-        let { name, nowTag, nowCluster } = this.state;
+        let { name, nowCluster } = this.state;
         let replicas = deployModal.replicas
+        let tag = deployModal.tag
 
-        let data = {name: name, tag: nowTag, cluster: nowCluster}
+        let data = {name: name, tag: tag, cluster: nowCluster}
         if (replicas > 0) {
             data.replicas = replicas
         }
@@ -790,9 +823,8 @@ class AppDetail extends React.Component {
                                     deployModal.visible = true
                                     deployModal.title = "部署"
                                     deployModal.canary = false
-                                    self.setState({nowTag: record.tag})
-                                    console.log(record.tag, self.state.nowTag, this)
-                                    self.setState({nowTag: record.tag, deployModal: deployModal})
+                                    deployModal.tag = record.tag
+                                    self.setState({deployModal: deployModal})
                                     }}>Deploy</div>
                             </Menu.Item>
                             <Menu.Item key="2">
@@ -801,7 +833,8 @@ class AppDetail extends React.Component {
                                     deployModal.visible = true
                                     deployModal.title = "部署Canary"
                                     deployModal.canary = true
-                                    self.setState({nowTag: record.tag, deployModal: deployModal})}}>Canary</div>
+                                    deployModal.tag = record.tag
+                                    self.setState({deployModal: deployModal})}}>Canary</div>
                             </Menu.Item>
                             <Menu.Divider />
                             <Menu.Item key="3">
@@ -811,7 +844,7 @@ class AppDetail extends React.Component {
                                         mode: "yaml",
                                         visible: true,
                                         initialValue: record.specs_text,
-                                        handler: self.updateReleaseSpec.bind(this)
+                                        handler: self.updateReleaseSpec.bind(self)
                                     }
                                     self.setState({nowTag: record.tag})
                                     self.showAceEditorModal(config) }} >Spec Text</div>
