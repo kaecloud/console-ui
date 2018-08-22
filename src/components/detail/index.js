@@ -632,7 +632,11 @@ class AppDetail extends React.Component {
             name: name,
             cluster: nowCluster
         }).then(res => {
-            setRulesHelper(JSON.stringify(res, null, 2))
+            let str = ""
+            if (res) {
+                str = JSON.stringify(res, null, 2)
+            }
+            setRulesHelper(str)
         }).catch(err => {
             let res = ""
             setRulesHelper(res)
