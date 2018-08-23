@@ -4,7 +4,7 @@ import ReactDOM from 'react-dom';
 import {Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
 import { Link } from 'react-router-dom';
 import {
-    getDetail, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
+    getDeployment, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
     appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
     appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret,
     appPostReleaseSpec } from 'api';
@@ -134,7 +134,7 @@ class AppDetail extends React.Component {
             version: '',
             nowCluster: '',
             scaleNum: 1,
-            data: [],
+            deployment: null,
             tableData: [],
             podTableData: [],
             canarypodTableData: [],
@@ -191,13 +191,16 @@ class AppDetail extends React.Component {
                     canaryVisible: res.status
                 })
             })
-            getDetail({name: name, cluster: cluster}).then(res => {
+            getDeployment({name: name, cluster: cluster}).then(res => {
                 that.setState({
-                    data: res,
+                    deployment: res,
                     version: res.metadata.annotations.release_tag
                 })
             }).catch(err => {
-                that.handleError(err);
+                let resp = err.response;
+                if (resp.status !== 404) {
+                    that.handleError(err);
+                }
             });
 
             // pods watcher
@@ -735,7 +738,7 @@ class AppDetail extends React.Component {
     render() {
 
         let self = this
-        const { data, name, canaryVisible} = this.state;
+        const { deployment, name, canaryVisible} = this.state;
         let podColumns = [
             {
                 title: 'NAME',
@@ -883,6 +886,7 @@ class AppDetail extends React.Component {
             annotations = [],
             match_labels = [],
             detailData = {
+                namespace: '',
                 created: '',
                 history: '',
                 rolling_update: {},
@@ -891,29 +895,30 @@ class AppDetail extends React.Component {
                 min_ready_seconds: ''
             };
 
-        if(data.length !== 0) {
+        if(deployment) {
             // 详情的数据
             detailData = {
-                created: data.metadata.creation_timestamp,
-                history: data.spec.revision_history_limit,
-                rolling_update: data.spec.strategy.rolling_update,
-                strategy: data.spec.strategy.type,
-                min_ready_seconds: data.spec.min_ready_seconds === null ? '0' : data.spec.min_ready_seconds,
-                status: data.status
+                namespace: deployment.metadata.namespace,
+                created: deployment.metadata.creation_timestamp,
+                history: deployment.spec.revision_history_limit,
+                rolling_update: deployment.spec.strategy.rolling_update,
+                strategy: deployment.spec.strategy.type,
+                min_ready_seconds: deployment.spec.min_ready_seconds === null ? '0' : deployment.spec.min_ready_seconds,
+                status: deployment.status
             }
 
             // 标签样式
-            for (let p in data.metadata.labels) {
-                labels.push(<span style={spanStyle} key={p}>{p}: {data.metadata.labels[p]}</span>)
+            for (let p in deployment.metadata.labels) {
+                labels.push(<span style={spanStyle} key={p}>{p}: {deployment.metadata.labels[p]}</span>)
             }
             // 选择器样式
-            for (let p in data.spec.selector.match_labels) {
-                match_labels.push(<span style={spanStyle} key={p}>{p}: {data.spec.selector.match_labels[p]}</span>)
+            for (let p in deployment.spec.selector.match_labels) {
+                match_labels.push(<span style={spanStyle} key={p}>{p}: {deployment.spec.selector.match_labels[p]}</span>)
             }
             // 注释样式
-            for (let p in data.metadata.annotations) {
+            for (let p in deployment.metadata.annotations) {
                 if(p !== 'app_specs_text') {
-                    annotations.push(<span style={spanStyle} key={p}>{p}: {data.metadata.annotations[p]}</span>)
+                    annotations.push(<span style={spanStyle} key={p}>{p}: {deployment.metadata.annotations[p]}</span>)
                 }
             }
         }
@@ -925,7 +930,7 @@ class AppDetail extends React.Component {
                         <Panel header={<h2>详情</h2>} key="1">
                             <div className="detailLeft">
                                 <p>名称：{name}</p>
-                                <p>命名空间：{data.space ? data.space : 'default'}</p>
+                                <p>命名空间：{detailData.namespace}</p>
                                 <p>Canary: <strong>{this.state.canaryVisible.toString()}</strong>
                                     {this.state.canaryVisible &&
                                         <span>

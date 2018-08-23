@@ -29,9 +29,8 @@ export const getCluster = params => {
 }
 
 // 获取detail
-export const getDetail = params => {
+export const getDeployment = params => {
     return axios.get(`${testUrl}${version}/app/${params.name}/deployment?cluster=${params.cluster}`).then(res => res.data)
-    .catch(err => console.log(err))
 }
 
 // 获取releases
