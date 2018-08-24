@@ -106,85 +106,86 @@ function getArg(name) {
     return n ? n[2]:false;
 }
 
+function getInitialState() {
+    return {
+        infoModal: {
+            text: '',
+            title: '',
+            visible: false
+        },
+        deployModal: {
+            title: '',
+            visible: false,
+            replicas: -1,
+            tag: '',
+            canary: false
+        },
+        configMapData: null,
+        secretData: null,
+        example: '',
+        name: '',
+        nowTag: '',
+        replicas: 1,
+        version: '',
+        nowCluster: '',
+        scaleNum: 1,
+        deployment: null,
+        tableData: [],
+        podTableData: [],
+        canarypodTableData: [],
+        textVisible: false,
+        scaleVisible: false,
+        rollbackVisible: false,
+        canaryVisible: false
+    }
+}
+
 class AppDetail extends React.Component {
 
     constructor() {
         super();
 
         let self = this;
-        this.state = {
-            infoModal: {
-                text: '',
-                title: '',
-                visible: false
-            },
-            deployModal: {
-                title: '',
-                visible: false,
-                replicas: -1,
-                tag: '',
-                canary: false
-            },
-            configMapData: null,
-            secretData: null,
-            example: '',
-            name: '',
-            nowTag: '',
-            replicas: 1,
-            version: '',
-            nowCluster: '',
-            scaleNum: 1,
-            deployment: null,
-            tableData: [],
-            podTableData: [],
-            canarypodTableData: [],
-            textVisible: false,
-            scaleVisible: false,
-            rollbackVisible: false,
-            canaryVisible: false
-
-        }
-
-
+        this.state = getInitialState()
         this.handleMsg = this.handleMsg.bind(this);
         this.showAceEditorModal = this.showAceEditorModal.bind(this)
-
     }
 
     componentDidMount() {
         let that = this;
 
         // 获取APP name
-        const name = getArg('app'),
-            defaultCluster = getArg('cluster');
+        const name = getArg('app')
+        const defaultCluster = getArg('cluster');
 
         // 测试地址
         const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000';
 
-        that.setState({
-            name: name
-        });
-        getReleases(name).then(res => {
-            that.setState({
-                tableData: res
-            })
-        });
-
         if(!defaultCluster) {
             getCluster().then(res => {
-                getMsg(name, res[0]);
+                fetchAllData(name, res[0]);
             })
         }else {
-            getMsg(name, defaultCluster);
-            that.eventEmitter = emitter.addListener("clusterChange",(cluster)=>{
-                getMsg(name, cluster);
-            });
+            fetchAllData(name, defaultCluster);
         }
 
-        function getMsg(name, cluster) {
+        that.eventEmitter = emitter.addListener("clusterChange", (cluster)=>{
+            fetchAllData(name, cluster);
+        });
+
+        function fetchAllData(name, cluster) {
+            that.setState(getInitialState())
+
             that.setState({
+                name: name,
                 nowCluster: cluster
             })
+
+            getReleases(name).then(res => {
+                that.setState({
+                    tableData: res
+                })
+            });
 
             getAppCanaryInfo({name:name, cluster:cluster}).then(res => {
                 that.setState({
@@ -233,51 +234,6 @@ class AppDetail extends React.Component {
             }
             that.webSocketEvent(ws, canary);
         }
-    }
-
-    componentWillMount() {
-    }
-
-    showInfoModal(title, data) {
-        if (!!!data) {
-            data = ""
-        }
-        if (typeof data != 'string') {
-             data = JSON.stringify(data, undefined, 2);
-        }
-        let text = data.replace(/\n/g, '<br/>');
-        text = text.replace(/ /g, '&nbsp;&nbsp;');
-        this.setState({
-            infoModal: {
-                title: title,
-                text: text,
-                visible: true
-            }
-        });
-    }
-
-    hiddenInfoModal() {
-        this.setState({
-            infoModal: {
-                visible: false,
-            }
-        });
-    }
-
-    showAceEditorModal(config) {
-        let self = this
-
-        let div = document.createElement('div');
-        document.body.appendChild(div);
-
-        function destroy(...args: any[]) {
-          const unmountResult = ReactDOM.unmountComponentAtNode(div);
-          if (unmountResult && div.parentNode) {
-            div.parentNode.removeChild(div);
-          }
-        }
-
-        ReactDOM.render(<AceEditorModal config={config} destroy={destroy} />, div)
     }
 
     // Websocket
@@ -340,6 +296,51 @@ class AppDetail extends React.Component {
                 }
             }
         }, false);
+    }
+
+    componentWillMount() {
+    }
+
+    showInfoModal(title, data) {
+        if (!!!data) {
+            data = ""
+        }
+        if (typeof data != 'string') {
+             data = JSON.stringify(data, undefined, 2);
+        }
+        let text = data.replace(/\n/g, '<br/>');
+        text = text.replace(/ /g, '&nbsp;&nbsp;');
+        this.setState({
+            infoModal: {
+                title: title,
+                text: text,
+                visible: true
+            }
+        });
+    }
+
+    hiddenInfoModal() {
+        this.setState({
+            infoModal: {
+                visible: false,
+            }
+        });
+    }
+
+    showAceEditorModal(config) {
+        let self = this
+
+        let div = document.createElement('div');
+        document.body.appendChild(div);
+
+        function destroy(...args: any[]) {
+          const unmountResult = ReactDOM.unmountComponentAtNode(div);
+          if (unmountResult && div.parentNode) {
+            div.parentNode.removeChild(div);
+          }
+        }
+
+        ReactDOM.render(<AceEditorModal config={config} destroy={destroy} />, div)
     }
 
     updateReleaseSpec(spec, destroy) {
@@ -931,14 +932,14 @@ class AppDetail extends React.Component {
                             <div className="detailLeft">
                                 <p>名称：{name}</p>
                                 <p>命名空间：{detailData.namespace}</p>
-                                <p>Canary: <strong>{this.state.canaryVisible.toString()}</strong>
+                                <div>Canary: <strong>{this.state.canaryVisible.toString()}</strong>
                                     {this.state.canaryVisible &&
                                         <span>
                                           <Divider type="vertical" />
                                           <Button onClick={this.handleDeleteCanary.bind(this)}>DeleteCanary</Button>
                                         </span>
                                     }
-                                </p>
+                                </div>
                                 <p>Config: <Button onClick={this.handleConfigMap.bind(this)}>Set</Button>
                                    <Button onClick={this.showConfigMap.bind(this)}>Show</Button>
                                 </p>

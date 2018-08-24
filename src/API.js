@@ -21,7 +21,6 @@ export const getApp = params => {
 }
 export const getAppCanaryInfo = params => {
     return axios.get(`${testUrl}${version}/app/${params.name}/canary?cluster=${params.cluster}`).then(res => res.data)
-    .catch(err => console.log(err))
 }
 // app_cluster
 export const getCluster = params => {
