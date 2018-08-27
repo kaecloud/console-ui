@@ -7,18 +7,26 @@ const Panel = Collapse.Panel;
 
 const columns = [
     {
+        title: '应用',
+        dataIndex: 'appname',
+        width: '10%',
+    }, {
         title: '用户',
         dataIndex: 'username',
         width: '10%'
     }, {
-        title: '应用',
-        dataIndex: 'appname',
-        width: '20%',
+        title: 'TAG',
+        dataIndex: 'tag',
+        width: '10%'
     }, {
-        title: '创建时间',
+        title: 'CLUSTER',
+        dataIndex: 'cluster',
+        width: '10%'
+    }, {
+        title: 'TIME',
         dataIndex: 'created',
         key: 'created',
-        width: '15%',
+        width: '10%',
         defaultSortOrder: 'descend',
         sorter: (a, b) => {
             let c = new Date(a.created).getTime();
@@ -26,9 +34,10 @@ const columns = [
             return c - d
         }
     }, {
-        title: '更新时间',
-        dataIndex: 'updated',
-        width: '15%',
+        title: '操作',
+        dataIndex: 'action',
+        width: '10%',
+
     }, {
         title: '修改内容',
         dataIndex: 'content',
@@ -37,11 +46,6 @@ const columns = [
                 <span>{content ? content : '无'}</span>
             )
         }
-    }, {
-        title: '操作',
-        dataIndex: 'action',
-        width: '20%',
-        
     }
 ]
 
@@ -68,7 +72,7 @@ class AppLog extends React.Component {
         return (
             <div className="logStyle">
                 <Collapse bordered={false} defaultActiveKey={['1']}>
-                    <Panel header={<h2>logger</h2>} key="1">
+                    <Panel header={<h2>Operation Log</h2>} key="1">
                         <Table 
                             columns={columns} 
                             dataSource={this.state.tableData} 

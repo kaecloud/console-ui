@@ -129,6 +129,7 @@ function getInitialState() {
         version: '',
         nowCluster: '',
         scaleNum: 1,
+        rollbackRevisionNum: 0,
         deployment: null,
         releaseTableData: [],
         podTableData: [],
@@ -653,7 +654,7 @@ class AppDetail extends React.Component {
 
         confirm({
             title: 'Recreate Pods',
-            content: 'Are you sure to force kubernetes to recreate the pods of specified app?',
+            content: `Are you sure to force kubernetes to recreate the pods of ${self.state.name} app?`,
             onOk() {
                 let {name, nowCluster} = self.state;
                 appRenew({name: name, cluster: nowCluster}).then(res => {
@@ -681,8 +682,8 @@ class AppDetail extends React.Component {
     // 回滚
     handleRollback() {
         this.setState({rollbackVisible: false})
-        let {name, nowCluster} = this.state
-        appRollback({name: name, cluster: nowCluster}).then(res => {
+        let {name, nowCluster, rollbackRevisionNum} = this.state
+        appRollback(name, {cluster: nowCluster, revision: rollbackRevisionNum}).then(res => {
             this.handleMsg(res, 'Rollback');
         }).catch(err => {
             this.handleError(err);
@@ -844,7 +845,7 @@ class AppDetail extends React.Component {
                                 <div onClick={() => {
                                     let deployModal = self.state.deployModal
                                     deployModal.visible = true
-                                    deployModal.title = "部署"
+                                    deployModal.title = `Deploy ${self.state.name} (tag: ${record.tag}, cluster: ${self.state.nowCluster})`
                                     deployModal.canary = false
                                     deployModal.tag = record.tag
                                     self.setState({deployModal: deployModal})
@@ -854,7 +855,7 @@ class AppDetail extends React.Component {
                                 <div onClick={() => {
                                     let deployModal = self.state.deployModal
                                     deployModal.visible = true
-                                    deployModal.title = "部署Canary"
+                                    deployModal.title = `DeployCanary ${self.state.name} (tag: ${record.tag}, cluster: ${self.state.nowCluster})`
                                     deployModal.canary = true
                                     deployModal.tag = record.tag
                                     self.setState({deployModal: deployModal})}}>Canary</div>
@@ -936,8 +937,9 @@ class AppDetail extends React.Component {
                         <Panel header={<h2>详情</h2>} key="1">
                             <div className="detailLeft">
                                 <p>名称：{name}</p>
+                                <p>集群：<span style={{color: 'red'}}>{this.state.nowCluster}</span></p>
                                 <p>命名空间：{detailData.namespace}</p>
-                                <div>Canary: <strong>{this.state.canaryVisible.toString()}</strong>
+                                <div>Canary: <span style={{color: 'red'}}>{this.state.canaryVisible.toString()}</span><strong></strong>
                                     {this.state.canaryVisible &&
                                         <span>
                                           <Divider type="vertical" />
@@ -1034,7 +1036,7 @@ class AppDetail extends React.Component {
                     </Modal>
 
                     <Modal
-                        title="伸缩 部署"
+                        title={`Scale ${this.state.name} (cluster: ${this.state.nowCluster})`}
                         visible={this.state.scaleVisible}
                         onOk={this.handleScale.bind(this)}
                         onCancel={() => {this.setState({scaleVisible: false})}}
@@ -1044,12 +1046,13 @@ class AppDetail extends React.Component {
                     </Modal>
 
                     <Modal
-                        title="回滚"
+                        title={`Rollback ${this.state.name} (cluster: ${this.state.nowCluster})`}
                         visible={this.state.rollbackVisible}
                         onOk={this.handleRollback.bind(this)}
                         onCancel={() => {this.setState({rollbackVisible: false})}}
                     >
-                        <p>Rollback specified app!</p>
+                        <span>revision：</span>
+                        <InputNumber min={0} max={10} defaultValue={0} onChange={num => {this.setState({rollbackRevisionNum: num})}} />
                     </Modal>
 
                     <Modal

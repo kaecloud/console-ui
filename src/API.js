@@ -179,13 +179,11 @@ export const appPostReleaseSpec = (name, tag, params) => {
 }
 
 // app_rollback
-export const appRollback = params => {
+export const appRollback = (name, params) => {
     return axios({
         method: 'put',
-        url: `${testUrl}${version}/app/${params.name}/rollback`,
-        data: {
-            'cluster': params.cluster,
-        },
+        url: `${testUrl}${version}/app/${name}/rollback`,
+        data: params,
         headers: {
 			'Content-Type': 'application/json'
         },
