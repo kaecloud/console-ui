@@ -694,6 +694,8 @@ class AppDetail extends React.Component {
         // 提示成功或失败
         let msg = JSON.parse(data);
         // let msg = {error: '1', msg: '1111111'}
+        notification.destroy()
+
         if(msg.error === null) {
             notification.success({
                 message: '成功！',
@@ -729,6 +731,9 @@ class AppDetail extends React.Component {
                 errorMsg = res.data.error
             }
         }
+        // destroy existing notifications first
+        notification.destroy()
+
         notification.error({
             message: '失败！',
             description: `${status}: ${errorMsg}`,
