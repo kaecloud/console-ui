@@ -130,7 +130,7 @@ function getInitialState() {
         nowCluster: '',
         scaleNum: 1,
         deployment: null,
-        tableData: [],
+        releaseTableData: [],
         podTableData: [],
         canarypodTableData: [],
         textVisible: false,
@@ -183,7 +183,7 @@ class AppDetail extends React.Component {
 
             getReleases(name).then(res => {
                 that.setState({
-                    tableData: res
+                    releaseTableData: res
                 })
             });
 
@@ -1013,7 +1013,7 @@ class AppDetail extends React.Component {
                         <Panel header={<h2>版本信息</h2>} key="1">
                             <Table
                                 columns={releaseColumns}
-                                dataSource={this.state.tableData}
+                                dataSource={this.state.releaseTableData}
                                 rowKey="id"
                             />
                         </Panel>
