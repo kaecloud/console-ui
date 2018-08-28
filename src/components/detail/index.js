@@ -108,6 +108,18 @@ function getArg(name) {
 
 function getInitialState() {
     return {
+        detailData: {
+            namespace: '',
+            created: '',
+            history: '',
+            rolling_update: {},
+            status: {},
+            strategy: '',
+            min_ready_seconds: '',
+            annotations: [],
+            labels: [],
+            match_labels: []
+        },
         infoModal: {
             text: '',
             title: '',
@@ -130,7 +142,6 @@ function getInitialState() {
         nowCluster: '',
         scaleNum: 1,
         rollbackRevisionNum: 0,
-        deployment: null,
         releaseTableData: [],
         podTableData: [],
         canarypodTableData: [],
@@ -150,6 +161,7 @@ class AppDetail extends React.Component {
         this.state = getInitialState()
         this.handleMsg = this.handleMsg.bind(this);
         this.showAceEditorModal = this.showAceEditorModal.bind(this)
+        this.fetchDeploymentData = this.fetchDeploymentData.bind(this)
     }
 
     componentDidMount() {
@@ -193,18 +205,7 @@ class AppDetail extends React.Component {
                     canaryVisible: res.status
                 })
             })
-            getDeployment({name: name, cluster: cluster}).then(res => {
-                that.setState({
-                    deployment: res,
-                    version: res.metadata.annotations.release_tag
-                })
-            }).catch(err => {
-                let resp = err.response;
-                if (resp.status !== 404) {
-                    that.handleError(err);
-                }
-            });
-
+            that.fetchDeploymentData(name, cluster)
             // pods watcher
             createPodsWatcher(name, cluster, false)
             // canary pods watcher
@@ -302,6 +303,54 @@ class AppDetail extends React.Component {
     componentWillMount() {
     }
 
+    fetchDeploymentData(name, cluster) {
+        getDeployment({name: name, cluster: cluster}).then(res => {
+            let deployment = res
+            let labels = [],
+                annotations = [],
+                match_labels = []
+
+            // 详情的数据
+            let detailData = {
+                namespace: deployment.metadata.namespace,
+                created: deployment.metadata.creation_timestamp,
+                history: deployment.spec.revision_history_limit,
+                rolling_update: deployment.spec.strategy.rolling_update,
+                strategy: deployment.spec.strategy.type,
+                min_ready_seconds: deployment.spec.min_ready_seconds === null ? '0' : deployment.spec.min_ready_seconds,
+                status: deployment.status
+            }
+
+            // 标签样式
+            for (let p in deployment.metadata.labels) {
+                labels.push(<span style={spanStyle} key={p}>{p}: {deployment.metadata.labels[p]}</span>)
+            }
+            // 选择器样式
+            for (let p in deployment.spec.selector.match_labels) {
+                match_labels.push(<span style={spanStyle} key={p}>{p}: {deployment.spec.selector.match_labels[p]}</span>)
+            }
+            // 注释样式
+            for (let p in deployment.metadata.annotations) {
+                if(p !== 'app_specs_text') {
+                    annotations.push(<span style={spanStyle} key={p}>{p}: {deployment.metadata.annotations[p]}</span>)
+                }
+            }
+            detailData.annotations = annotations
+            detailData.labels = labels
+            detailData.match_labels = match_labels
+
+            this.setState({
+                detailData: detailData,
+                version: res.metadata.annotations.release_tag
+            })
+        }).catch(err => {
+            let resp = err.response;
+            if (resp.status !== 404) {
+                this.handleError(err);
+            }
+        });
+    }
+
     showInfoModal(title, data) {
         if (!!!data) {
             data = ""
@@ -352,6 +401,12 @@ class AppDetail extends React.Component {
         appPostReleaseSpec(name, nowTag, data).then(res=> {
             destroy()
             this.handleMsg(res, "Update Release Spec")
+            // update release data
+            getReleases(name).then(res => {
+                this.setState({
+                    releaseTableData: res
+                })
+            });
         }).catch(err => {
             this.handleError(err)
         })
@@ -380,9 +435,12 @@ class AppDetail extends React.Component {
                     ws.send(`{"tag": "${tag}"}`);
                 };
                 ws.onclose = function(evt) {
-                    // infoModal.visible = false
-                    // self.setState({infoModal: infoModal})
-
+                    // update release data
+                    getReleases(name).then(res => {
+                        self.setState({
+                            releaseTableData: res
+                        })
+                    });
                     console.log("Build finished")
                 }
 
@@ -543,8 +601,9 @@ class AppDetail extends React.Component {
         deployModal.visible = false
         this.setState({deployModal: deployModal})
         let { name, nowCluster } = this.state;
+        let tag = deployModal.tag
 
-        let data = {tag: deployModal.tag, cluster: nowCluster}
+        let data = {tag: tag, cluster: nowCluster}
         if (deployModal.replicas > 0) {
             data.replicas = deployModal.replicas
         }
@@ -558,6 +617,8 @@ class AppDetail extends React.Component {
         } else {
             appDeploy(name, data).then(res => {
                 this.handleMsg(res, 'Deploy');
+                // update version
+                this.fetchDeploymentData(name, nowCluster)
             }).catch(err => {
                 this.handleError(err);
             });
@@ -685,6 +746,7 @@ class AppDetail extends React.Component {
         let {name, nowCluster, rollbackRevisionNum} = this.state
         appRollback(name, {cluster: nowCluster, revision: rollbackRevisionNum}).then(res => {
             this.handleMsg(res, 'Rollback');
+            this.fetchDeploymentData(name, nowCluster)
         }).catch(err => {
             this.handleError(err);
         });
@@ -745,7 +807,7 @@ class AppDetail extends React.Component {
     render() {
 
         let self = this
-        const { deployment, name, canaryVisible} = this.state;
+        const {name, canaryVisible} = this.state;
         let podColumns = [
             {
                 title: 'NAME',
@@ -889,47 +951,6 @@ class AppDetail extends React.Component {
             }
         ]
 
-        let labels = [],
-            annotations = [],
-            match_labels = [],
-            detailData = {
-                namespace: '',
-                created: '',
-                history: '',
-                rolling_update: {},
-                status: {},
-                strategy: '',
-                min_ready_seconds: ''
-            };
-
-        if(deployment) {
-            // 详情的数据
-            detailData = {
-                namespace: deployment.metadata.namespace,
-                created: deployment.metadata.creation_timestamp,
-                history: deployment.spec.revision_history_limit,
-                rolling_update: deployment.spec.strategy.rolling_update,
-                strategy: deployment.spec.strategy.type,
-                min_ready_seconds: deployment.spec.min_ready_seconds === null ? '0' : deployment.spec.min_ready_seconds,
-                status: deployment.status
-            }
-
-            // 标签样式
-            for (let p in deployment.metadata.labels) {
-                labels.push(<span style={spanStyle} key={p}>{p}: {deployment.metadata.labels[p]}</span>)
-            }
-            // 选择器样式
-            for (let p in deployment.spec.selector.match_labels) {
-                match_labels.push(<span style={spanStyle} key={p}>{p}: {deployment.spec.selector.match_labels[p]}</span>)
-            }
-            // 注释样式
-            for (let p in deployment.metadata.annotations) {
-                if(p !== 'app_specs_text') {
-                    annotations.push(<span style={spanStyle} key={p}>{p}: {deployment.metadata.annotations[p]}</span>)
-                }
-            }
-        }
-
         return (
             <div>
                 <div className="detailPage">
@@ -937,9 +958,9 @@ class AppDetail extends React.Component {
                         <Panel header={<h2>详情</h2>} key="1">
                             <div className="detailLeft">
                                 <p>名称：{name}</p>
-                                <p>集群：<span style={{color: 'red'}}>{this.state.nowCluster}</span></p>
-                                <p>命名空间：{detailData.namespace}</p>
-                                <div>Canary: <span style={{color: 'red'}}>{this.state.canaryVisible.toString()}</span><strong></strong>
+                                <p>集群：<span style={{color: 'blue'}}>{this.state.nowCluster}</span></p>
+                                <p>命名空间：{this.state.detailData.namespace}</p>
+                                <div>Canary: <span style={{color: 'blue'}}>{this.state.canaryVisible.toString()}</span><strong></strong>
                                     {this.state.canaryVisible &&
                                         <span>
                                           <Divider type="vertical" />
@@ -958,15 +979,16 @@ class AppDetail extends React.Component {
                                     ABTesting Rules: <Button onClick={this.handleSetABTestingRules.bind(this) }>Set</Button>
                                 </p>
                                 }
-                                <p>标签： {labels}</p>
-                                <p>注释： {annotations ? annotations : '无'}</p>
-                                <p>创建时间： {detailData.created}</p>
-                                <p>选择器： {match_labels}</p>
-                                <p>策略： {detailData.strategy}</p>
-                                <p>最小就绪秒数： {detailData.min_ready_seconds}</p>
-                                <p>历史版本限制值： {detailData.history}</p>
-                                <p>滚动更新策略： 最大激增数：{detailData.rolling_update.max_surge}，最大无效数：{detailData.rolling_update.max_unavailable}</p>
-                                <p>状态： {detailData.status.updated_replicas}个已更新，共计 {detailData.status.ready_replicas}个， {detailData.status.available_replicas}个可用， {detailData.status.unavailable_replicas === null ? '0' : detailData.status.unavailable_replicas}个不可用</p>
+                                <p>标签： {this.state.detailData.labels}</p>
+                                <p>注释： {this.state.detailData.annotations ? this.state.detailData.annotations : '无'}</p>
+                                <p>创建时间： {this.state.detailData.created}</p>
+                                <p>选择器： {this.state.detailData.match_labels}</p>
+                                <p>策略： {this.state.detailData.strategy}</p>
+                                <p>最小就绪秒数： {this.state.detailData.min_ready_seconds}</p>
+                                <p>历史版本限制值： {this.state.detailData.history}</p>
+                                <p>滚动更新策略： 最大激增数：{this.state.detailData.rolling_update.max_surge}，
+                                   最大无效数：{this.state.detailData.rolling_update.max_unavailable}</p>
+                                <p>状态： {this.state.detailData.status.updated_replicas}个已更新，共计 {this.state.detailData.status.ready_replicas}个， {this.state.detailData.status.available_replicas}个可用， {this.state.detailData.status.unavailable_replicas === null ? '0' : this.state.detailData.status.unavailable_replicas}个不可用</p>
                                 <Button type="primary"><Link to={`/logger?app=${name}`}>查看日志</Link></Button>
                                 <Button onClick={this.handleRenew.bind(this)}>Renew</Button>
                                 <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
