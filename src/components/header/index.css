@@ -1,4 +1,6 @@
 .headerStyle {
+    position: fixed;
+    z-index: 1;
     width: 100%;
     height: 50px;
     background: #f7f7f9;

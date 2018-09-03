@@ -714,8 +714,8 @@ class AppDetail extends React.Component {
         let self = this
 
         confirm({
-            title: 'Recreate Pods',
-            content: `Are you sure to force kubernetes to recreate the pods of ${self.state.name} app?`,
+            title: <div>Recreate Pods(cluster: <span style={{color:'red'}}>{self.state.nowCluster}</span>)</div>,
+            content: <div>Are you sure to force kubernetes to recreate the pods of <strong>{self.state.name}</strong> app?</div>,
             onOk() {
                 let {name, nowCluster} = self.state;
                 appRenew({name: name, cluster: nowCluster}).then(res => {
@@ -907,7 +907,7 @@ class AppDetail extends React.Component {
                                 <div onClick={() => {
                                     let deployModal = self.state.deployModal
                                     deployModal.visible = true
-                                    deployModal.title = `Deploy ${self.state.name} (tag: ${record.tag}, cluster: ${self.state.nowCluster})`
+                                    deployModal.title = <div>Deploy {self.state.name} (tag: {record.tag}, cluster: <span style={{color:'red'}}>{self.state.nowCluster}</span>)</div>
                                     deployModal.canary = false
                                     deployModal.tag = record.tag
                                     self.setState({deployModal: deployModal})
@@ -917,7 +917,7 @@ class AppDetail extends React.Component {
                                 <div onClick={() => {
                                     let deployModal = self.state.deployModal
                                     deployModal.visible = true
-                                    deployModal.title = `DeployCanary ${self.state.name} (tag: ${record.tag}, cluster: ${self.state.nowCluster})`
+                                    deployModal.title = <div>DeployCanary {self.state.name} (tag: {record.tag}, cluster: <span style={{color:'red'}}>{self.state.nowCluster}</span>)</div>
                                     deployModal.canary = true
                                     deployModal.tag = record.tag
                                     self.setState({deployModal: deployModal})}}>Canary</div>
@@ -1058,7 +1058,7 @@ class AppDetail extends React.Component {
                     </Modal>
 
                     <Modal
-                        title={`Scale ${this.state.name} (cluster: ${this.state.nowCluster})`}
+                        title={<div>Scale {this.state.name} (cluster:<span style={{color:'red'}}>{this.state.nowCluster}</span>)</div>}
                         visible={this.state.scaleVisible}
                         onOk={this.handleScale.bind(this)}
                         onCancel={() => {this.setState({scaleVisible: false})}}
@@ -1068,7 +1068,7 @@ class AppDetail extends React.Component {
                     </Modal>
 
                     <Modal
-                        title={`Rollback ${this.state.name} (cluster: ${this.state.nowCluster})`}
+                        title={<div>Rollback {this.state.name} (cluster:<span style={{color:'red'}}>{this.state.nowCluster}</span>)</div>}
                         visible={this.state.rollbackVisible}
                         onOk={this.handleRollback.bind(this)}
                         onCancel={() => {this.setState({rollbackVisible: false})}}
