@@ -155,6 +155,8 @@ class AppJob extends React.Component {
                     // console.log(job)
                     createJob(job).then(res => {
                         this.getJobDetail();
+
+                        notification.destroy()
                         notification.success({
                             message: '成功！',
                             description: `Create Success!`,
@@ -171,6 +173,8 @@ class AppJob extends React.Component {
                             let data = JSON.parse(res.data);
                             errorMsg = data.error;
                         }
+
+                        notification.destroy()
                         notification.error({
                             message: '失败！',
                             description: `${res.status}: ${errorMsg}`,
@@ -206,6 +210,8 @@ class AppJob extends React.Component {
     handleRestart(name) {
         restartJob({name: name}).then(res => {
             if(JSON.parse(res).error === null) {
+
+                notification.destroy()
                 notification.success({
                     message: '成功！',
                     description: `Restart Success!`,
@@ -217,6 +223,8 @@ class AppJob extends React.Component {
             if(res.data.indexOf('<p>') !== -1 ) {
                 errorMsg = res.data.split('<p>')[1].split('</p>')[0]; 
             }
+
+            notification.destroy()
             notification.error({
                 message: '失败！',
                 description: `${res.status}: ${errorMsg}`,
@@ -229,6 +237,8 @@ class AppJob extends React.Component {
     handleDelete(name) {
         deleteJob({name: name}).then(res => {
             if(res.error === null) {
+
+                notification.destroy()
                 notification.success({
                     message: '成功！',
                     description: `Delete Success!`,
@@ -243,6 +253,7 @@ class AppJob extends React.Component {
                     }
                 })
             } else {
+                notification.destroy()
                 notification.error({
                     message: '失败！',
                     description: 'Delete Fail',
@@ -272,6 +283,8 @@ class AppJob extends React.Component {
         }
         ws.onerror = function(evt) {
             let msg = JSON.parse(evt.data).data
+
+            notification.destroy()
             notification.error({
                 message: '错误信息',
                 description: `${msg}`,
