@@ -56,6 +56,37 @@ export const getPods = params => {
     .catch(err => console.log(err))
 }
 
+export const getAppYamlList = appname => {
+    return axios.get(`${testUrl}${version}/app/${appname}/yaml`).then(res => res.data)
+    .catch(err => console.log(err))
+}
+
+export const createOrUpdateAppYaml = (appname, params) => {
+    return axios({
+        method: 'post',
+        url: `${testUrl}${version}/app/${appname}/yaml`,
+        data: params,
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
+
+export const deleteAppYaml = (appname, name) => {
+    return axios({
+        method: 'delete',
+        url: `${testUrl}${version}/app/${appname}/name/${name}/yaml`,
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
 // app_deploy
 export const appDeploy = (name, params) => {
     return axios({

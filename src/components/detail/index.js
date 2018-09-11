@@ -7,7 +7,7 @@ import {
     getDeployment, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
     appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
     appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret,
-    appPostReleaseSpec } from 'api';
+    appPostReleaseSpec, getAppYamlList, deleteAppYaml, createOrUpdateAppYaml } from 'api';
 import emitter from "../event";
 
 import brace from 'brace';
@@ -142,6 +142,7 @@ function getInitialState() {
         nowCluster: '',
         scaleNum: 1,
         rollbackRevisionNum: 0,
+        yamlList: [],
         releaseTableData: [],
         podTableData: [],
         canarypodTableData: [],
@@ -194,6 +195,11 @@ class AppDetail extends React.Component {
                 nowCluster: cluster
             })
 
+            getAppYamlList(name).then(res => {
+                that.setState({
+                   yamlList: res
+                })
+            })
             getReleases(name).then(res => {
                 that.setState({
                     releaseTableData: res
@@ -380,6 +386,11 @@ class AppDetail extends React.Component {
     showAceEditorModal(config) {
         let self = this
 
+        if (! config.handler) {
+            config.handler = function(specs, destroy) {
+                destroy()
+            }
+        }
         let div = document.createElement('div');
         document.body.appendChild(div);
 
@@ -393,24 +404,6 @@ class AppDetail extends React.Component {
         ReactDOM.render(<AceEditorModal config={config} destroy={destroy} />, div)
     }
 
-    updateReleaseSpec(spec, destroy) {
-        let {name, nowTag} = this.state
-        let data = {
-            specs_text: spec
-        }
-        appPostReleaseSpec(name, nowTag, data).then(res=> {
-            destroy()
-            this.handleMsg(res, "Update Release Spec")
-            // update release data
-            getReleases(name).then(res => {
-                this.setState({
-                    releaseTableData: res
-                })
-            });
-        }).catch(err => {
-            this.handleError(err)
-        })
-    }
     // 构建
     handleBuild(tag) {
         let self = this
@@ -603,7 +596,11 @@ class AppDetail extends React.Component {
         let { name, nowCluster } = this.state;
         let tag = deployModal.tag
 
-        let data = {tag: tag, cluster: nowCluster}
+        let data = {
+          tag: tag,
+          cluster: nowCluster,
+          app_yaml_name: deployModal.appYamlName
+        }
         if (deployModal.replicas > 0) {
             data.replicas = deployModal.replicas
         }
@@ -706,6 +703,107 @@ class AppDetail extends React.Component {
         }).catch(err => {
             let res = ""
             setRulesHelper(res)
+        });
+    }
+
+    showAppYamlAddModal(record) {
+        let self = this
+        let appname = self.state.name
+        let title = "Change App Yaml"
+        if (! record.name) {
+            title = "Add App Yaml"
+            record = {}
+        }
+        let div = document.createElement('div');
+        document.body.appendChild(div);
+
+        function destroy(...args: any[]) {
+          const unmountResult = ReactDOM.unmountComponentAtNode(div);
+          if (unmountResult && div.parentNode) {
+            div.parentNode.removeChild(div);
+          }
+        }
+
+        function handler(newRecord) {
+            createOrUpdateAppYaml(appname, newRecord).then(res => {
+                destroy()
+                self.handleMsg(res, title)
+
+                getAppYamlList(appname).then(res => {
+                    self.setState({
+                       yamlList: res
+                    })
+                })
+            }).catch(err => {
+                self.handleError(err)
+            })
+        }
+
+        let config = {
+            title: title,
+            handler: handler,
+            destroy: destroy
+        }
+
+        const WrappedAppYamlAddModal = Form.create()(AppYamlAddModal);
+        ReactDOM.render(<WrappedAppYamlAddModal config={config} record={record} />, div)
+    }
+
+    handleSetAppYaml(record) {
+        let self = this
+        const {name} = this.state
+
+        function setAppYamlHelper(specs_text, destroy) {
+            let data = {
+                name: record.name,
+                specs_text: specs_text,
+                comment: record.comment
+            }
+            createOrUpdateAppYaml(name, data).then(res => {
+                destroy()
+                self.handleMsg(res, "Set App Yaml")
+
+                getAppYamlList(name).then(res => {
+                    self.setState({
+                       yamlList: res
+                    })
+                })
+            }).catch(err => {
+                self.handleError(err)
+            })
+        }
+
+        let config = {
+            title: "App Yaml",
+            mode: "yaml",
+            visible: true,
+            initialValue: record.specs_text,
+            handler: setAppYamlHelper
+        }
+        self.showAceEditorModal(config)
+    }
+
+    handleDeleteAppYaml(record) {
+        let self = this
+        const {name} = this.state
+
+        confirm({
+            title: 'Delete App Yaml',
+            content: <div>Are you sure to delete app yaml(<strong>{record.name}</strong>)?</div>,
+            onOk() {
+                deleteAppYaml(name, record.name).then(res => {
+                    self.handleMsg(res, "delete app yaml")
+
+                    getAppYamlList(name).then(res => {
+                        that.setState({
+                           yamlList: res
+                        })
+                    })
+                }).catch(err => {
+                    self.handleError(err)
+                })
+            },
+            onCancel() {},
         });
     }
 
@@ -929,8 +1027,8 @@ class AppDetail extends React.Component {
                                         title: "Spec",
                                         mode: "yaml",
                                         visible: true,
-                                        initialValue: record.specs_text,
-                                        handler: self.updateReleaseSpec.bind(self)
+                                        readOnly: true,
+                                        initialValue: record.specs_text
                                     }
                                     self.setState({nowTag: record.tag})
                                     self.showAceEditorModal(config) }} >Spec Text</div>
@@ -951,6 +1049,44 @@ class AppDetail extends React.Component {
             }
         ]
 
+        let yamlColumns = [
+            {
+                title: 'name',
+                dataIndex: 'name',
+                width: '14%',
+            }, {
+                title: 'created',
+                dataIndex: 'created',
+                width: '15%',
+                defaultSortOrder: 'descend',
+                sorter: (a, b) => {
+                    let c = new Date(a.created).getTime();
+                    let d = new Date(b.created).getTime();
+                    return c - d
+                }
+            }, {
+                title: 'updated',
+                dataIndex: 'updated',
+                width: '15%',
+            }, {
+                title: 'comment',
+                dataIndex: 'comment',
+                width: '35%',
+            }, {
+                title: 'Action',
+                dataIndex: 'Action',
+                width: '16%',
+                render(text, record) {
+                    return (
+                         <span>
+                            <a href="javascript:;" onClick={self.showAppYamlAddModal.bind(self, record)}>Edit</a>
+                            <Divider type="vertical" />
+                            <a href="javascript:;" onClick={self.handleDeleteAppYaml.bind(self, record)}>Delete</a>
+                        </span>
+                    )
+                }
+            }
+        ]
         return (
             <div>
                 <div className="detailPage">
@@ -1007,7 +1143,7 @@ class AppDetail extends React.Component {
                         </Panel>
                     </Collapse>
 
-                    <div style={{ height: '40px' }}></div>
+                    <div style={{ height: '20px' }}></div>
 
                     <Collapse bordered={false} defaultActiveKey={['1']}>
                         <Panel header={<h2>副本集</h2>} key="1">
@@ -1019,7 +1155,7 @@ class AppDetail extends React.Component {
                         </Panel>
                     </Collapse>
 
-                    <div style={{ height: '40px' }}></div>
+                    <div style={{ height: '20px' }}></div>
 
                     {this.state.canaryVisible && <Collapse bordered={false} defaultActiveKey={['1']}>
                         <Panel header={<h2>canary副本集</h2>} key="1">
@@ -1029,9 +1165,23 @@ class AppDetail extends React.Component {
                                 rowKey="name"
                             />
                         </Panel>
-                    </Collapse>}
+                    </Collapse> }
+                    {this.state.canaryVisible && <div style={{ height: '20px' }}></div> }
 
-                    <div style={{ height: '40px' }}></div>
+                    <Collapse bordered={false} defaultActiveKey={['1']}>
+                        <Panel header={<h2>Yaml Template</h2>} key="1">
+                            <div className="table-operations">
+                              <Button type="primary" onClick={this.showAppYamlAddModal.bind(this, {})}>Add</Button>
+                            </div>
+
+                            <Table
+                                columns={yamlColumns}
+                                dataSource={this.state.yamlList}
+                                rowKey="id"
+                            />
+                        </Panel>
+                    </Collapse>
+                    <div style={{ height: '20px' }}></div>
 
                     <Collapse bordered={false} defaultActiveKey={['1']}>
                         <Panel header={<h2>版本信息</h2>} key="1">
@@ -1086,12 +1236,25 @@ class AppDetail extends React.Component {
                               deployModal.visible = false
                               this.setState({deployModal: deployModal})}}
                     >
+                       <div>
                         <span>所需容器数量：</span>
                         <InputNumber min={0} max={100} defaultValue={0}
                            onChange={num => {
                               let deployModal = this.state.deployModal
                               deployModal.replicas = num
                               this.setState({deployModal: deployModal})}} />
+                         </div>
+                        <div>
+                        <span> App Yaml: </span>
+                        <Select defaultValue="default"
+                           onChange={val => {
+                              let deployModal = this.state.deployModal
+                              deployModal.appYamlName = val
+                              this.setState({deployModal: deployModal})}} >
+                             { this.state.yamlList.map(item => <Option key={item.name}>{item.name}</Option>) }
+                        </Select>
+                        </div>
+
                     </Modal>
 
                     <div id="example"></div>
@@ -1099,6 +1262,95 @@ class AppDetail extends React.Component {
             </div>
         )
     }
+}
+
+class AppYamlAddModal extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+        visible: true,
+        initialRecord: this.props.record,
+        yamlValue: this.props.record.specs_text,
+        config: this.props.config,
+        destroy: this.props.config.destroy
+    };
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.onChange = this.onChange.bind(this);
+  }
+
+  onChange(newValue) {
+      this.setState({yamlValue: newValue})
+  }
+
+  handleSubmit(event) {
+    event.preventDefault();
+
+    event.preventDefault();
+    this.props.form.validateFields((err, values) => {
+        if (!err) {
+            let record = values
+            record.specs_text = this.state.yamlValue
+
+            this.state.config.handler(record)
+        }
+    })
+  }
+
+  render() {
+    const { getFieldDecorator } = this.props.form;
+
+    return (
+        <Modal
+            title= {this.state.config.title}
+            visible={this.state.visible}
+            onCancel={this.state.destroy}
+            footer={null}
+        >
+      <form onSubmit={this.handleSubmit}>
+                <FormItem
+                    {...formItemLayout}
+                    label="Name"
+                >
+                    {getFieldDecorator('name', {
+                        initialValue: this.state.initialRecord.name
+                    })(
+                        <Input placeholder="App Yaml Name" />
+                    )}
+                </FormItem>
+                <FormItem
+                    {...formItemLayout}
+                    label="Comment"
+                >
+                    {getFieldDecorator('comment', {
+                        initialValue: this.state.initialRecord.comment,
+                        rules: [{required: false, message: 'Comment'}]
+                    })(
+                        <TextArea rows={3} />
+                    )}
+                </FormItem>
+                <AceEditor
+                    mode="yaml"
+                    value={this.state.yamlValue}
+                    theme="xcode"
+                    onChange={this.onChange}
+                    name="yaml"
+                    fontSize={18}
+                    width="450px"
+                    height="600px"
+                    editorProps={{$blockScrolling: true}}
+                />
+          <Row>
+            <FormItem>
+              <Button type="primary" htmlType="submit" >
+                Submit
+              </Button>
+            </FormItem>
+          </Row>
+      </form>
+        </Modal>
+    );
+  }
 }
 
 class AceEditorModal extends React.Component {
@@ -1143,6 +1395,7 @@ class AceEditorModal extends React.Component {
                 fontSize={18}
                 width="450px"
                 height="600px"
+                readOnly={!! this.state.config.readOnly}
                 editorProps={{$blockScrolling: true}}
             />
           <Row>
