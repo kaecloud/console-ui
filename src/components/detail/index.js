@@ -496,8 +496,12 @@ class AppDetail extends React.Component {
               }
             }
 
-            function submitForm(params) {
-                params.cluster = nowCluster
+            function submitForm(replace, cm_data) {
+                let params = {
+                  replace: replace,
+                  data: cm_data,
+                  cluster: nowCluster
+                }
                 console.log(params)
 
                 appPostConfigMap(name, params).then(res=> {
@@ -532,18 +536,7 @@ class AppDetail extends React.Component {
         }
     }
 
-    showSecret() {
-        const {name, nowCluster} = this.state
-
-        appGetSecret(name, {cluster: nowCluster}).then(res => {
-            this.setState({secretData: res})
-            this.showInfoModal("Secret", res)
-        }).catch(err => {
-            this.handleError(err);
-        });
-    }
-
-    handleSecret() {
+    showSecretModal() {
         let self = this
 
         function createSecret(secretData){
@@ -557,9 +550,9 @@ class AppDetail extends React.Component {
               }
             }
 
-            function submitForm(data) {
+            function submitForm(replace, data) {
                 let { name, nowCluster } = self.state;
-                let params = {data: data, cluster: nowCluster}
+                let params = {data: data, replace: replace, cluster: nowCluster}
                 appPostSecret(name, params).then(res=> {
                     self.handleMsg(res, "Create Secret")
                     destroy()
@@ -567,25 +560,21 @@ class AppDetail extends React.Component {
                     self.handleError(err)
                 })
             }
-
-            ReactDOM.render(<SecretFormModal value={secretData} handler={submitForm} destroy={destroy} />, div)
+            let jsonData = JSON.stringify(secretData, undefined, 2)
+            ReactDOM.render(<SecretFormModal value={jsonData} handler={submitForm} destroy={destroy} />, div)
         }
 
         // we need initial value of form, so if secretData is null, we need to get it from backend
-        if (self.state.secretData === null) {
-            const {name, nowCluster} = self.state
+        const {name, nowCluster} = self.state
 
-            appGetSecret(name, {cluster: nowCluster}).then(res => {
-                self.setState({secretData: res})
-                createSecret(res)
-            }).catch(err => {
-                let res = {}
-                self.setState({secretData: res})
-                createSecret(res)
-            });
-        } else {
-            createSecret(self.state.secretData)
-        }
+        appGetSecret(name, {cluster: nowCluster}).then(res => {
+            self.setState({secretData: res})
+            createSecret(res)
+        }).catch(err => {
+            let res = {}
+            self.setState({secretData: res})
+            createSecret(res)
+        });
     }
 
     // 部署
@@ -1107,8 +1096,7 @@ class AppDetail extends React.Component {
                                 <p>Config: <Button onClick={this.handleConfigMap.bind(this)}>Set</Button>
                                    <Button onClick={this.showConfigMap.bind(this)}>Show</Button>
                                 </p>
-                                <p>Secret: <Button onClick={this.handleSecret.bind(this)}>Set</Button>
-                                   <Button onClick={this.showSecret.bind(this)}>Show</Button>
+                                <p>Secret: <Button onClick={this.showSecretModal.bind(this)}>Set</Button>
                                 </p>
                                 {this.state.canaryVisible &&
                                 <p>
@@ -1286,7 +1274,6 @@ class AppYamlAddModal extends React.Component {
   handleSubmit(event) {
     event.preventDefault();
 
-    event.preventDefault();
     this.props.form.validateFields((err, values) => {
         if (!err) {
             let record = values
@@ -1329,6 +1316,7 @@ class AppYamlAddModal extends React.Component {
                         <TextArea rows={3} />
                     )}
                 </FormItem>
+                <p>Spec: </p>
                 <AceEditor
                     mode="yaml"
                     value={this.state.yamlValue}
@@ -1433,7 +1421,11 @@ class ConfigMapModal extends React.Component {
     event.preventDefault();
     this.props.form.validateFields((err, values) => {
         if (!err) {
-            this.state.config.handler(values)
+            console.log(values)
+            let cm_data = { }
+            cm_data[values.key] = values.data
+            console.log(values.replace, cm_data)
+            this.state.config.handler(values.replace, cm_data)
         }
     })
   }
@@ -1451,12 +1443,23 @@ class ConfigMapModal extends React.Component {
             <Form style={{marginTop: '20px'}} onSubmit={this.handleSubmit.bind(this)}>
                 <FormItem
                     {...formItemLayout}
-                    label="File Name"
+                    label="Key"
                 >
-                    {getFieldDecorator('config_name', {
+                    {getFieldDecorator('key', {
                         initialValue: this.state.initialValue.config_name
                     })(
-                        <Input placeholder="config file name" />
+                        <Input placeholder="the key name in configmap data" />
+                    )}
+                </FormItem>
+                <FormItem
+                    {...formItemLayout}
+                    label="replace"
+                >
+                    {getFieldDecorator('replace', {
+                        valuePropName: 'checked',
+                        initialValue: false,
+                    })(
+                        <Checkbox />
                     )}
                 </FormItem>
                 <FormItem
@@ -1467,7 +1470,7 @@ class ConfigMapModal extends React.Component {
                         initialValue: this.state.initialValue.data,
                         rules: [{required: true, message: 'Please input you config content'}]
                     })(
-                        <TextArea rows={4} />
+                        <TextArea rows={8} />
                     )}
                 </FormItem>
                 <Button type="primary" htmlType="submit" className="create-job-button">
@@ -1482,102 +1485,58 @@ class ConfigMapModal extends React.Component {
 class SecretFormModal extends React.Component {
   constructor(props) {
     super(props);
-    let keys = []
-    let values = []
 
-    console.log(Object.entries(this.props.value))
-    for (const [k, v] of Object.entries(this.props.value)) {
-        keys.push(k)
-        values.push(v)
-    }
     this.state = {
-        keys:keys,
-        values: values,
         visible: true,
+        value: this.props.value,
         destroy: this.props.destroy
     };
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
-  createUI(){
-     return this.state.values.map((el, i) =>
-         <div key={i}>
-           <Row>
-             <Col span={8}>
-              <FormItem>
-                  <Input placeholder="key" value={this.state.keys[i]||''} onChange={this.handleKeyChange.bind(this, i)}/>
-              </FormItem>
-            </Col>
-            <Col span={1}>
-              <FormItem>
-                <div> ： </div>
-              </FormItem>
-            </Col>
-             <Col span={11}>
-              <FormItem>
-                  <Input placeholder="value" value={el||''} onChange={this.handleValChange.bind(this, i)}/>
-              </FormItem>
-            </Col>
-            <Col span={2}>
-              <Button icon="minus" shape="circle" onClick={this.removeClick.bind(this, i)}/>
-            </Col>
-    	  </Row>
-         </div>
-     )
+  onAceEditorChange(newValue) {
+      this.setState({value: newValue})
   }
 
-  handleValChange(i, event) {
-     let values = [...this.state.values];
-     values[i] = event.target.value;
-     this.setState({ values });
-  }
-
-  handleKeyChange(i, event) {
-     let keys = [...this.state.keys];
-     keys[i] = event.target.value;
-     this.setState({ keys });
-  }
-
-  addClick(){
-    this.setState(prevState => ({ keys: [...prevState.keys, ''], values: [...prevState.values, '']}))
-  }
-
-  removeClick(i){
-     let values = [...this.state.values];
-     values.splice(i,1);
-     let keys = [...this.state.keys]
-     keys.splice(i, 1)
-     this.setState({ values: values, keys: keys });
+  onCheckboxChange(e) {
+      this.setState({replace: e.target.checked})
   }
 
   handleSubmit(event) {
     event.preventDefault();
 
-    let data = {}
-    for (const [idx, key] of this.state.keys.entries()) {
-        let val = this.state.values[idx]
-
-        if ((! key) || (! val)) {
-            continue
-        }
-        data[key] = val
-    }
-    this.props.handler(data)
+    let replace = this.state.replace
+    let secretData = JSON.parse(this.state.value)
+    this.props.handler(replace, secretData)
   }
 
   render() {
     return (
-    <Modal
-        title="创建Secret"
-        visible={this.state.visible}
-        onCancel={this.state.destroy}
-        footer={null}
-    >
+        <Modal
+            title="创建Secret"
+            visible={this.state.visible}
+            onCancel={this.state.destroy}
+            footer={null}
+        >
       <form onSubmit={this.handleSubmit}>
-          {this.createUI()}
-          <Row>
-            <Button onClick={this.addClick.bind(this)} > + </Button>
-          </Row>
+              <Row>
+                  <span>replace: </span>
+                  <Checkbox onChange={this.onCheckboxChange.bind(this)}/>
+              </Row>
+              <div style={{height: '10px'}}></div>
+
+            <p>Data:</p>
+            <AceEditor
+                mode="json"
+                value={this.state.value}
+                theme="xcode"
+                onChange={this.onAceEditorChange.bind(this)}
+                name="json"
+                fontSize={18}
+                width="450px"
+                height="600px"
+                editorProps={{$blockScrolling: true}}
+            />
           <Row>
             <FormItem>
               <Button type="primary" htmlType="submit" >
@@ -1586,8 +1545,7 @@ class SecretFormModal extends React.Component {
             </FormItem>
           </Row>
       </form>
-
-    </Modal>
+        </Modal>
     );
   }
 }
