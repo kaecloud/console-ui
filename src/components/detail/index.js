@@ -125,13 +125,6 @@ function getInitialState() {
             title: '',
             visible: false
         },
-        deployModal: {
-            title: '',
-            visible: false,
-            replicas: -1,
-            tag: '',
-            canary: false
-        },
         configMapData: null,
         secretData: null,
         example: '',
@@ -140,6 +133,7 @@ function getInitialState() {
         replicas: 1,
         version: '',
         nowCluster: '',
+        clusterNameList: [],
         scaleNum: 1,
         rollbackRevisionNum: 0,
         yamlList: [],
@@ -209,6 +203,11 @@ class AppDetail extends React.Component {
             getAppCanaryInfo({name:name, cluster:cluster}).then(res => {
                 that.setState({
                     canaryVisible: res.status
+                })
+            })
+            getCluster().then(res => {
+                that.setState({
+                    clusterNameList: res
                 })
             })
             that.fetchDeploymentData(name, cluster)
@@ -578,59 +577,62 @@ class AppDetail extends React.Component {
     }
 
     // 部署
-    handleDeploy() {
-        let deployModal = this.state.deployModal
-        deployModal.visible = false
-        this.setState({deployModal: deployModal})
-        let { name, nowCluster } = this.state;
-        let tag = deployModal.tag
-
-        let data = {
-          tag: tag,
-          cluster: nowCluster,
-          app_yaml_name: deployModal.appYamlName
-        }
-        if (deployModal.replicas > 0) {
-            data.replicas = deployModal.replicas
-        }
-        if (deployModal.canary) {
-            appDeployCanary(name, data).then(res => {
-                this.setState({canaryVisible: true})
-                this.handleMsg(res, 'Deploy Canary');
-            }).catch(err => {
-                this.handleError(err);
-            });
+    showDeployModal(record, canary) {
+        let self = this
+        let appname = self.state.name
+        let nowCluster = self.state.nowCluster
+        let title = ''
+        if (canary) {
+            title = "Deploy Canary"
         } else {
-            appDeploy(name, data).then(res => {
-                this.handleMsg(res, 'Deploy');
-                // update version
-                this.fetchDeploymentData(name, nowCluster)
-            }).catch(err => {
-                this.handleError(err);
-            });
+            title = "Deploy"
         }
-    }
+        let div = document.createElement('div');
+        document.body.appendChild(div);
 
-    // 部署canary
-    handleDeployCanary() {
-        let deployModal = this.state.deployModal
-        deployModal.visible = false
-        this.setState({deployModal: deployModal})
-        let { name, nowCluster } = this.state;
-        let replicas = deployModal.replicas
-        let tag = deployModal.tag
-
-        let data = {name: name, tag: tag, cluster: nowCluster}
-        if (replicas > 0) {
-            data.replicas = replicas
+        function destroy(...args: any[]) {
+          const unmountResult = ReactDOM.unmountComponentAtNode(div);
+          if (unmountResult && div.parentNode) {
+            div.parentNode.removeChild(div);
+          }
         }
 
-        appDeployCanary(name, data).then(res => {
-            this.setState({canaryVisible: true})
-            this.handleMsg(res, 'Deploy Canary');
-        }).catch(err => {
-            this.handleError(err);
-        });
+        function handler(data) {
+            if (canary) {
+                appDeployCanary(appname, data).then(res => {
+                    destroy();
+                    self.setState({canaryVisible: true})
+                    self.handleMsg(res, 'Deploy Canary');
+                }).catch(err => {
+                    self.handleError(err);
+                });
+            } else {
+                appDeploy(appname, data).then(res => {
+                    destroy();
+                    self.handleMsg(res, 'Deploy');
+                    // update version
+                    self.fetchDeploymentData(appname, nowCluster)
+                }).catch(err => {
+                    self.handleError(err);
+                });
+            }
+        }
+
+        let config = {
+            title: title,
+            handler: handler,
+            destroy: destroy
+        }
+        let initialValue = {
+            tag: record.tag,
+            replicas: 0,
+            yamlNameList: self.state.yamlList.map(item => item.name),
+            clusterNameList: self.state.clusterNameList,
+            currentClusterName: self.state.nowCluster
+        }
+
+        const WrappedDeployModal = Form.create()(DeployModal);
+        ReactDOM.render(<WrappedDeployModal config={config} initialValue={initialValue} />, div)
     }
 
     // 删除canary
@@ -991,23 +993,10 @@ class AppDetail extends React.Component {
                                 )
                             }
                             <Menu.Item key="1">
-                                <div onClick={() => {
-                                    let deployModal = self.state.deployModal
-                                    deployModal.visible = true
-                                    deployModal.title = <div>Deploy {self.state.name} (tag: {record.tag}, cluster: <span style={{color:'red'}}>{self.state.nowCluster}</span>)</div>
-                                    deployModal.canary = false
-                                    deployModal.tag = record.tag
-                                    self.setState({deployModal: deployModal})
-                                    }}>Deploy</div>
+                                <div onClick={() => { self.showDeployModal.bind(self)(record, false); }}>Deploy</div>
                             </Menu.Item>
                             <Menu.Item key="2">
-                                <div onClick={() => {
-                                    let deployModal = self.state.deployModal
-                                    deployModal.visible = true
-                                    deployModal.title = <div>DeployCanary {self.state.name} (tag: {record.tag}, cluster: <span style={{color:'red'}}>{self.state.nowCluster}</span>)</div>
-                                    deployModal.canary = true
-                                    deployModal.tag = record.tag
-                                    self.setState({deployModal: deployModal})}}>Canary</div>
+                                <div onClick={() => { self.showDeployModal.bind(self)(record, true); }}>Canary</div>
                             </Menu.Item>
                             <Menu.Divider />
                             <Menu.Item key="3">
@@ -1201,6 +1190,7 @@ class AppDetail extends React.Component {
                         onOk={this.handleScale.bind(this)}
                         onCancel={() => {this.setState({scaleVisible: false})}}
                     >
+                        <p>cluster：<span style={{color:'red'}}>{this.state.nowCluster}</span></p>
                         <span>所需容器数量：</span>
                         <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
                     </Modal>
@@ -1211,38 +1201,9 @@ class AppDetail extends React.Component {
                         onOk={this.handleRollback.bind(this)}
                         onCancel={() => {this.setState({rollbackVisible: false})}}
                     >
+                        <p>cluster：<span style={{color:'red'}}>{this.state.nowCluster}</span></p>
                         <span>revision：</span>
                         <InputNumber min={0} max={10} defaultValue={0} onChange={num => {this.setState({rollbackRevisionNum: num})}} />
-                    </Modal>
-
-                    <Modal
-                        title={this.state.deployModal.title}
-                        visible={this.state.deployModal.visible}
-                        onOk={this.handleDeploy.bind(this)}
-                        onCancel={() => {
-                              let deployModal = this.state.deployModal
-                              deployModal.visible = false
-                              this.setState({deployModal: deployModal})}}
-                    >
-                       <div>
-                        <span>所需容器数量：</span>
-                        <InputNumber min={0} max={100} defaultValue={0}
-                           onChange={num => {
-                              let deployModal = this.state.deployModal
-                              deployModal.replicas = num
-                              this.setState({deployModal: deployModal})}} />
-                         </div>
-                        <div>
-                        <span> App Yaml: </span>
-                        <Select defaultValue="default"
-                           onChange={val => {
-                              let deployModal = this.state.deployModal
-                              deployModal.appYamlName = val
-                              this.setState({deployModal: deployModal})}} >
-                             { this.state.yamlList.map(item => <Option key={item.name}>{item.name}</Option>) }
-                        </Select>
-                        </div>
-
                     </Modal>
 
                     <div id="example"></div>
@@ -1545,6 +1506,106 @@ class SecretFormModal extends React.Component {
             </FormItem>
           </Row>
       </form>
+        </Modal>
+    );
+  }
+}
+
+class DeployModal extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+        visible: true,
+        config: this.props.config,
+        initialValue: this.props.initialValue,
+    };
+    this.handleSubmit = this.handleSubmit.bind(this);
+    this.onChange = this.onChange.bind(this);
+  }
+
+  onChange(newValue) {
+      this.setState({value: newValue})
+  }
+
+  handleSubmit(event) {
+    event.preventDefault();
+    this.props.form.validateFields((err, values) => {
+        if (!err) {
+            let data = {
+              tag: this.state.initialValue.tag,
+              cluster: values.cluster_name,
+              app_yaml_name: values.app_yaml_name
+            }
+
+            if (values.replicas > 0) {
+                data.replicas = values.replicas
+            }
+            console.log(values, data)
+            this.state.config.handler(data)
+        }
+    })
+  }
+
+  render() {
+    const { getFieldDecorator } = this.props.form;
+
+    return (
+        <Modal
+            title={this.state.config.title}
+            visible={this.state.visible}
+            onCancel={this.state.config.destroy}
+            footer={null}
+        >
+            <Form style={{marginTop: '20px'}} onSubmit={this.handleSubmit.bind(this)}>
+                <FormItem
+                    {...formItemLayout}
+                    label="Tag(readOnly)"
+                >
+                    {getFieldDecorator('tag', {
+                        initialValue: this.state.initialValue.tag
+                    })(
+                        <Input readOnly={true} />
+                    )}
+                </FormItem>
+                <FormItem
+                    {...formItemLayout}
+                    label="Cluster"
+                >
+                    {getFieldDecorator('cluster_name', {
+                        initialValue: this.state.initialValue.currentClusterName
+                    })(
+                        <Select>
+                             { this.state.initialValue.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
+                        </Select>
+                    )}
+                </FormItem>
+                <FormItem
+                    {...formItemLayout}
+                    label="容器数量："
+                >
+                    {getFieldDecorator('replicas', {
+                        initialValue: this.state.initialValue.replicas
+                    })(
+                        <InputNumber min={0} max={100} />
+                    )}
+                </FormItem>
+                <FormItem
+                    {...formItemLayout}
+                    label="App Yaml"
+                >
+                    {getFieldDecorator('app_yaml_name', {
+                        initialValue: "default"
+                    })(
+                        <Select>
+                             { this.state.initialValue.yamlNameList.map(name => <Option key={name}>{name}</Option>) }
+                        </Select>
+                    )}
+                </FormItem>
+                <Button type="primary" htmlType="submit" className="create-job-button">
+                    Submit
+                </Button>
+            </Form>
         </Modal>
     );
   }
