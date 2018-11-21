@@ -17,22 +17,16 @@ import 'brace/mode/json';
 import 'brace/theme/xcode';
 
 import './index.css';
+import {
+  DeleteConfirmModal, AppYamlAddModal, AceEditorModal,
+  ConfigMapModal, SecretFormModal, DeployModal
+} from './modals'
+
 const Panel = Collapse.Panel;
 const { TextArea } = Input;
 const FormItem = Form.Item;
 const Option = Select.Option;
 const confirm = Modal.confirm;
-
-const formItemLayout = {
-    labelCol: {
-        xs: { span: 24 },
-        sm: { span: 5 },
-    },
-    wrapperCol: {
-        xs: { span: 30 },
-        sm: { span: 18 },
-    },
-};
 
 const spanStyle = {
     padding: '0 4px',
@@ -59,7 +53,7 @@ function extractDataFromPod(pod) {
             return numminutes + 'm';
         }
         return seconds + 's';
-    }
+    };
     let status = pod.status.phase;
     // get ready count
     let restart_count = 0;
@@ -71,9 +65,9 @@ function extractDataFromPod(pod) {
                 ready_count++;
             } else {
                 if (cont_status.state.terminated) {
-                    status = cont_status.state.terminated.reason
+                  status = cont_status.state.terminated.reason;
                 } else if (cont_status.state.waiting) {
-                    status = cont_status.state.waiting.reason
+                  status = cont_status.state.waiting.reason;
                 }
             }
             if (cont_status.restart_count > restart_count) {
@@ -96,8 +90,8 @@ function extractDataFromPod(pod) {
         age: msToHuman(interval),
         ip: pod.status.pod_ip,
         node: pod.status.host_ip
-    }
-    return data
+    };
+  return data;
 }
 
 function getArg(name) {
@@ -143,7 +137,7 @@ function getInitialState() {
         scaleVisible: false,
         rollbackVisible: false,
         canaryVisible: false
-    }
+    };
 }
 
 class AppDetail extends React.Component {
@@ -152,10 +146,10 @@ class AppDetail extends React.Component {
         super();
 
         let self = this;
-        this.state = getInitialState()
+      this.state = getInitialState();
         this.handleMsg = this.handleMsg.bind(this);
-        this.showAceEditorModal = this.showAceEditorModal.bind(this)
-        this.fetchDeploymentData = this.fetchDeploymentData.bind(this)
+      this.showAceEditorModal = this.showAceEditorModal.bind(this);
+      this.fetchDeploymentData = this.fetchDeploymentData.bind(this);
     }
 
     componentDidMount() {
@@ -402,19 +396,37 @@ class AppDetail extends React.Component {
         ReactDOM.render(<AceEditorModal config={config} destroy={destroy} />, div)
     }
 
+  showAppDeployment() {
+    let infoModal = this.state.infoModal;
+    infoModal.visible = true;
+    infoModal.title = "Deployment";
+    infoModal.text = `
+        <p>命名空间：${this.state.detailData.namespace}</p>
+        <p>标签： ${this.state.detailData.labels}</p>
+        <p>注释： ${this.state.detailData.annotations ? this.state.detailData.annotations : '无'}</p>
+        <p>创建时间： ${this.state.detailData.created}</p>
+        <p>选择器： ${this.state.detailData.match_labels}</p>
+        <p>策略： ${this.state.detailData.strategy}</p>
+        <p>最小就绪秒数： ${this.state.detailData.min_ready_seconds}</p>
+        <p>历史版本限制值： ${this.state.detailData.history}</p>
+        <p>滚动更新策略： 最大激增数：${this.state.detailData.rolling_update.max_surge},
+      最大无效数：${this.state.detailData.rolling_update.max_unavailable}</p>
+    `;
+    this.setState({infoModal: infoModal});
+  }
     // 构建
     handleBuild(tag) {
-        let self = this
+      let self = this;
         let { name } = self.state;
 
         confirm({
             title: 'Build',
             content: `Are you sure to build image for app ${name} release ${tag}?`,
             onOk() {
-                let infoModal = self.state.infoModal
-                infoModal.visible = true
-                infoModal.title = "Build Output"
-                self.setState({infoModal: infoModal})
+              let infoModal = self.state.infoModal;
+              infoModal.visible = true;
+              infoModal.title = "Build Output";
+              self.setState({infoModal: infoModal});
 
                 let prodSchema = "ws:"
                 if (window.location.protocol === "https:") {
@@ -1118,58 +1130,44 @@ class AppDetail extends React.Component {
         ]
         return (
             <div>
-                <div className="detailPage">
-                    <Collapse bordered={false} defaultActiveKey={['1']}>
-                        <Panel header={<h2>详情</h2>} key="1">
-                            <div className="detailLeft">
-                                <p>名称：{name}</p>
-                                <p>集群：<span style={{color: 'blue'}}>{this.state.nowCluster}</span></p>
-                                <p>命名空间：{this.state.detailData.namespace}</p>
-                                <div>Canary: <span style={{color: 'blue'}}>{this.state.canaryVisible.toString()}</span><strong></strong>
-                                    {this.state.canaryVisible &&
-                                        <span>
-                                          <Divider type="vertical" />
-                                          <Button onClick={this.handleDeleteCanary.bind(this)}>DeleteCanary</Button>
-                                        </span>
-                                    }
-                                </div>
-                                <p>Config: <Button onClick={this.handleConfigMap.bind(this)}>Set</Button>
-                                   <Button onClick={this.showConfigMap.bind(this)}>Show</Button>
-                                </p>
-                                <p>Secret: <Button onClick={this.showSecretModal.bind(this)}>Set</Button>
-                                </p>
-                                {this.state.canaryVisible &&
-                                <p>
-                                    ABTesting Rules: <Button onClick={this.handleSetABTestingRules.bind(this) }>Set</Button>
-                                </p>
-                                }
-                                <p>标签： {this.state.detailData.labels}</p>
-                                <p>注释： {this.state.detailData.annotations ? this.state.detailData.annotations : '无'}</p>
-                                <p>创建时间： {this.state.detailData.created}</p>
-                                <p>选择器： {this.state.detailData.match_labels}</p>
-                                <p>策略： {this.state.detailData.strategy}</p>
-                                <p>最小就绪秒数： {this.state.detailData.min_ready_seconds}</p>
-                                <p>历史版本限制值： {this.state.detailData.history}</p>
-                                <p>滚动更新策略： 最大激增数：{this.state.detailData.rolling_update.max_surge}，
-                                   最大无效数：{this.state.detailData.rolling_update.max_unavailable}</p>
-                                <p>状态： {this.state.detailData.status.updated_replicas}个已更新，共计 {this.state.detailData.status.ready_replicas}个， {this.state.detailData.status.available_replicas}个可用， {this.state.detailData.status.unavailable_replicas === null ? '0' : this.state.detailData.status.unavailable_replicas}个不可用</p>
-                                <Button type="primary"><Link to={`/logger?app=${name}`}>审计日志</Link></Button>
-                                <Button onClick={this.handleRenew.bind(this)}>Renew</Button>
-                                <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
-                                <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
-                                <Button type="danger" onClick={this.showDeleteAppConfirmModal.bind(this)}>Delete</Button>
-                            </div>
-                            { this.state.textVisible ? (
-                                <div className="detailRight">
-                                    <div className="title-bar"></div>
-                                    <div className="text-body">
-                                        <span className="text"></span>
-                                    </div>
-                                </div>
-                            ) : ''}
-                        </Panel>
-                    </Collapse>
+                <Row>
+                  <div className="detailInfo">
+                    <div className="appHeader"><Icon type="setting" theme="filled" /> {name}</div>
 
+                    <div className="appBody">
+                        <p>集群：<span style={{color: 'blue'}}>{this.state.nowCluster}</span>,
+                         Canary: <span style={{color: 'blue'}}>{this.state.canaryVisible.toString()}</span><strong></strong>
+                        </p>
+                        <p>状态： {this.state.detailData.status.updated_replicas}个已更新，共计 {this.state.detailData.status.ready_replicas}个， {this.state.detailData.status.available_replicas}个可用， {this.state.detailData.status.unavailable_replicas === null ? '0' : this.state.detailData.status.unavailable_replicas}个不可用</p>
+                        <div>
+                            {this.state.canaryVisible &&
+                                <span>
+                                  <Divider type="vertical" />
+                                  <Button onClick={this.handleDeleteCanary.bind(this)}>DeleteCanary</Button>
+                                </span>
+                            }
+                          </div>
+                          <p>Deployment:
+                              <Button onClick={this.showAppDeployment.bind(this)}>Show</Button>
+                          </p>
+                          <p>Config: <Button onClick={this.handleConfigMap.bind(this)}>Set</Button>
+                                 <Button onClick={this.showConfigMap.bind(this)}>Show</Button>
+                          </p>
+                          <p>Secret: <Button onClick={this.showSecretModal.bind(this)}>Set</Button>
+                          </p>
+                          {this.state.canaryVisible &&
+                          <p>
+                              ABTesting Rules: <Button onClick={this.handleSetABTestingRules.bind(this) }>Set</Button>
+                          </p>
+                          }
+                          <Button type="primary"><Link to={`/logger?app=${name}`}>审计日志</Link></Button>
+                          <Button onClick={this.handleRenew.bind(this)}>Renew</Button>
+                          <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
+                          <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
+                          <Button type="danger" onClick={this.showDeleteAppConfirmModal.bind(this)}>Delete</Button>
+                          </div>
+                      </div>
+                      </Row>
                     <div style={{ height: '20px' }}></div>
 
                     <Collapse bordered={false} defaultActiveKey={['1']}>
@@ -1259,498 +1257,9 @@ class AppDetail extends React.Component {
                     </Modal>
 
                     <div id="example"></div>
-                </div>
             </div>
         )
     }
-}
-
-class DeleteConfirmModal extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-        visible: true,
-        buttonDisabled: true,
-        expectValue: this.props.expectValue,
-        config: this.props.config,
-        handler: this.props.config.handler,
-        destroy: this.props.config.destroy
-    };
-    this.onChange = this.onChange.bind(this);
-  }
-
-  onChange(e) {
-      var newValue = e.target.value
-      console.log(newValue)
-      if (this.state.expectValue == newValue) {
-          this.setState({buttonDisabled: false})
-      } else {
-          this.setState({buttonDisabled: true})
-      }
-  }
-
-  render() {
-    return (
-        <Modal
-            title= "Are you absolutely sure?"
-            visible={this.state.visible}
-            onCancel={this.state.destroy}
-            footer={null}
-        >
-          <p>
-            This action <strong>cannot</strong> be undone. This will permanently delete the <strong>{this.state.expectValue}</strong> app
-          </p>
-          <p>Please type in the name of the app to confirm.</p>
-
-          <Row>
-              <Input name="name" onChange={this.onChange} />
-          </Row>
-          <div style={{height:"10px"}}></div>
-          <Row>
-             <Button type="danger" style={{width: '100%'}} disabled={this.state.buttonDisabled} onClick={this.state.handler}>
-               I understand the consequences, delete this app
-             </Button>
-          </Row>
-        </Modal>
-    );
-  }
-}
-
-class AppYamlAddModal extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-        visible: true,
-        initialRecord: this.props.record,
-        yamlValue: this.props.record.specs_text,
-        config: this.props.config,
-        destroy: this.props.config.destroy
-    };
-    this.handleSubmit = this.handleSubmit.bind(this);
-    this.onChange = this.onChange.bind(this);
-  }
-
-  onChange(newValue) {
-      this.setState({yamlValue: newValue})
-  }
-
-  handleSubmit(event) {
-    event.preventDefault();
-
-    this.props.form.validateFields((err, values) => {
-        if (!err) {
-            let record = values
-            record.specs_text = this.state.yamlValue
-
-            this.state.config.handler(record)
-        }
-    })
-  }
-
-  render() {
-    const { getFieldDecorator } = this.props.form;
-
-    return (
-        <Modal
-            title= {this.state.config.title}
-            visible={this.state.visible}
-            onCancel={this.state.destroy}
-            footer={null}
-        >
-      <form onSubmit={this.handleSubmit}>
-                <FormItem
-                    {...formItemLayout}
-                    label="Name"
-                >
-                    {getFieldDecorator('name', {
-                        initialValue: this.state.initialRecord.name
-                    })(
-                        <Input placeholder="App Yaml Name" />
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Comment"
-                >
-                    {getFieldDecorator('comment', {
-                        initialValue: this.state.initialRecord.comment,
-                        rules: [{required: false, message: 'Comment'}]
-                    })(
-                        <TextArea rows={3} />
-                    )}
-                </FormItem>
-                <p>Spec: </p>
-                <AceEditor
-                    mode="yaml"
-                    value={this.state.yamlValue}
-                    theme="xcode"
-                    onChange={this.onChange}
-                    name="yaml"
-                    fontSize={18}
-                    width="450px"
-                    height="600px"
-                    editorProps={{$blockScrolling: true}}
-                />
-          <Row>
-            <FormItem>
-              <Button type="primary" htmlType="submit" >
-                Submit
-              </Button>
-            </FormItem>
-          </Row>
-      </form>
-        </Modal>
-    );
-  }
-}
-
-class AceEditorModal extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-        visible: true,
-        value: this.props.config.initialValue,
-        config: this.props.config,
-        destroy: this.props.destroy
-    };
-    this.handleSubmit = this.handleSubmit.bind(this);
-    this.onChange = this.onChange.bind(this);
-  }
-
-  onChange(newValue) {
-      this.setState({value: newValue})
-  }
-
-  handleSubmit(event) {
-    event.preventDefault();
-    this.state.config.handler(this.state.value, this.state.destroy)
-  }
-
-  render() {
-
-    return (
-        <Modal
-            title={this.state.config.title}
-            visible={this.state.visible}
-            onCancel={this.state.destroy}
-            footer={null}
-        >
-      <form onSubmit={this.handleSubmit}>
-            <AceEditor
-                mode={this.state.config.mode}
-                value={this.state.value}
-                theme="xcode"
-                onChange={this.onChange}
-                name="json"
-                fontSize={18}
-                width="450px"
-                height="600px"
-                readOnly={!! this.state.config.readOnly}
-                editorProps={{$blockScrolling: true}}
-            />
-          <Row>
-            <FormItem>
-              <Button type="primary" htmlType="submit" >
-                Submit
-              </Button>
-            </FormItem>
-          </Row>
-      </form>
-        </Modal>
-    );
-  }
-}
-
-class ConfigMapModal extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-        visible: true,
-        config: this.props.config,
-        initialValue: this.props.initialValue,
-        handler: this.props.config.handler,
-        destroy: this.props.config.destroy
-    };
-    this.handleSubmit = this.handleSubmit.bind(this);
-    this.onChange = this.onChange.bind(this);
-  }
-
-  onChange(newValue) {
-      this.setState({value: newValue})
-  }
-
-  handleSubmit(event) {
-    event.preventDefault();
-    this.props.form.validateFields((err, values) => {
-        if (!err) {
-            console.log(values)
-            let cm_data = { }
-            cm_data[values.key] = values.data
-            console.log(values.replace, cm_data)
-          this.state.handler(values.cluster_name, values.replace, cm_data)
-        }
-    })
-  }
-
-  render() {
-    const { getFieldDecorator } = this.props.form;
-
-    return (
-        <Modal
-            title="创建ConfigMap"
-            visible={this.state.visible}
-            onCancel={this.state.destroy}
-            footer={null}
-        >
-            <Form style={{marginTop: '20px'}} onSubmit={this.handleSubmit.bind(this)}>
-                <FormItem
-                    {...formItemLayout}
-                    label="Cluster"
-                >
-                    {getFieldDecorator('cluster_name', {
-                        initialValue: this.state.initialValue.currentClusterName
-                    })(
-                        <Select>
-                             { this.state.initialValue.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
-                        </Select>
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Key"
-                >
-                    {getFieldDecorator('key', {
-                        initialValue: this.state.initialValue.config_name
-                    })(
-                        <Input placeholder="the key name in configmap data" />
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="replace"
-                >
-                    {getFieldDecorator('replace', {
-                        valuePropName: 'checked',
-                        initialValue: false,
-                    })(
-                        <Checkbox />
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Data"
-                >
-                    {getFieldDecorator('data', {
-                        initialValue: this.state.initialValue.data,
-                        rules: [{required: true, message: 'Please input you config content'}]
-                    })(
-                        <TextArea rows={8} />
-                    )}
-                </FormItem>
-                <Button type="primary" htmlType="submit" className="create-job-button">
-                    Submit
-                </Button>
-            </Form>
-        </Modal>
-    );
-  }
-}
-
-class SecretFormModal extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-        visible: true,
-        value: this.props.initialValue.secretData,
-        initialValue: this.props.initialValue,
-        handler: this.props.config.handler,
-        destroy: this.props.config.destroy
-    };
-    this.handleSubmit = this.handleSubmit.bind(this);
-  }
-
-  onAceEditorChange(newValue) {
-      this.setState({value: newValue})
-  }
-
-  handleSubmit(event) {
-    event.preventDefault();
-
-    event.preventDefault();
-    this.props.form.validateFields((err, values) => {
-      if (!err) {
-        let secretData = JSON.parse(this.state.value)
-        this.state.handler(values.cluster_name, values.replace, secretData)
-      }
-    })
-  }
-
-  render() {
-    const { getFieldDecorator } = this.props.form;
-
-    return (
-        <Modal
-            title="创建Secret"
-            visible={this.state.visible}
-            onCancel={this.state.destroy}
-            footer={null}
-        >
-      <form onSubmit={this.handleSubmit}>
-              <FormItem
-                  {...formItemLayout}
-                  label="Cluster"
-              >
-                  {getFieldDecorator('cluster_name', {
-                      initialValue: this.state.initialValue.currentClusterName
-                  })(
-                      <Select>
-                           { this.state.initialValue.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
-                      </Select>
-                  )}
-              </FormItem>
-
-              <FormItem
-                {...formItemLayout}
-                label="replace"
-              >
-                {getFieldDecorator('replace', {
-                  valuePropName: 'checked',
-                  initialValue: false,
-                })(
-                    <Checkbox />
-                )}
-              </FormItem>
-
-              <div style={{height: '5px'}}></div>
-
-            <p>Data:</p>
-            <AceEditor
-                mode="json"
-                value={this.state.value}
-                theme="xcode"
-                onChange={this.onAceEditorChange.bind(this)}
-                name="json"
-                fontSize={18}
-                width="450px"
-                height="600px"
-                editorProps={{$blockScrolling: true}}
-            />
-          <Row>
-            <FormItem>
-              <Button type="primary" htmlType="submit" >
-                Submit
-              </Button>
-            </FormItem>
-          </Row>
-      </form>
-        </Modal>
-    );
-  }
-}
-
-class DeployModal extends React.Component {
-  constructor(props) {
-    super(props);
-
-    this.state = {
-        visible: true,
-        config: this.props.config,
-        initialValue: this.props.initialValue,
-    };
-    this.handleSubmit = this.handleSubmit.bind(this);
-    this.onChange = this.onChange.bind(this);
-  }
-
-  onChange(newValue) {
-      this.setState({value: newValue})
-  }
-
-  handleSubmit(event) {
-    event.preventDefault();
-    this.props.form.validateFields((err, values) => {
-        if (!err) {
-            let data = {
-              tag: this.state.initialValue.tag,
-              cluster: values.cluster_name,
-              app_yaml_name: values.app_yaml_name
-            }
-
-            if (values.replicas > 0) {
-                data.replicas = values.replicas
-            }
-            console.log(values, data)
-            this.state.config.handler(data)
-        }
-    })
-  }
-
-  render() {
-    const { getFieldDecorator } = this.props.form;
-
-    return (
-        <Modal
-            title={this.state.config.title}
-            visible={this.state.visible}
-            onCancel={this.state.config.destroy}
-            footer={null}
-        >
-            <Form style={{marginTop: '20px'}} onSubmit={this.handleSubmit.bind(this)}>
-                <FormItem
-                    {...formItemLayout}
-                    label="Tag(readOnly)"
-                >
-                    {getFieldDecorator('tag', {
-                        initialValue: this.state.initialValue.tag
-                    })(
-                        <Input readOnly={true} />
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Cluster"
-                >
-                    {getFieldDecorator('cluster_name', {
-                        initialValue: this.state.initialValue.currentClusterName
-                    })(
-                        <Select>
-                             { this.state.initialValue.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
-                        </Select>
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="容器数量："
-                >
-                    {getFieldDecorator('replicas', {
-                        initialValue: this.state.initialValue.replicas
-                    })(
-                        <InputNumber min={0} max={100} />
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="App Yaml"
-                >
-                    {getFieldDecorator('app_yaml_name', {
-                        initialValue: "default"
-                    })(
-                        <Select>
-                             { this.state.initialValue.yamlNameList.map(name => <Option key={name}>{name}</Option>) }
-                        </Select>
-                    )}
-                </FormItem>
-                <Button type="primary" htmlType="submit" className="create-job-button">
-                    Submit
-                </Button>
-            </Form>
-        </Modal>
-    );
-  }
 }
 
 export default Form.create()(AppDetail);

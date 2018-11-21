@@ -3,6 +3,24 @@
     float: right;
 }
 
+.detailInfo {
+    background: #fff;
+}
+
+.detailInfo .ant-btn {
+    margin-right: 10px;
+}
+
+.appHeader {
+    padding: 10px 10px 10px 24px;
+    font-size: 2em;
+    color: #4caf50;
+    height: 31px;
+}
+.appBody {
+    margin-top: 10px;
+    padding: 24px;
+}
 .ant-collapse-borderless{
     margin-bottom: 20px;
     background-color: #fff;
