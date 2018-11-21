@@ -7,7 +7,7 @@ import {
     getDeployment, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
     appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
     appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret,
-    appPostReleaseSpec, getAppYamlList, deleteAppYaml, createOrUpdateAppYaml } from 'api';
+    appPostReleaseSpec, getAppYamlList, deleteAppYaml, createOrUpdateAppYaml, deleteApp} from 'api';
 import emitter from "../event";
 
 import brace from 'brace';
@@ -127,7 +127,6 @@ function getInitialState() {
         },
         configMapData: null,
         secretData: null,
-        example: '',
         name: '',
         nowTag: '',
         replicas: 1,
@@ -495,13 +494,12 @@ class AppDetail extends React.Component {
               }
             }
 
-            function submitForm(replace, cm_data) {
+          function submitForm(cluster_name, replace, cm_data) {
                 let params = {
                   replace: replace,
                   data: cm_data,
-                  cluster: nowCluster
+                  cluster: cluster_name
                 }
-                console.log(params)
 
                 appPostConfigMap(name, params).then(res=> {
                     destroy()
@@ -511,13 +509,19 @@ class AppDetail extends React.Component {
                 })
             }
             let config = {
-                initialValue: configMapData,
-                handler: submitForm
+              destroy: destroy,
+              handler: submitForm
             }
 
+            let initialValue = {
+                configMapData: configMapData,
+                clusterNameList: self.state.clusterNameList,
+                currentClusterName: self.state.nowCluster
+            }
+          console.log(initialValue)
             const WrappedConfigMapModal = Form.create()(ConfigMapModal);
 
-            ReactDOM.render(<WrappedConfigMapModal config={config} destroy={destroy} />, div)
+            ReactDOM.render(<WrappedConfigMapModal config={config} initialValue={initialValue} />, div)
         }
 
         // we need initial value of form, so if configMapData is null, we need to get it from backend
@@ -549,18 +553,32 @@ class AppDetail extends React.Component {
               }
             }
 
-            function submitForm(replace, data) {
-                let { name, nowCluster } = self.state;
-                let params = {data: data, replace: replace, cluster: nowCluster}
-                appPostSecret(name, params).then(res=> {
-                    self.handleMsg(res, "Create Secret")
-                    destroy()
-                }).catch(err => {
-                    self.handleError(err)
-                })
+          function submitForm(cluster_name, replace, data) {
+            let { name, nowCluster } = self.state;
+            let params = {
+              data: data,
+              replace: replace,
+              cluster: cluster_name
             }
-            let jsonData = JSON.stringify(secretData, undefined, 2)
-            ReactDOM.render(<SecretFormModal value={jsonData} handler={submitForm} destroy={destroy} />, div)
+            appPostSecret(name, params).then(res=> {
+                self.handleMsg(res, "Create Secret")
+                destroy()
+            }).catch(err => {
+                self.handleError(err)
+            })
+          }
+          let config = {
+            destroy: destroy,
+            handler: submitForm
+          }
+
+          let initialValue = {
+            secretData: JSON.stringify(secretData, undefined, 2),
+            clusterNameList: self.state.clusterNameList,
+            currentClusterName: self.state.nowCluster
+          }
+            const WrappedSecretFormModal = Form.create()(SecretFormModal);
+            ReactDOM.render(<WrappedSecretFormModal initialValue={initialValue} config={config} />, div)
         }
 
         // we need initial value of form, so if secretData is null, we need to get it from backend
@@ -695,6 +713,39 @@ class AppDetail extends React.Component {
             let res = ""
             setRulesHelper(res)
         });
+    }
+
+    showDeleteAppConfirmModal() {
+        let self = this
+        let appname = self.state.name
+        let title = "Delete App " + appname
+        let div = document.createElement('div');
+        document.body.appendChild(div);
+
+        function destroy(...args: any[]) {
+          const unmountResult = ReactDOM.unmountComponentAtNode(div);
+          if (unmountResult && div.parentNode) {
+            div.parentNode.removeChild(div);
+          }
+        }
+
+        function handler() {
+            deleteApp(appname).then(res => {
+                destroy()
+                self.handleMsg(res, title)
+            }).catch(err => {
+                self.handleError(err)
+            })
+        }
+
+        let config = {
+            title: title,
+            handler: handler,
+            destroy: destroy
+        }
+
+        const WrappedDeleteAppConfirmModal = Form.create()(DeleteConfirmModal);
+        ReactDOM.render(<WrappedDeleteAppConfirmModal config={config} expectValue={appname} />, div)
     }
 
     showAppYamlAddModal(record) {
@@ -1102,12 +1153,11 @@ class AppDetail extends React.Component {
                                 <p>滚动更新策略： 最大激增数：{this.state.detailData.rolling_update.max_surge}，
                                    最大无效数：{this.state.detailData.rolling_update.max_unavailable}</p>
                                 <p>状态： {this.state.detailData.status.updated_replicas}个已更新，共计 {this.state.detailData.status.ready_replicas}个， {this.state.detailData.status.available_replicas}个可用， {this.state.detailData.status.unavailable_replicas === null ? '0' : this.state.detailData.status.unavailable_replicas}个不可用</p>
-                                <Button type="primary"><Link to={`/logger?app=${name}`}>查看日志</Link></Button>
+                                <Button type="primary"><Link to={`/logger?app=${name}`}>审计日志</Link></Button>
                                 <Button onClick={this.handleRenew.bind(this)}>Renew</Button>
                                 <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
                                 <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
-
-                                <div>{this.state.example}</div>
+                                <Button type="danger" onClick={this.showDeleteAppConfirmModal.bind(this)}>Delete</Button>
                             </div>
                             { this.state.textVisible ? (
                                 <div className="detailRight">
@@ -1140,6 +1190,7 @@ class AppDetail extends React.Component {
                                 columns={podColumns}
                                 dataSource={this.state.canarypodTableData}
                                 rowKey="name"
+                                pagination={false}
                             />
                         </Panel>
                     </Collapse> }
@@ -1155,6 +1206,7 @@ class AppDetail extends React.Component {
                                 columns={yamlColumns}
                                 dataSource={this.state.yamlList}
                                 rowKey="id"
+                                pagination={false}
                             />
                         </Panel>
                     </Collapse>
@@ -1211,6 +1263,58 @@ class AppDetail extends React.Component {
             </div>
         )
     }
+}
+
+class DeleteConfirmModal extends React.Component {
+  constructor(props) {
+    super(props);
+
+    this.state = {
+        visible: true,
+        buttonDisabled: true,
+        expectValue: this.props.expectValue,
+        config: this.props.config,
+        handler: this.props.config.handler,
+        destroy: this.props.config.destroy
+    };
+    this.onChange = this.onChange.bind(this);
+  }
+
+  onChange(e) {
+      var newValue = e.target.value
+      console.log(newValue)
+      if (this.state.expectValue == newValue) {
+          this.setState({buttonDisabled: false})
+      } else {
+          this.setState({buttonDisabled: true})
+      }
+  }
+
+  render() {
+    return (
+        <Modal
+            title= "Are you absolutely sure?"
+            visible={this.state.visible}
+            onCancel={this.state.destroy}
+            footer={null}
+        >
+          <p>
+            This action <strong>cannot</strong> be undone. This will permanently delete the <strong>{this.state.expectValue}</strong> app
+          </p>
+          <p>Please type in the name of the app to confirm.</p>
+
+          <Row>
+              <Input name="name" onChange={this.onChange} />
+          </Row>
+          <div style={{height:"10px"}}></div>
+          <Row>
+             <Button type="danger" style={{width: '100%'}} disabled={this.state.buttonDisabled} onClick={this.state.handler}>
+               I understand the consequences, delete this app
+             </Button>
+          </Row>
+        </Modal>
+    );
+  }
 }
 
 class AppYamlAddModal extends React.Component {
@@ -1367,8 +1471,9 @@ class ConfigMapModal extends React.Component {
     this.state = {
         visible: true,
         config: this.props.config,
-        initialValue: this.props.config.initialValue,
-        destroy: this.props.destroy
+        initialValue: this.props.initialValue,
+        handler: this.props.config.handler,
+        destroy: this.props.config.destroy
     };
     this.handleSubmit = this.handleSubmit.bind(this);
     this.onChange = this.onChange.bind(this);
@@ -1386,7 +1491,7 @@ class ConfigMapModal extends React.Component {
             let cm_data = { }
             cm_data[values.key] = values.data
             console.log(values.replace, cm_data)
-            this.state.config.handler(values.replace, cm_data)
+          this.state.handler(values.cluster_name, values.replace, cm_data)
         }
     })
   }
@@ -1402,6 +1507,18 @@ class ConfigMapModal extends React.Component {
             footer={null}
         >
             <Form style={{marginTop: '20px'}} onSubmit={this.handleSubmit.bind(this)}>
+                <FormItem
+                    {...formItemLayout}
+                    label="Cluster"
+                >
+                    {getFieldDecorator('cluster_name', {
+                        initialValue: this.state.initialValue.currentClusterName
+                    })(
+                        <Select>
+                             { this.state.initialValue.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
+                        </Select>
+                    )}
+                </FormItem>
                 <FormItem
                     {...formItemLayout}
                     label="Key"
@@ -1449,8 +1566,10 @@ class SecretFormModal extends React.Component {
 
     this.state = {
         visible: true,
-        value: this.props.value,
-        destroy: this.props.destroy
+        value: this.props.initialValue.secretData,
+        initialValue: this.props.initialValue,
+        handler: this.props.config.handler,
+        destroy: this.props.config.destroy
     };
     this.handleSubmit = this.handleSubmit.bind(this);
   }
@@ -1459,19 +1578,21 @@ class SecretFormModal extends React.Component {
       this.setState({value: newValue})
   }
 
-  onCheckboxChange(e) {
-      this.setState({replace: e.target.checked})
-  }
-
   handleSubmit(event) {
     event.preventDefault();
 
-    let replace = this.state.replace
-    let secretData = JSON.parse(this.state.value)
-    this.props.handler(replace, secretData)
+    event.preventDefault();
+    this.props.form.validateFields((err, values) => {
+      if (!err) {
+        let secretData = JSON.parse(this.state.value)
+        this.state.handler(values.cluster_name, values.replace, secretData)
+      }
+    })
   }
 
   render() {
+    const { getFieldDecorator } = this.props.form;
+
     return (
         <Modal
             title="创建Secret"
@@ -1480,11 +1601,32 @@ class SecretFormModal extends React.Component {
             footer={null}
         >
       <form onSubmit={this.handleSubmit}>
-              <Row>
-                  <span>replace: </span>
-                  <Checkbox onChange={this.onCheckboxChange.bind(this)}/>
-              </Row>
-              <div style={{height: '10px'}}></div>
+              <FormItem
+                  {...formItemLayout}
+                  label="Cluster"
+              >
+                  {getFieldDecorator('cluster_name', {
+                      initialValue: this.state.initialValue.currentClusterName
+                  })(
+                      <Select>
+                           { this.state.initialValue.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
+                      </Select>
+                  )}
+              </FormItem>
+
+              <FormItem
+                {...formItemLayout}
+                label="replace"
+              >
+                {getFieldDecorator('replace', {
+                  valuePropName: 'checked',
+                  initialValue: false,
+                })(
+                    <Checkbox />
+                )}
+              </FormItem>
+
+              <div style={{height: '5px'}}></div>
 
             <p>Data:</p>
             <AceEditor

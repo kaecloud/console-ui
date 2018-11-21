@@ -38,6 +38,18 @@ export const getReleases = params => {
     .catch(err => console.log(err))
 }
 
+export const deleteApp = params => {
+    return axios({
+        method: 'delete',
+        url: `${testUrl}${version}/app/${params}`,
+        headers: {
+			'Content-Type': 'application/json'
+        },
+        transformResponse: [function (data) {
+            return data;
+        }],
+    }).then(res => res.data)
+}
 // 获取日志
 export const getLogger = params => {
     return axios.get(`${testUrl}${version}/app/${params}/oplogs`).then(res => res.data)
