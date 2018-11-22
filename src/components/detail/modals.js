@@ -4,10 +4,10 @@ import ReactDOM from 'react-dom';
 import {Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
 import { Link } from 'react-router-dom';
 import {
-    getDeployment, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
-    appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
-    appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret,
-    appPostReleaseSpec, getAppYamlList, deleteAppYaml, createOrUpdateAppYaml, deleteApp} from 'api';
+  getDeployment, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
+  appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
+  appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret,
+  appPostReleaseSpec, getAppYamlList, deleteAppYaml, createOrUpdateAppYaml, deleteApp} from 'api';
 
 import brace from 'brace';
 import AceEditor from 'react-ace';
@@ -23,14 +23,14 @@ const Option = Select.Option;
 const confirm = Modal.confirm;
 
 const formItemLayout = {
-    labelCol: {
-        xs: { span: 24 },
-        sm: { span: 5 },
-    },
-    wrapperCol: {
-        xs: { span: 30 },
-        sm: { span: 18 },
-    },
+  labelCol: {
+    xs: { span: 24 },
+    sm: { span: 5 }
+  },
+  wrapperCol: {
+    xs: { span: 30 },
+    sm: { span: 18 }
+  },
 };
 
 class DeleteConfirmModal extends React.Component {
@@ -38,48 +38,47 @@ class DeleteConfirmModal extends React.Component {
     super(props);
 
     this.state = {
-        visible: true,
-        buttonDisabled: true,
-        expectValue: this.props.expectValue,
-        config: this.props.config,
-        handler: this.props.config.handler,
-        destroy: this.props.config.destroy
+      visible: true,
+      buttonDisabled: true,
+      expectValue: this.props.expectValue,
+      config: this.props.config,
+      handler: this.props.config.handler,
+      destroy: this.props.config.destroy
     };
     this.onChange = this.onChange.bind(this);
   }
 
   onChange(e) {
-      var newValue = e.target.value
-      console.log(newValue)
-      if (this.state.expectValue == newValue) {
-          this.setState({buttonDisabled: false})
-      } else {
-          this.setState({buttonDisabled: true})
-      }
+    var newValue = e.target.value;
+    if (this.state.expectValue == newValue) {
+      this.setState({buttonDisabled: false});
+    } else {
+      this.setState({buttonDisabled: true});
+    }
   }
 
   render() {
     return (
         <Modal
-            title= "Are you absolutely sure?"
-            visible={this.state.visible}
-            onCancel={this.state.destroy}
-            footer={null}
+      title= "Are you absolutely sure?"
+      visible={this.state.visible}
+      onCancel={this.state.destroy}
+      footer={null}
         >
-          <p>
-            This action <strong>cannot</strong> be undone. This will permanently delete the <strong>{this.state.expectValue}</strong> app
-          </p>
-          <p>Please type in the name of the app to confirm.</p>
+        <p>
+        This action <strong>cannot</strong> be undone. This will permanently delete the <strong>{this.state.expectValue}</strong> app
+      </p>
+        <p>Please type in the name of the app to confirm.</p>
 
-          <Row>
-              <Input name="name" onChange={this.onChange} />
-          </Row>
-          <div style={{height:"10px"}}></div>
-          <Row>
-             <Button type="danger" style={{width: '100%'}} disabled={this.state.buttonDisabled} onClick={this.state.handler}>
-               I understand the consequences, delete this app
-             </Button>
-          </Row>
+        <Row>
+        <Input name="name" onChange={this.onChange} />
+        </Row>
+        <div style={{height:"10px"}}></div>
+        <Row>
+        <Button type="danger" style={{width: '100%'}} disabled={this.state.buttonDisabled} onClick={this.state.handler}>
+        I understand the consequences, delete this app
+      </Button>
+        </Row>
         </Modal>
     );
   }
@@ -91,31 +90,31 @@ class AppYamlAddModal extends React.Component {
     super(props);
 
     this.state = {
-        visible: true,
-        initialRecord: this.props.record,
-        yamlValue: this.props.record.specs_text,
-        config: this.props.config,
-        destroy: this.props.config.destroy
+      visible: true,
+      initialRecord: this.props.record,
+      yamlValue: this.props.record.specs_text,
+      config: this.props.config,
+      destroy: this.props.config.destroy
     };
     this.handleSubmit = this.handleSubmit.bind(this);
     this.onChange = this.onChange.bind(this);
   }
 
   onChange(newValue) {
-      this.setState({yamlValue: newValue})
+    this.setState({yamlValue: newValue});
   }
 
   handleSubmit(event) {
     event.preventDefault();
 
     this.props.form.validateFields((err, values) => {
-        if (!err) {
-            let record = values
-            record.specs_text = this.state.yamlValue
+      if (!err) {
+        let record = values;
+        record.specs_text = this.state.yamlValue;
 
-            this.state.config.handler(record)
-        }
-    })
+        this.state.config.handler(record);
+      }
+    });
   }
 
   render() {
@@ -123,45 +122,45 @@ class AppYamlAddModal extends React.Component {
 
     return (
         <Modal
-            title= {this.state.config.title}
-            visible={this.state.visible}
-            onCancel={this.state.destroy}
-            footer={null}
+          title= {this.state.config.title}
+          visible={this.state.visible}
+          onCancel={this.state.destroy}
+          footer={null}
         >
-      <form onSubmit={this.handleSubmit}>
-                <FormItem
-                    {...formItemLayout}
-                    label="Name"
-                >
-                    {getFieldDecorator('name', {
-                        initialValue: this.state.initialRecord.name
-                    })(
-                        <Input placeholder="App Yaml Name" />
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Comment"
-                >
-                    {getFieldDecorator('comment', {
-                        initialValue: this.state.initialRecord.comment,
-                        rules: [{required: false, message: 'Comment'}]
-                    })(
-                        <TextArea rows={3} />
-                    )}
-                </FormItem>
-                <p>Spec: </p>
-                <AceEditor
-                    mode="yaml"
-                    value={this.state.yamlValue}
-                    theme="xcode"
-                    onChange={this.onChange}
-                    name="yaml"
-                    fontSize={18}
-                    width="450px"
-                    height="600px"
-                    editorProps={{$blockScrolling: true}}
-                />
+        <form onSubmit={this.handleSubmit}>
+          <FormItem
+            {...formItemLayout}
+            label="Name"
+          >
+            {getFieldDecorator('name', {
+              initialValue: this.state.initialRecord.name
+            })(
+                <Input placeholder="App Yaml Name" />
+            )}
+          </FormItem>
+          <FormItem
+            {...formItemLayout}
+            label="Comment"
+              >
+              {getFieldDecorator('comment', {
+                initialValue: this.state.initialRecord.comment,
+                rules: [{required: false, message: 'Comment'}]
+              })(
+                  <TextArea rows={3} />
+              )}
+          </FormItem>
+          <p>Spec: </p>
+          <AceEditor
+            mode="yaml"
+            value={this.state.yamlValue}
+            theme="xcode"
+            onChange={this.onChange}
+            name="yaml"
+            fontSize={18}
+            width="450px"
+            height="600px"
+            editorProps={{$blockScrolling: true}}
+          />
           <Row>
             <FormItem>
               <Button type="primary" htmlType="submit" >
@@ -298,17 +297,17 @@ class ConfigMapModal extends React.Component {
                         <Input placeholder="the key name in configmap data" />
                     )}
                 </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="replace"
-                >
-                    {getFieldDecorator('replace', {
-                        valuePropName: 'checked',
-                        initialValue: false,
-                    })(
-                        <Checkbox />
-                    )}
-                </FormItem>
+        <FormItem
+      {...formItemLayout}
+      label="replace"
+        >
+        {getFieldDecorator('replace', {
+          valuePropName: 'checked',
+          initialValue: false,
+        })(
+            <Checkbox />
+        )}
+      </FormItem>
                 <FormItem
                     {...formItemLayout}
                     label="Data"
@@ -320,9 +319,9 @@ class ConfigMapModal extends React.Component {
                         <TextArea rows={8} />
                     )}
                 </FormItem>
-                <Button type="primary" htmlType="submit" className="create-job-button">
-                    Submit
-                </Button>
+        <Button type="primary" htmlType="submit" className="create-job-button">
+        Submit
+      </Button>
             </Form>
         </Modal>
     );
@@ -364,12 +363,12 @@ class SecretFormModal extends React.Component {
 
     return (
         <Modal
-            title="创建Secret"
-            visible={this.state.visible}
-            onCancel={this.state.destroy}
-            footer={null}
+          title="创建Secret"
+          visible={this.state.visible}
+          onCancel={this.state.destroy}
+          footer={null}
         >
-      <form onSubmit={this.handleSubmit}>
+          <form onSubmit={this.handleSubmit}>
               <FormItem
                   {...formItemLayout}
                   label="Cluster"
@@ -395,27 +394,25 @@ class SecretFormModal extends React.Component {
                 )}
               </FormItem>
 
-              <div style={{height: '5px'}}></div>
+        <div style={{height: '5px'}}></div>
 
-            <p>Data:</p>
-            <AceEditor
-                mode="json"
-                value={this.state.value}
-                theme="xcode"
-                onChange={this.onAceEditorChange.bind(this)}
-                name="json"
-                fontSize={18}
-                width="450px"
-                height="600px"
-                editorProps={{$blockScrolling: true}}
-            />
-          <Row>
-            <FormItem>
-              <Button type="primary" htmlType="submit" >
-                Submit
-              </Button>
-            </FormItem>
-          </Row>
+        <p>Data:</p>
+        <AceEditor
+          mode="json"
+          value={this.state.value}
+          theme="xcode"
+          onChange={this.onAceEditorChange.bind(this)}
+          name="json"
+          fontSize={18}
+          width="450px"
+          height="600px"
+          editorProps={{$blockScrolling: true}}
+        />
+        <Row>
+          <FormItem>
+            <Button type="primary" htmlType="submit" > Submit </Button>
+          </FormItem>
+        </Row>
       </form>
         </Modal>
     );
@@ -463,60 +460,60 @@ class DeployModal extends React.Component {
 
     return (
         <Modal
-            title={this.state.config.title}
-            visible={this.state.visible}
-            onCancel={this.state.config.destroy}
-            footer={null}
+          title={this.state.config.title}
+          visible={this.state.visible}
+          onCancel={this.state.config.destroy}
+          footer={null}
         >
-            <Form style={{marginTop: '20px'}} onSubmit={this.handleSubmit.bind(this)}>
-                <FormItem
-                    {...formItemLayout}
-                    label="Tag(readOnly)"
-                >
-                    {getFieldDecorator('tag', {
-                        initialValue: this.state.initialValue.tag
-                    })(
-                        <Input readOnly={true} />
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Cluster"
-                >
-                    {getFieldDecorator('cluster_name', {
-                        initialValue: this.state.initialValue.currentClusterName
-                    })(
-                        <Select>
-                             { this.state.initialValue.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
-                        </Select>
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="容器数量："
-                >
-                    {getFieldDecorator('replicas', {
-                        initialValue: this.state.initialValue.replicas
-                    })(
-                        <InputNumber min={0} max={100} />
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="App Yaml"
-                >
-                    {getFieldDecorator('app_yaml_name', {
-                        initialValue: "default"
-                    })(
-                        <Select>
-                             { this.state.initialValue.yamlNameList.map(name => <Option key={name}>{name}</Option>) }
-                        </Select>
-                    )}
-                </FormItem>
-                <Button type="primary" htmlType="submit" className="create-job-button">
-                    Submit
-                </Button>
-            </Form>
+          <Form style={{marginTop: '20px'}} onSubmit={this.handleSubmit.bind(this)}>
+            <FormItem
+              {...formItemLayout}
+              label="Tag(readOnly)"
+            >
+              {getFieldDecorator('tag', {
+                  initialValue: this.state.initialValue.tag
+              })(
+                  <Input readOnly={true} />
+              )}
+            </FormItem>
+            <FormItem
+              {...formItemLayout}
+              label="Cluster"
+            >
+              {getFieldDecorator('cluster_name', {
+                initialValue: this.state.initialValue.currentClusterName
+              })(
+                <Select>
+                  { this.state.initialValue.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
+                </Select>
+              )}
+            </FormItem>
+            <FormItem
+              {...formItemLayout}
+              label="容器数量："
+            >
+              {getFieldDecorator('replicas', {
+                  initialValue: this.state.initialValue.replicas
+              })(
+                  <InputNumber min={0} max={100} />
+              )}
+            </FormItem>
+            <FormItem
+              {...formItemLayout}
+              label="App Yaml"
+            >
+              {getFieldDecorator('app_yaml_name', {
+                initialValue: "default"
+              })(
+                  <Select>
+                  { this.state.initialValue.yamlNameList.map(name => <Option key={name}>{name}</Option>) }
+                </Select>
+              )}
+            </FormItem>
+            <Button type="primary" htmlType="submit" className="create-job-button">
+                Submit
+            </Button>
+        </Form>
         </Modal>
     );
   }
