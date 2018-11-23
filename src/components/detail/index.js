@@ -1,7 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 
-import {Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
+import {
+  Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select,
+  Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification,
+  Progress
+} from 'antd';
 import { Link } from 'react-router-dom';
 import {
   getDeployment, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
@@ -82,6 +86,8 @@ function extractDataFromPod(pod) {
   let interval = Date.now() - start_time;
 
   let data = {
+    ready_count: ready_count,
+    ready_total: ready_total,
     ready: ready_count + "/" + ready_total,
     name: pod.metadata.name,
     status: status,
@@ -107,18 +113,6 @@ function setArg(name, val) {
 
 function getInitialState() {
   return {
-    detailData: {
-      namespace: '',
-      created: '',
-      history: '',
-      rolling_update: {},
-      status: {},
-      strategy: '',
-      min_ready_seconds: '',
-      annotations: [],
-      labels: [],
-      match_labels: []
-    },
     infoModal: {
       text: '',
       title: '',
@@ -129,6 +123,7 @@ function getInitialState() {
     name: '',
     nowTag: '',
     replicas: 1,
+    readyReplicas: 0,
     version: '',
     nowCluster: '',
     clusterNameList: [],
@@ -325,6 +320,17 @@ class AppDetail extends React.Component {
           }
         }
       }
+      if (! canary) {
+        let readyReplicas = 0;
+        for (const val of temp.values() ) {
+          if (val.ready_count === val.ready_total) {
+            readyReplicas++;
+          }
+        }
+        self.setState({
+          readyReplicas: readyReplicas
+        });
+      }
     }, false);
   }
 
@@ -334,41 +340,11 @@ class AppDetail extends React.Component {
   fetchDeploymentData(name, cluster) {
     getDeployment({name: name, cluster: cluster}).then(res => {
       let deployment = res;
-      let labels = [],
-          annotations = [],
-          match_labels = [];
-
-      // 详情的数据
-      let detailData = {
-        namespace: deployment.metadata.namespace,
-        created: deployment.metadata.creation_timestamp,
-        history: deployment.spec.revision_history_limit,
-        rolling_update: deployment.spec.strategy.rolling_update,
-        strategy: deployment.spec.strategy.type,
-        min_ready_seconds: deployment.spec.min_ready_seconds === null ? '0' : deployment.spec.min_ready_seconds,
-        status: deployment.status
-      };
-
-      // 标签样式
-      for (let p in deployment.metadata.labels) {
-        labels.push(<span style={spanStyle} key={p}>{p}: {deployment.metadata.labels[p]}</span>);
-      }
-      // 选择器样式
-      for (let p in deployment.spec.selector.match_labels) {
-        match_labels.push(<span style={spanStyle} key={p}>{p}: {deployment.spec.selector.match_labels[p]}</span>);
-      }
-      // 注释样式
-      for (let p in deployment.metadata.annotations) {
-        if(p !== 'app_specs_text') {
-          annotations.push(<span style={spanStyle} key={p}>{p}: {deployment.metadata.annotations[p]}</span>);
-        }
-      }
-      detailData.annotations = annotations;
-      detailData.labels = labels;
-      detailData.match_labels = match_labels;
 
       this.setState({
-        detailData: detailData,
+        deploymentData: deployment,
+        replicas: deployment.spec.replicas,
+        readyReplicas: deployment.status.ready_replicas,
         version: res.metadata.annotations.release_tag
       });
     }).catch(err => {
@@ -434,22 +410,52 @@ class AppDetail extends React.Component {
 
   showAppDeployment() {
     let infoModal = this.state.infoModal;
+    let dp = this.state.deploymentData;
+    let labels = [],
+        annotations = [],
+        match_labels = [];
+
+    // 详情的数据
+    let namespace= dp.metadata.namespace,
+        replicas= dp.spec.replicas,
+        created= dp.metadata.creation_timestamp,
+        history= dp.spec.revision_history_limit,
+        rolling_update= dp.spec.strategy.rolling_update,
+        strategy= dp.spec.strategy.type,
+        min_ready_seconds= dp.spec.min_ready_seconds === null ? '0' : dp.spec.min_ready_seconds,
+        status= dp.status;
+
+    // 标签样式
+    for (let p in dp.metadata.labels) {
+      labels.push(<span style={spanStyle} key={p}>{p}: {dp.metadata.labels[p]}</span>);
+    }
+    // 选择器样式
+    for (let p in dp.spec.selector.match_labels) {
+      match_labels.push(<span style={spanStyle} key={p}>{p}: {dp.spec.selector.match_labels[p]}</span>);
+    }
+    // 注释样式
+    for (let p in dp.metadata.annotations) {
+      if(p !== 'app_specs_text') {
+        annotations.push(<span style={spanStyle} key={p}>{p}: {dp.metadata.annotations[p]}</span>);
+      }
+    }
+
     infoModal.visible = true;
     infoModal.title = "Deployment";
-    console.log(this.state.detailData.match_labels, this.state.detailData.match_labels[0]);
     infoModal.text = (
       <div>
         <p>appname: {this.state.name} </p>
-        <p>命名空间：{this.state.detailData.namespace}</p>
-        <p>标签： {this.state.detailData.labels}</p>
-        <p>注释： {this.state.detailData.annotations ? this.state.detailData.annotations : '无'}</p>
-        <p>创建时间： {this.state.detailData.created}</p>
-        <p>选择器： {this.state.detailData.match_labels}</p>
-        <p>策略： {this.state.detailData.strategy}</p>
-        <p>最小就绪秒数： {this.state.detailData.min_ready_seconds}</p>
-        <p>历史版本限制值： {this.state.detailData.history}</p>
-        <p>滚动更新策略： 最大激增数：{this.state.detailData.rolling_update.max_surge},
-      最大无效数：{this.state.detailData.rolling_update.max_unavailable}</p>
+        <p>命名空间：{namespace}</p>
+        <p>标签： {labels}</p>
+        <p>注释： {annotations ? annotations : '无'}</p>
+        <p>创建时间： {created}</p>
+        <p>选择器： {match_labels}</p>
+        <p>策略： {strategy}</p>
+        <p>最小就绪秒数： {min_ready_seconds}</p>
+        <p>历史版本限制值： {history}</p>
+        <p>状态： {status.updated_replicas}个已更新，共计 {status.ready_replicas}个， {status.available_replicas}个可用， {status.unavailable_replicas === null ? '0' : status.unavailable_replicas}个不可用</p>
+        <p>滚动更新策略： 最大激增数：{rolling_update.max_surge},
+      最大无效数：{rolling_update.max_unavailable}</p>
         </div>
     );
     this.setState({infoModal: infoModal});
@@ -949,12 +955,12 @@ class AppDetail extends React.Component {
     // 提示成功或失败
     let msg = JSON.parse(data);
     // let msg = {error: '1', msg: '1111111'}
-    notification.destroy()
+    notification.destroy();
 
     if(msg.error === null) {
       notification.success({
         message: '成功！',
-        description: `${action} Success!`,
+        description: `${action} Success!`
       });
     }else {
       // 报错信息以html格式显示
@@ -983,11 +989,11 @@ class AppDetail extends React.Component {
       status = res.status;
       errorMsg = res.data;
       if (res.data.error) {
-        errorMsg = res.data.error
+        errorMsg = res.data.error;
       }
     }
     // destroy existing notifications first
-    notification.destroy()
+    notification.destroy();
 
     notification.error({
       message: '失败！',
@@ -1001,6 +1007,9 @@ class AppDetail extends React.Component {
     let self = this;
     const {name, canaryVisible, nowCluster} = this.state;
 
+    let healthPercent = 100 * (self.state.readyReplicas / self.state.replicas);
+    let healthStatus = healthPercent >= 100? 'success': 'exception';
+    let healthFormat = healthPercent >= 100? 'Health': `${healthPercent}%`;
     let podColumns = [
       {
         title: 'NAME',
@@ -1037,7 +1046,7 @@ class AppDetail extends React.Component {
         dataIndex: 'node',
         width: '15%'
       }
-    ]
+    ];
 
     let releaseColumns = [
       {
@@ -1171,7 +1180,8 @@ class AppDetail extends React.Component {
         ]
         return (
             <div>
-                <Row>
+                <Row type="flex" justify="space-between">
+                 <Col span={12}>
                   <div className="detailInfo">
                     <div className="appHeader"><Icon type="setting" theme="filled" /> {name}</div>
 
@@ -1185,7 +1195,7 @@ class AppDetail extends React.Component {
                         <p>
                          Canary: <span style={{color: 'blue'}}>{this.state.canaryVisible.toString()}</span><strong></strong>
                         </p>
-                        <p>状态： {this.state.detailData.status.updated_replicas}个已更新，共计 {this.state.detailData.status.ready_replicas}个， {this.state.detailData.status.available_replicas}个可用， {this.state.detailData.status.unavailable_replicas === null ? '0' : this.state.detailData.status.unavailable_replicas}个不可用</p>
+                        <p>状态： {this.state.readyReplicas}个可用, 共计 {this.state.replicas}个 </p>
                         <div>
                             {this.state.canaryVisible &&
                                 <span>
@@ -1214,6 +1224,14 @@ class AppDetail extends React.Component {
                           <Button type="danger" onClick={this.showDeleteAppConfirmModal.bind(this)}>Delete</Button>
                           </div>
                       </div>
+              </Col>
+
+              <Col span={11} style={{background: '#fff'}}>
+                <div style={{padding: '10px'}}>
+                  <h2>Health State:</h2>
+                  <Progress type="circle" status={healthStatus} percent={healthPercent} format={()=>healthFormat} />
+                </div>
+              </Col>
                       </Row>
                     <div style={{ height: '20px' }}></div>
 
