@@ -1,6 +1,6 @@
 import React from 'react';
 import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
-import {jobList, createJob, getUserId, restartJob, deleteJob} from 'api';
+import {jobList, createJob, getUserId, restartJob, deleteJob, getCluster} from 'api';
 import {Link} from 'react-router-dom';
 
 import brace from 'brace';
@@ -48,6 +48,7 @@ class AppJob extends React.Component {
             showMsg: '',
             username: '1',
             data: [],
+          clusterNameList: [],
             columns: [
                 {
                     title: 'name',
@@ -107,7 +108,7 @@ class AppJob extends React.Component {
                                 </Menu.Item>
                             </Menu>
                         );
-            
+
                         return (
                             <Dropdown overlay={menu} trigger={['click']}>
                                 <a className="ant-dropdown-link" href="#">
@@ -168,7 +169,7 @@ class AppJob extends React.Component {
                         let res = err.response;
                         let errorMsg;
                         if(res.data.indexOf('<p>') !== -1 ) {
-                            errorMsg = res.data.split('<p>')[1].split('</p>')[0]; 
+                            errorMsg = res.data.split('<p>')[1].split('</p>')[0];
                         }else {
                             let data = JSON.parse(res.data);
                             errorMsg = data.error;
@@ -181,10 +182,7 @@ class AppJob extends React.Component {
                             duration: 0,
                         });
                     });
-                }else {
-                    // console.log({
-                    //     specs_text: yamlConfig
-                    // })
+                } else {
                     createJob({
                         specs_text: yamlConfig
                     }).then(res => {
@@ -221,7 +219,7 @@ class AppJob extends React.Component {
             let res = err.response;
             let errorMsg;
             if(res.data.indexOf('<p>') !== -1 ) {
-                errorMsg = res.data.split('<p>')[1].split('</p>')[0]; 
+                errorMsg = res.data.split('<p>')[1].split('</p>')[0];
             }
 
             notification.destroy()
@@ -329,23 +327,24 @@ class AppJob extends React.Component {
                 this.setState({
                     data: data
                 })
-            }); 
+            });
         });
     }
 
+  handleChangeCluster(newCluster) {
+    // let {name} = this.state;
+    // this.fetchAllData(name, newCluster);
+    this.setState({
+      nowCluster: newCluster
+    });
+  }
     componentDidMount() {
-        // // 测试数据
-        // getUserId().then(res => {
-        //     let username = res.nickname;
-        //     let data = this.state.data;
-        //     data.map(d => {
-        //         d.user = username
-        //     })
-        //     this.setState({
-        //         data: data
-        //     })
-        // });
-
+        getCluster().then(res => {
+          this.setState({
+            clusterNameList: res,
+            nowCluster: res[0]
+          });
+        });
         // 获取username和data
         this.getJobDetail();
     }
@@ -478,10 +477,17 @@ class AppJob extends React.Component {
             <div className="jobList">
                 <Collapse bordered={false} defaultActiveKey={['1']}>
                     <Panel header={<h2>job列表</h2>} key="1">
-                        <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}} onClick={() => {this.setState({visible: true})}}>Create Job</Button>    
+                        <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}} onClick={() => {this.setState({visible: true})}}>Create Job</Button>
                         <Icon type="reload" className="reload" onClick={this.getJobDetail.bind(this)}/>
-                        <Table 
-                            columns={columns} 
+
+                        <Divider type="vertical" />
+
+                        Cluster: <Select value={this.state.nowCluster} style={{ width: 100}}
+                                onChange={this.handleChangeCluster.bind(this)}>
+                             { this.state.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
+                        </Select>
+                        <Table
+                            columns={columns}
                             dataSource={this.state.data}
                             rowKey="name"
                         />

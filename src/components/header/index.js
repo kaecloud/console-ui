@@ -4,7 +4,7 @@ import { appList, getUserId } from 'api';
 import { Link } from 'react-router-dom';
 import './index.css';
 
-class Header extends React.Component {
+class PageHeader extends React.Component {
 
     constructor() {
         super();
@@ -127,4 +127,4 @@ class Header extends React.Component {
     }
 }
 
-export default Header;
+export default PageHeader;

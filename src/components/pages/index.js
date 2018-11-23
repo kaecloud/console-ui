@@ -6,7 +6,6 @@ import AppDetail from '../detail';
 import AppLog from '../log';
 import AppJob from '../job';
 
-import './index.css';
 
 class Pages extends React.Component {
     constructor(props) {
@@ -15,7 +14,7 @@ class Pages extends React.Component {
 
     render() {
         return (
-            <div id="page">
+            <div id="page" style={{margin: "0 15% 0 15%"}}>
                 <Switch>
                     <Route path="/list" component={AppList} />
                     <Route path="/jobs" component={AppJob} />

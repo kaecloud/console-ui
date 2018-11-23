@@ -1,6 +1,7 @@
 import React from 'react';
+import { Layout, Menu, Breadcrumb } from 'antd';
 
-import Header from './header';
+import PageHeader from './header';
 // import Nav from './nav';
 import Sidebar from './sidebar';
 import Pages from './pages';
@@ -11,14 +12,14 @@ class App extends React.Component {
 
     render() {
         return (
-            <div style={{height: "100%"}}>
-                <Header />
-                {/* <Nav /> */}
-                <div className="box-container">
-                    <Sidebar/>
-                    <Pages/>
-                </div>
-            </div> 
+          <Layout>
+            <PageHeader />
+            {/* <Nav /> */}
+            <div className="box-container">
+               {/* <Sidebar/> */}
+                <Pages/>
+            </div>
+           </Layout>
         )
     }
 }
