@@ -224,20 +224,20 @@ class AppDetail extends React.Component {
       ws.send(`{"cluster": "${cluster}", "canary": ${canary}}`);
     };
     ws.onclose = function(evt) {
-      console.info(`"${canaryStr} pods websocket connection closed"`);
+      console.info(`${canaryStr} pods websocket connection closed`);
       let stateWs = that.state.podsWatcherWS;
       if (canary) {
         stateWs = that.state.canaryPodsWatcherWS;
       }
       if (ws == stateWs) {
-        console.log("recreate websocket..");
+        console.info(`recreate ${canaryStr} pods watcher websocket..`);
         setTimeout(function() {
           that.createPodsWatcher(name, cluster, canary);
-        }, 3000);
+        }, 5000);
       }
     };
     ws.onerror = function(evt) {
-      console.error(`"${canaryStr} pods websocket connection got an error"`);
+      console.error(`${canaryStr} pods websocket connection got an error`);
       ws.close();
     };
     that.webSocketEvent(ws, canary);
@@ -654,14 +654,14 @@ class AppDetail extends React.Component {
 
   // 部署
   showDeployModal(record, canary) {
-    let self = this
-    let appname = self.state.name
-    let nowCluster = self.state.nowCluster
-    let title = ''
+    let self = this;
+    let appname = self.state.name;
+    let nowCluster = self.state.nowCluster;
+    let title = '';
     if (canary) {
-      title = "Deploy Canary"
+      title = "Deploy Canary";
     } else {
-      title = "Deploy"
+      title = "Deploy";
     }
     let div = document.createElement('div');
     document.body.appendChild(div);
@@ -677,7 +677,7 @@ class AppDetail extends React.Component {
       if (canary) {
         appDeployCanary(appname, data).then(res => {
           destroy();
-          self.setState({canaryVisible: true})
+          self.setState({canaryVisible: true});
           self.handleMsg(res, 'Deploy Canary');
         }).catch(err => {
           self.handleError(err);
@@ -687,7 +687,7 @@ class AppDetail extends React.Component {
           destroy();
           self.handleMsg(res, 'Deploy');
           // update version
-          self.fetchDeploymentData(appname, nowCluster)
+          self.fetchDeploymentData(appname, nowCluster);
         }).catch(err => {
           self.handleError(err);
         });
@@ -698,17 +698,17 @@ class AppDetail extends React.Component {
       title: title,
       handler: handler,
       destroy: destroy
-    }
+    };
     let initialValue = {
       tag: record.tag,
       replicas: 0,
       yamlNameList: self.state.yamlList.map(item => item.name),
       clusterNameList: self.state.clusterNameList,
       currentClusterName: self.state.nowCluster
-    }
+    };
 
     const WrappedDeployModal = Form.create()(DeployModal);
-    ReactDOM.render(<WrappedDeployModal config={config} initialValue={initialValue} />, div)
+    ReactDOM.render(<WrappedDeployModal config={config} initialValue={initialValue} />, div);
   }
 
   // 删除canary
@@ -929,10 +929,13 @@ class AppDetail extends React.Component {
 
   // 伸缩
   handleScale() {
-    this.setState({scaleVisible: false})
+    let self = this;
+    this.setState({scaleVisible: false});
     let {name, scaleNum, nowCluster} = this.state;
     appScale({name: name, replicas: scaleNum, cluster: nowCluster}).then(res => {
       this.handleMsg(res, 'Scale');
+      // refresh deployment
+      this.fetchDeploymentData(name, nowCluster);
     }).catch(err => {
       this.handleError(err);
     });
