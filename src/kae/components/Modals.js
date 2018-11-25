@@ -7,7 +7,7 @@ import {
   getDeployment, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
   appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
   appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret,
-  appPostReleaseSpec, getAppYamlList, deleteAppYaml, createOrUpdateAppYaml, deleteApp} from 'api';
+  getAppYamlList, deleteAppYaml, createOrUpdateAppYaml, deleteApp} from 'api';
 
 import brace from 'brace';
 import AceEditor from 'react-ace';
@@ -15,8 +15,6 @@ import AceEditor from 'react-ace';
 import 'brace/mode/json';
 import 'brace/theme/xcode';
 
-import './index.css';
-const Panel = Collapse.Panel;
 const { TextArea } = Input;
 const FormItem = Form.Item;
 const Option = Select.Option;

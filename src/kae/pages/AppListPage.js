@@ -4,8 +4,6 @@ import { appList } from 'api';
 import { Table, Collapse } from 'antd';
 const Panel = Collapse.Panel;
 
-import './index.css';
-
 const columns = [
     {
         title: 'name',
@@ -59,14 +57,14 @@ class AppList extends React.Component {
                             rowKey="name"
                             onRow={(record) => {
                                 return {
-                                    onClick: () => {this.props.history.push(`/detail?app=${record.name}&cluster=`);},// 点击行
+                                    onClick: () => {this.props.history.push(`/apps/${record.name}/detail?cluster=`);},// 点击行
                                 };
                             }}
                         />
                     </Panel>
                 </Collapse>
             </div>
-        )
+        );
     }
 }
 

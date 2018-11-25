@@ -9,7 +9,6 @@ import AceEditor from 'react-ace';
 import 'brace/mode/yaml';
 import 'brace/theme/xcode';
 
-import './index.css';
 const { TextArea } = Input;
 const Panel = Collapse.Panel;
 const FormItem = Form.Item;
@@ -33,7 +32,7 @@ function onChange(newValue) {
     // console.log(newValue)
 }
 
-class AppJob extends React.Component {
+class JobList extends React.Component {
 
     constructor() {
         super();
@@ -521,4 +520,4 @@ class AppJob extends React.Component {
     }
 }
 
-export default Form.create()(AppJob);
+export default Form.create()(JobList);
