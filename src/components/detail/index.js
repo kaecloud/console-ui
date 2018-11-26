@@ -1183,7 +1183,7 @@ class AppDetail extends React.Component {
         ]
         return (
             <div>
-                <Row type="flex" justify="space-between">
+                <Row type="flex"  gutter={10} justify="space-between">
                  <Col span={12}>
                   <div className="detailInfo">
                     <div className="appHeader"><Icon type="setting" theme="filled" /> {name}</div>
@@ -1229,7 +1229,7 @@ class AppDetail extends React.Component {
                       </div>
               </Col>
 
-              <Col span={11} style={{background: '#fff'}}>
+              <Col span={12} style={{background: '#fff'}}>
                 <div style={{padding: '10px'}}>
                   <h2>Health State:</h2>
                   <Progress type="circle" status={healthStatus} percent={healthPercent} format={()=>healthFormat} />
@@ -1244,6 +1244,7 @@ class AppDetail extends React.Component {
                                 columns={podColumns}
                                 dataSource={this.state.podTableData}
                                 rowKey="name"
+                                size='small'
                             />
                         </Panel>
                     </Collapse>
@@ -1257,6 +1258,7 @@ class AppDetail extends React.Component {
                                 dataSource={this.state.canarypodTableData}
                                 rowKey="name"
                                 pagination={false}
+                                size='small'
                             />
                         </Panel>
                     </Collapse> }
@@ -1273,6 +1275,7 @@ class AppDetail extends React.Component {
                                 dataSource={this.state.yamlList}
                                 rowKey="id"
                                 pagination={false}
+                                size='small'
                             />
                         </Panel>
                     </Collapse>
@@ -1284,6 +1287,7 @@ class AppDetail extends React.Component {
                                 columns={releaseColumns}
                                 dataSource={this.state.releaseTableData}
                                 rowKey="id"
+                                size='small'
                             />
                         </Panel>
                     </Collapse>

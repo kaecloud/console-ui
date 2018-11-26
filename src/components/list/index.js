@@ -56,6 +56,7 @@ class AppList extends React.Component {
                         <Table
                             columns={columns}
                             dataSource={this.state.data}
+                            size='small'
                             rowKey="name"
                             onRow={(record) => {
                                 return {
