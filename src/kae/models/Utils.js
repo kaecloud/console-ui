@@ -18,12 +18,12 @@ export function createAction(type, ...argNames) {
   };
 }
 
-function getRequests(props, types) {
-  return _.map(types, (type) => getRequestFromProps(props, type);
+export function getRequests(props, types) {
+  return _.map(types, (type) => getRequestFromProps(props, type));
 }
 
 export function getPageRequests(props, types) {
-  const requests = _.map(types, (type) => getRequestFromProps(props, type);
+  const requests = _.map(types, (type) => getRequestFromProps(props, type));
   const isFetching = _.some(requests, (r) => r.isFetching);
   let error = '';
   const firstError = _.find(requests, (r) => r.error);
@@ -33,7 +33,7 @@ export function getPageRequests(props, types) {
   return { requests, isFetching, error };
 }
 
-function getRequestFromProps(props, type) {
+export function getRequestFromProps(props, type) {
   return props[type] || {
     apiType: type,
     isFetching: false,

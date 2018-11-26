@@ -1,6 +1,6 @@
 import {createStore, applyMiddleware} from 'redux';
 import { createLogger } from 'redux-logger';
-import { rootReducer } from './reducers';
+import rootReducer from './reducers';
 
 const asyncApiCaller = store => next => action => {
   const {dispatch, getState} = store;
@@ -35,7 +35,7 @@ const asyncApiCaller = store => next => action => {
       asyncType: requestType,
       statusCode: response.statusCode,
       response: response.data ,
-      flash: response.flash,
+      flash: response.flash
     }));
   };
 
@@ -45,7 +45,7 @@ const asyncApiCaller = store => next => action => {
       asyncType: requestType,
       statusCode: error.statusCode,
       error: error.data,
-      flash: error.flash,
+      flash: error.flash
     }));
   };
   return callApi().then(resolve, reject);

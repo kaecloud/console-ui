@@ -1,10 +1,16 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
-import {jobList, createJob, getUserId, restartJob, deleteJob, getCluster} from 'api';
 import {Link} from 'react-router-dom';
 
 import brace from 'brace';
 import AceEditor from 'react-ace';
+import * as JobActions from '../models/actions/Jobs';
+import * as JobApi from '../models/apis/Jobs';
+import { getRequestFromProps, getPageRequests } from '../models/Utils';
+import {getClusterNameList, processApiResult} from './Utils';
+import CreateJobModal from '../components/CreateJobModal';
+import {baseWsUrl} from '../config';
 
 import 'brace/mode/yaml';
 import 'brace/theme/xcode';
@@ -14,510 +20,246 @@ const Panel = Collapse.Panel;
 const FormItem = Form.Item;
 const Option = Select.Option;
 
-let yamlConfig = '';
-
-const formItemLayout = {
-    labelCol: {
-        xs: { span: 24 },
-        sm: { span: 5 },
-    },
-    wrapperCol: {
-        xs: { span: 30 },
-        sm: { span: 18 },
-    },
-};
-
-function onChange(newValue) {
-    yamlConfig = newValue
-    // console.log(newValue)
-}
-
 class JobList extends React.Component {
+  constructor() {
+    super();
+    let self = this;
+    this.state = {
+      visible: false,
+      logVisible: false,
+      username: '',
+      logMsg: '',
+      showMsg: ''
+    };
+  }
 
-    constructor() {
-        super();
-        let self = this;
-        this.state = {
-            isForm: true,
-            visible: false,
-            logVisible: false,
-            formData: {},
-            username: '',
-            logMsg: '',
-            showMsg: '',
-            username: '1',
-            data: [],
-          clusterNameList: [],
-            columns: [
-                {
-                    title: 'name',
-                    dataIndex: 'name',
-                }, {
-                    title: 'status',
-                    dataIndex: 'status',
-                    filters: [{
-                        text: 'Hidden',
-                        value: 'Hidden',
-                    }, {
-                        text: 'Complete',
-                        value: 'Complete',
-                    }, {
-                        text: 'Fav',
-                        value: 'Fav',
-                    }, {
-                        text: 'Running',
-                        value: 'Running',
-                    }],
-                    onFilter: (value, record) => record.status.indexOf(value) === 0,
-                }, {
-                    title: 'created',
-                    dataIndex: 'created',
-                    defaultSortOrder: 'descend',
-                    sorter: (a, b) => {
-                        let c = new Date(a.created).getTime();
-                        let d = new Date(b.created).getTime();
-                        return c - d
-                    }
-                }, {
-                    title: 'updated',
-                    dataIndex: 'updated',
-                }, {
-                    title: 'user',
-                    dataIndex: 'user',
-                }, {
-                    title: 'log',
-                    dataIndex: 'log',
-                    render(text, record) {
-                        return (
-                            <span style={{color: '#347EFF', cursor: 'pointer'}} onClick={() => {self.handleShowMessage(record.name)}}>log</span>
-                        )
-                    }
-                }, {
-                    title: 'Action',
-                    dataIndex: 'action',
-                    render(text, record) {
-                        const menu = (
-                            <Menu>
-                                <Menu.Item key="1">
-                                    <div onClick={() => {self.handleRestart(record.name)}}>Restart</div>
-                                </Menu.Item>
-                                <Menu.Divider />
-                                <Menu.Item key="2">
-                                    <div onClick={() => {self.handleDelete(record.name)}}>Delete</div>
-                                </Menu.Item>
-                            </Menu>
-                        );
+  handleRestart(name) {
+    let self = this;
+    processApiResult(JobApi.restart(name), 'Restat Job')
+      .then(val => {
+        self.refreshList();
+      }).catch(v => {});
+  }
 
-                        return (
-                            <Dropdown overlay={menu} trigger={['click']}>
-                                <a className="ant-dropdown-link" href="#">
-                                    <div style={{width: '40px', textAlign: 'center'}}>
-                                        <Icon type="ellipsis" className="btnIcon" />
-                                    </div>
-                                </a>
-                            </Dropdown>
-                        )
-                    }
-                }
-            ]
-        }
+  handleDelete(name) {
+    let self = this;
+    processApiResult(JobApi.delete(name), 'Delete Job')
+      .then(val => {
+        self.refreshList();
+      }).catch(v => {});
+  }
+
+  handleShowMessage(name) {
+    let self = this;
+    let showMsg = [];
+    // console.log(name);
+    this.setState({logVisible: true});
+
+    const ws = new WebSocket(`${baseWsUrl}/api/v1/ws/job/${name}/log/events`);
+    ws.onopen = function(evt) {
+      // console.log("Connection open ...");
+    };
+    ws.onclose = function(evt) {
+      console.log("Build finished")
+    }
+    ws.onerror = function(evt) {
+      let msg = JSON.parse(evt.data).data
+
+      notification.destroy()
+      notification.error({
+        message: '错误信息',
+        description: `${msg}`,
+        duration: 0,
+      });
     }
 
-    handleSubmit(e) {
-        const {isForm, name} = this.state
-
-        e.preventDefault();
-        this.props.form.validateFields((err, values) => {
-            if (!err) {
-                if(isForm) {
-                    let job;
-                    if(values.gpus === 0) {
-                        job = {
-                            jobname: values.jobname,
-                            git: values.git,
-                            commit: values.commitId,
-                            autoRestart: values.autoRestart,
-                            image: values.image,
-                            command: values.command,
-                            shell: values.shell
-                        }
-                    }else {
-                        job = {
-                            jobname: values.jobname,
-                            git: values.git,
-                            commit: values.commitId,
-                            autoRestart: values.autoRestart,
-                            image: values.image,
-                            command: values.command,
-                            shell: values.shell
-                        }
-                    }
-                    // console.log(job)
-                    createJob(job).then(res => {
-                        this.getJobDetail();
-
-                        notification.destroy()
-                        notification.success({
-                            message: '成功！',
-                            description: `Create Success!`,
-                        });
-                        this.setState({
-                            visible: false
-                        });
-                    }).catch(err => {
-                        let res = err.response;
-                        let errorMsg;
-                        if(res.data.indexOf('<p>') !== -1 ) {
-                            errorMsg = res.data.split('<p>')[1].split('</p>')[0];
-                        }else {
-                            let data = JSON.parse(res.data);
-                            errorMsg = data.error;
-                        }
-
-                        notification.destroy()
-                        notification.error({
-                            message: '失败！',
-                            description: `${res.status}: ${errorMsg}`,
-                            duration: 0,
-                        });
-                    });
-                } else {
-                    createJob({
-                        specs_text: yamlConfig
-                    }).then(res => {
-                        this.getJobDetail();
-                    });
-                }
-            }
-        });
+    ws.onmessage = function(evt) {
+      let msg = JSON.parse(evt.data)
+      if(msg.error !== undefined) {
+        msg = msg.error.split('\n');
+        let arr = [];
+        msg.forEach((d, index) => {
+          arr.push(<p key={index}>{d}</p>)
+        })
+        const errMsg = (
+            <div style={{color: 'red'}}>
+            {arr}
+          </div>
+        )
+        self.setState({
+          logMsg: errMsg
+        })
+      }else {
+        msg = msg.data;
+        showMsg.push(<p key={msg}>{msg}</p>)
+        self.setState({
+          showMsg: showMsg
+        })
+      }
     }
+  }
 
-    handleChange(newValue) {
-        if(newValue === 'form') {
-            this.setState({
-                isForm: true
-            });
-        }else {
-            this.setState({
-                isForm: false
-            });
-        }
-    }
+  getJobList() {
+    const { requests, isFetching, error } =
+          getPageRequests(this.props, [
+            'LIST_JOB_REQUEST', 'GET_CURRENT_USER_REQUEST'
+          ]);
+    let [jobsReq, userReq] = requests;
+    let jobList = jobsReq.data? jobsReq.data: [],
+        username = userReq.data? userReq.data.nickname: 'unknown';
 
-    handleRestart(name) {
-        restartJob({name: name}).then(res => {
-            if(JSON.parse(res).error === null) {
-
-                notification.destroy()
-                notification.success({
-                    message: '成功！',
-                    description: `Restart Success!`,
-                });
-            }
-        }).catch(err => {
-            let res = err.response;
-            let errorMsg;
-            if(res.data.indexOf('<p>') !== -1 ) {
-                errorMsg = res.data.split('<p>')[1].split('</p>')[0];
-            }
-
-            notification.destroy()
-            notification.error({
-                message: '失败！',
-                description: `${res.status}: ${errorMsg}`,
-                duration: 0,
-            });
-        });
-        this.getJobDetail();
-    }
-
-    handleDelete(name) {
-        deleteJob({name: name}).then(res => {
-            if(res.error === null) {
-
-                notification.destroy()
-                notification.success({
-                    message: '成功！',
-                    description: `Delete Success!`,
-                });
-                let {data} = this.state;
-                data.map((d, index) => {
-                    if(d.name === name) {
-                        data.splice(index, 1);
-                        this.setState({
-                            data: data
-                        })
-                    }
-                })
-            } else {
-                notification.destroy()
-                notification.error({
-                    message: '失败！',
-                    description: 'Delete Fail',
-                    duration: 0,
-                });
-            }
-        });
-    }
-
-    handleShowMessage(name) {
-        let self = this;
-        let showMsg = [];
-        // console.log(name);
-        this.setState({logVisible: true});
-
-        let prodSchema = "ws:"
-        if (window.location.protocol === "https:") {
-            prodSchema = "wss:"
-        }
-        const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
-        const ws = new WebSocket(`${wsUrl}/api/v1/ws/job/${name}/log/events`);
-        ws.onopen = function(evt) {
-            // console.log("Connection open ...");
-        };
-        ws.onclose = function(evt) {
-            console.log("Build finished")
-        }
-        ws.onerror = function(evt) {
-            let msg = JSON.parse(evt.data).data
-
-            notification.destroy()
-            notification.error({
-                message: '错误信息',
-                description: `${msg}`,
-                duration: 0,
-            });
-        }
-
-        ws.onmessage = function(evt) {
-            let msg = JSON.parse(evt.data)
-            if(msg.error !== undefined) {
-                msg = msg.error.split('\n');
-                let arr = [];
-                msg.forEach((d, index) => {
-                    arr.push(<p key={index}>{d}</p>)
-                })
-                const errMsg = (
-                    <div style={{color: 'red'}}>
-                        {arr}
-                    </div>
-                )
-                self.setState({
-                    logMsg: errMsg
-                })
-            }else {
-                msg = msg.data;
-                showMsg.push(<p key={msg}>{msg}</p>)
-                self.setState({
-                    showMsg: showMsg
-                })
-            }
-        }
-    }
-
-    getJobDetail() {
-        getUserId().then(res => {
-            let username = res.nickname;
-            jobList().then(res => {
-                let data = res;
-                data.map(d => {
-                    d.user = username
-                })
-                this.setState({
-                    data: data
-                })
-            });
-        });
-    }
+    jobList.map(d => {
+      d.user = username;
+    });
+    return jobList;
+  }
 
   handleChangeCluster(newCluster) {
-    // let {name} = this.state;
-    // this.fetchAllData(name, newCluster);
     this.setState({
       nowCluster: newCluster
     });
   }
-    componentDidMount() {
-        getCluster().then(res => {
-          this.setState({
-            clusterNameList: res,
-            nowCluster: res[0]
-          });
-        });
-        // 获取username和data
-        this.getJobDetail();
+
+  componentDidMount() {
+    this.refreshList();
+  }
+
+  refreshList() {
+    const {dispatch} = this.props;
+    dispatch(JobActions.list());
+  }
+
+  showCreateJobModal() {
+    let self = this;
+
+    let div = document.createElement('div');
+    document.body.appendChild(div);
+
+    function destroy(...args: any[]) {
+      const unmountResult = ReactDOM.unmountComponentAtNode(div);
+      if (unmountResult && div.parentNode) {
+        div.parentNode.removeChild(div);
+      }
+    }
+    function handler(job) {
+      processApiResult(JobApi.create(job), 'Create Job')
+        .then(data => {
+            destroy();
+            self.refreshList();
+        }).catch(e => {});
+    }
+    let config = {
+      isForm: true,
+      destroy: destroy,
+      hander: handler
+    };
+
+    ReactDOM.render(<CreateJobModal config={config} />, div);
+  }
+
+  render() {
+    let jobList = this.getJobList(),
+        clusterNameList = getClusterNameList(this.props),
+        nowCluster = this.state.nowCluster;
+    if (! nowCluster) {
+      if (clusterNameList.length > 0) {
+        nowCluster = clusterNameList[0];
+      }
     }
 
-    render() {
+      const { getFieldDecorator } = this.props.form;
 
-        const { getFieldDecorator } = this.props.form;
-        const {isForm, columns} = this.state;
-        const modalContent = isForm ? (
-            <Form style={{marginTop: '20px'}} onSubmit={this.handleSubmit.bind(this)}>
-                <FormItem
-                    {...formItemLayout}
-                    label="Jobname"
-                >
-                    {getFieldDecorator('jobname', {
-                        rules: [{ required: true, message: 'Please input your jobname!' }],
-                    })(
-                        <Input placeholder="Jobname"/>
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Git"
-                >
-                    {getFieldDecorator('git', {
-                        rules: [{ message: 'Please input your git!' }],
-                    })(
-                        <Input placeholder="Git"/>
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="GPUs"
-                >
-                    {getFieldDecorator('gpus', {
-                        initialValue: 0,
-                    })(
-                        <InputNumber min={0} max={10} />
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="autoRestart"
-                >
-                    {getFieldDecorator('autoRestart', {
-                        valuePropName: 'checked',
-                        initialValue: false,
-                    })(
-                        <Checkbox></Checkbox>
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="shell"
-                >
-                    {getFieldDecorator('shell', {
-                        valuePropName: 'checked',
-                        initialValue: false,
-                    })(
-                        <Checkbox></Checkbox>
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Command"
-                >
-                    {getFieldDecorator('command', {
-                        rules: [{ required: true, message: 'Please input your command!' }],
-                    })(
-                        <TextArea rows={4} />
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Image"
-                >
-                    {getFieldDecorator('image', {
-                        rules: [{ required: true, message: 'Please input your image!' }],
-                    })(
-                        <Input/>
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Commit id"
-                >
-                    {getFieldDecorator('commitId')(
-                        <Input/>
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Branch"
-                >
-                    {getFieldDecorator('branch')(
-                        <Input/>
-                    )}
-                </FormItem>
-                <FormItem
-                    {...formItemLayout}
-                    label="Comments"
-                >
-                    {getFieldDecorator('comments')(
-                        <TextArea rows={4} />
-                    )}
-                </FormItem>
-                <Button type="primary" htmlType="submit" className="create-job-button">
-                    Create Job
-                </Button>
-            </Form>
-        ) : (
-            <div>
-                <AceEditor
-                    mode="yaml"
-                    theme="xcode"
-                    onChange={onChange}
-                    name="yaml"
-                    fontSize={18}
-                    width="450px"
-                    height="600px"
-                    editorProps={{$blockScrolling: true}}
-                />
-                <Button type="primary" className="create-job-button" onClick={this.handleSubmit.bind(this)}>
-                    Create Job
-                </Button>
-            </div>
-        )
+      let jobListcolumns = [
+          {
+              title: 'name',
+              dataIndex: 'name'
+          }, {
+              title: 'status',
+              dataIndex: 'status',
+              filters: [{
+                  text: 'Hidden',
+                  value: 'Hidden'
+              }, {
+                  text: 'Complete',
+                  value: 'Complete'
+              }, {
+                  text: 'Fav',
+                  value: 'Fav'
+              }, {
+                  text: 'Running',
+                  value: 'Running'
+              }],
+              onFilter: (value, record) => record.status.indexOf(value) === 0,
+          }, {
+              title: 'created',
+              dataIndex: 'created',
+              defaultSortOrder: 'descend',
+              sorter: (a, b) => {
+                  let c = new Date(a.created).getTime();
+                  let d = new Date(b.created).getTime();
+                  return c - d
+              }
+          }, {
+              title: 'updated',
+              dataIndex: 'updated',
+          }, {
+              title: 'user',
+              dataIndex: 'user',
+          }, {
+              title: 'log',
+              dataIndex: 'log',
+              render(text, record) {
+                  return (
+                      <span style={{color: '#347EFF', cursor: 'pointer'}} onClick={() => {self.handleShowMessage(record.name)}}>log</span>
+                  )
+              }
+          }, {
+              title: 'Action',
+              dataIndex: 'action',
+              render(text, record) {
+                  return (
+                      <span>
+                      <a href="javascript:;" onClick={() => {self.handleRestart(record.name)}}>Restart</a>
+                      <Divider type="vertical" />
+                      <a href="javascript:;" onClick={() => {self.handleDelete(record.name)}}>Delete</a>
+                      </span>
+                  );
+              }
+          }
+      ];
+      return (
+          <div className="jobList">
+              <Collapse bordered={false} defaultActiveKey={['1']}>
+                  <Panel header={<h2>job列表</h2>} key="1">
+          <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}} onClick={this.showCreateJobModal.bind(this)}>Create Job</Button>
+                      <Icon type="reload" className="reload" onClick={this.refreshList.bind(this)}/>
 
-        return (
-            <div className="jobList">
-                <Collapse bordered={false} defaultActiveKey={['1']}>
-                    <Panel header={<h2>job列表</h2>} key="1">
-                        <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}} onClick={() => {this.setState({visible: true})}}>Create Job</Button>
-                        <Icon type="reload" className="reload" onClick={this.getJobDetail.bind(this)}/>
+                      <Divider type="vertical" />
 
-                        <Divider type="vertical" />
+                      Cluster: <Select value={nowCluster} style={{ width: 100}}
+                              onChange={this.handleChangeCluster.bind(this)}>
+                           { clusterNameList.map(name => <Option key={name}>{name}</Option>) }
+                      </Select>
+                      <Table
+                          columns={jobListcolumns}
+                          dataSource={jobList}
+                          rowKey="name"
+                      />
 
-                        Cluster: <Select value={this.state.nowCluster} style={{ width: 100}}
-                                onChange={this.handleChangeCluster.bind(this)}>
-                             { this.state.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
-                        </Select>
-                        <Table
-                            columns={columns}
-                            dataSource={this.state.data}
-                            rowKey="name"
-                        />
-
-                        <Modal
-                            title="Create Job"
-                            visible={this.state.visible}
-                            onCancel={() => {this.setState({visible: false})}}
-                            footer={null}
-                        >
-                            <span>选择创建方式：</span>
-                            <Select defaultValue="form" style={{ width: 80 }} onChange={this.handleChange.bind(this)}>
-                                <Option value="form">Form</Option>
-                                <Option value="yaml">yaml</Option>
-                            </Select>
-                            {modalContent}
-                        </Modal>
-                    </Panel>
-                </Collapse>
-                <Modal
-                    title="logger"
-                    visible={this.state.logVisible}
-                    onCancel={() => {this.setState({logVisible: false, showMsg: '', logMsg: ''})}}
-                    footer={null}
-                >
-                    <div>{this.state.showMsg}</div>
-                    <div>{this.state.logMsg}</div>
-                </Modal>
-            </div>
-        )
-    }
+                  </Panel>
+              </Collapse>
+              <Modal
+                  title="logger"
+                  visible={this.state.logVisible}
+                  onCancel={() => {this.setState({logVisible: false, showMsg: '', logMsg: ''})}}
+                  footer={null}
+              >
+                  <div>{this.state.showMsg}</div>
+                  <div>{this.state.logMsg}</div>
+              </Modal>
+          </div>
+      )
+  }
 }
 
 export default Form.create()(JobList);

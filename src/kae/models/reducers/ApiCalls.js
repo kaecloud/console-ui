@@ -1,5 +1,6 @@
 import _ from 'lodash';
 import {createReducer} from '../Utils';
+import AppPodsWatcher from '../AppDetailPageWs';
 
 /*
  * State Shape:
@@ -33,11 +34,19 @@ function getInitRequest(action) {
 function genHandlers() {
   let handlers = {};
   const apiTypes = [
-    'LOAD_APPS_REQUEST', 'GET_APP_REQUEST', 'DELETE_APP_REQUEST',
-    'GET_APP_DEPLOYMENT_REQUEST',
-    'REGISTER_APP_REQUEST', 'DEPLOY_APP_REQUEST',
+    'LIST_APP_REQUEST', 'GET_APP_REQUEST', 'DELETE_APP_REQUEST',
+    'GET_APP_CANARY_REQUEST', 'GET_APP_DEPLOYMENT_REQUEST',
     'GET_APP_RELEASES_REQUEST', 'GET_APP_LOGS_REQUEST',
+    'LIST_APP_YAML_REQUEST',
+    'GET_APP_SECRET_REQUEST', 'CREATE_APP_SECRET_REQUEST',
+    'GET_APP_CONFIGMAP_REQUEST', 'CREATE_APP_CONFIGMAP_REQUEST',
+    'GET_APP_ABTESTING_REQUEST', 'SET_APP_ABTESTING_REQUEST',
+    'REGISTER_APP_REQUEST', 'DEPLOY_APP_REQUEST',
     'GET_APP_YAML_REQUEST',
+
+    'LIST_JOB_REQUEST',
+
+    'LIST_CLUSTER_REQUEST', 'GET_CURRENT_USER_REQUEST'
   ];
   _.forEach(apiTypes, (ty) => {
     handlers[ty] = (state, action) => {
@@ -95,6 +104,42 @@ function genHandlers() {
       [apiType]: getInitRequest({ asyncType: apiType }),
     });
   };
+
+  handlers['APP_PODS_EVENT'] = (state, action) => {
+    let {payload} = action;
+    let oldData = _.assign({}, state['APP_PODS_EVENT']);
+    let oldPods = oldData.data? oldData.data: [];
+    // console.log(state, oldData, event);
+    let newData = AppPodsWatcher.mergeEvent(oldPods, payload);
+
+    const newRequest = _.assign({}, getInitRequest(action), {
+      isFetching: false,
+      statusCode: 200,
+      data: newData,
+      opFlash: ''
+    });
+    return _.assign({}, state, {
+      'APP_PODS_EVENT': newRequest
+    });
+  };
+
+  handlers['APP_CANARY_PODS_EVENT'] = (state, action) => {
+    let {payload} = action;
+    let oldData = _.assign({}, state['APP_CANARY_PODS_EVENT']);
+    let oldPods = oldData.data? oldData.data: [];
+    let newData = AppPodsWatcher.mergeEvent(oldPods, payload);
+
+    const newRequest = _.assign({}, getInitRequest(action), {
+      isFetching: false,
+      statusCode: 200,
+      data: newData,
+      opFlash: ''
+    });
+    return _.assign({}, state, {
+      'APP_CANARY_PODS_EVENT': newRequest
+    });
+  }
+
   return handlers;
 }
 

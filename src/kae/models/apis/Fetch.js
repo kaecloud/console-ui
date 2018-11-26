@@ -9,11 +9,36 @@ const Fetch = {
     return { statusCode, data, flash };
   },
 
+  handleError(error) {
+    let dummycode = 1111;
+    if (error.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      let res = error.response;
+      return Promise.reject(this.wrap(res.status, res.data));
+    } else if (error.request) {
+      // The request was made but no response was received
+      // `error.request` is an instance of XMLHttpRequest in the browser and an instance of
+      console.error(error.request);
+      let dd = {
+        error: "doesn't get reseponse"
+      };
+      return Promise.reject(this.wrap(dummycode, dd));
+    } else {
+      // Something happened in setting up the request that triggered an Error
+      console.error('Error', error.message);
+      let dd = {
+        error: "error when setup request"
+      };
+      return Promise.reject(this.wrap(dummycode, dd));
+    }
+  },
+
   get(url) {
     return axios.get(url).then(res => {
-      this.wrap(200, res.data);
+      return this.wrap(200, res.data);
     }).catch(err => {
-      return Promise.reject(this.wrap(code, `Server got hacked, ${err}`));
+      return this.handleError(err);
     });
   },
 
@@ -29,10 +54,9 @@ const Fetch = {
         return data;
       }],
     }).then(res => {
-      this.wrap(200, res.data);
+      return this.wrap(200, res.data);
     }).catch(err => {
-      let res = err.response;
-      return Promise.reject(this.wrap(res.status, res.data));
+      return this.handleError(err);
     });
   },
 
@@ -48,9 +72,9 @@ const Fetch = {
         return data;
       }],
     }).then(res => {
-      this.wrap(200, res.data);
+      return this.wrap(200, res.data);
     }).catch(err => {
-      return Promise.reject(this.wrap(code, `Server got hacked, ${err}`));
+      return this.handleError(err);
     });
   },
 
@@ -66,9 +90,9 @@ const Fetch = {
         return data;
       }],
     }).then(res => {
-      this.wrap(res.data);
+      return this.wrap(200, res.data);
     }).catch(err => {
-      return Promise.reject(this.wrap(code, `Server got hacked, ${err}`));
+      return this.handleError(err);
     });
   },
 };

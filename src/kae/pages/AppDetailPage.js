@@ -4,14 +4,12 @@ import ReactDOM from 'react-dom';
 import {
   Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select,
   Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification,
-  Progress
+  Progress, Tooltip
 } from 'antd';
 import { Link } from 'react-router-dom';
-import {
-  getDeployment, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
-  appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
-  appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret,
-  getAppYamlList, deleteAppYaml, createOrUpdateAppYaml, deleteApp} from 'api';
+
+import SyntaxHighlighter from 'react-syntax-highlighter';
+import { docco } from 'react-syntax-highlighter/styles/hljs';
 
 import brace from 'brace';
 import AceEditor from 'react-ace';
@@ -19,10 +17,18 @@ import AceEditor from 'react-ace';
 import 'brace/mode/json';
 import 'brace/theme/xcode';
 
-import {
-  DeleteConfirmModal, AppYamlAddModal, AceEditorModal,
-  ConfigMapModal, SecretFormModal, DeployModal
-} from '../components/Modals';
+import AceEditorModal from '../components/AceEditorModal';
+import DeleteConfirmModal from '../components/DeleteConfirmModal';
+import AppYamlAddModal from '../components/AppYamlAddModal';
+import DeployModal from '../components/DeployModal';
+import showInfoModal from '../components/InfoModal';
+
+import * as AppApi from '../models/apis/Apps';
+import {getPageRequests, getRequestFromProps} from '../models/Utils';
+import * as AppActions from '../models/actions/Apps';
+import AppPodsWatcher from '../models/AppDetailPageWs';
+import {getArg, setArg, processApiResult} from './Utils';
+import {baseWsUrl} from '../config';
 
 const Panel = Collapse.Panel;
 const { TextArea } = Input;
@@ -38,350 +44,54 @@ const spanStyle = {
   borderRadius: '6px'
 };
 
-function extractDataFromPod(pod) {
-  var msToHuman = function(ms) {
-    var numdays, numhours, numminutes;
-    var seconds = ms / 1000;
-    numdays = Math.floor(seconds / 86400);
-    if (numdays > 0) {
-      return numdays + 'd';
-    }
-    numhours = Math.floor(seconds / 3600);
-    if (numhours > 0) {
-      return numhours + 'h';
-    }
-    numminutes = Math.floor(seconds / 60);
-    if (numminutes > 0) {
-      return numminutes + 'm';
-    }
-    return seconds + 's';
-  };
-  let status = pod.status.phase;
-  // get ready count
-  let restart_count = 0;
-  let ready_count = 0;
-  let ready_total = pod.spec.containers.length;
-  if (pod.status.container_statuses) {
-    for (let cont_status of pod.status.container_statuses) {
-      if (cont_status.ready) {
-        ready_count++;
-      } else {
-        if (cont_status.state.terminated) {
-          status = cont_status.state.terminated.reason;
-        } else if (cont_status.state.waiting) {
-          status = cont_status.state.waiting.reason;
-        }
-      }
-      if (cont_status.restart_count > restart_count) {
-        restart_count = cont_status.restart_count;
-      }
-    }
-  }
-  let start_time_str = pod.status.start_time;
-  if (start_time_str && !start_time_str.endsWith("GMT")) {
-    start_time_str += " GMT";
-  }
-  let start_time = new Date(start_time_str);
-  let interval = Date.now() - start_time;
-
-  let data = {
-    ready_count: ready_count,
-    ready_total: ready_total,
-    ready: ready_count + "/" + ready_total,
-    name: pod.metadata.name,
-    status: status,
-    restarts: restart_count,
-    age: msToHuman(interval),
-    ip: pod.status.pod_ip,
-    node: pod.status.host_ip
-  };
-  return data;
-}
-
-function getArg(name) {
-  var i = new RegExp(name + "=([^&]+)","i")
-  , n = location.href.match(i);
-  return n ? n[1]:false;
-}
-
-function setArg(name, val) {
-  var re = new RegExp(name + "=([^&]*)","i");
-  var newUrl = location.href.replace(re, name+"="+val);
-  location.href = newUrl;
-}
-
-function getInitialState() {
-  return {
-    infoModal: {
-      text: '',
-      title: '',
-      visible: false
-    },
-    configMapData: null,
-    secretData: null,
-    name: '',
-    nowTag: '',
-    replicas: 1,
-    readyReplicas: 0,
-    version: '',
-    nowCluster: '',
-    clusterNameList: [],
-    scaleNum: 1,
-    rollbackRevisionNum: 0,
-    yamlList: [],
-    releaseTableData: [],
-    podTableData: [],
-    canarypodTableData: [],
-    textVisible: false,
-    scaleVisible: false,
-    rollbackVisible: false,
-    canaryVisible: false
-  };
-}
-
 class AppDetail extends React.Component {
 
   constructor() {
     super();
 
     let self = this;
-    this.state = getInitialState();
-    this.handleMsg = this.handleMsg.bind(this);
+    this.state = this.getInitialState();
     this.showAceEditorModal = this.showAceEditorModal.bind(this);
-    this.fetchDeploymentData = this.fetchDeploymentData.bind(this);
   }
 
   componentDidMount() {
     let that = this;
+    let appName = this.getAppName(),
+        nowCluster = this.getNowCluster();
 
-    // 获取APP name
-    const name = getAppName;
-    const defaultCluster = getArg('cluster');
-
-    // 测试地址
-    const testUrl = process.env.NODE_ENV === 'production' ? '' : 'http://192.168.1.17:5000';
-
-    if(!defaultCluster) {
-      getCluster().then(res => {
-        that.fetchAllData(name, res[0]);
-      });
-    }else {
-      that.fetchAllData(name, defaultCluster);
-    }
-
+    AppPodsWatcher.reload(appName, nowCluster);
+    this.refreshPage();
   }
 
-  fetchAllData(name, cluster) {
-    let that = this;
-    that.setState(getInitialState());
-
-    getCluster().then(res => {
-      that.setState({
-        clusterNameList: res
-      });
-    });
-
-    that.setState({
-      name: name,
-      nowCluster: cluster
-    });
-
-    getAppYamlList(name).then(res => {
-      that.setState({
-        yamlList: res
-      });
-    });
-    getReleases(name).then(res => {
-      that.setState({
-        releaseTableData: res
-      });
-    });
-
-    getAppCanaryInfo({name:name, cluster:cluster}).then(res => {
-      that.setState({
-        canaryVisible: res.status
-      });
-    });
-    that.fetchDeploymentData(name, cluster);
-    // pods watcher
-    that.createPodsWatcher(name, cluster, false);
-    // canary pods watcher
-    that.createPodsWatcher(name, cluster, true);
-  }
-
-  createPodsWatcher(name, cluster, canary) {
-    let that = this;
-    let prodSchema = "ws:";
-    if (window.location.protocol === "https:") {
-      prodSchema = "wss:";
-    }
-    const canaryStr = canary? "canary": "";
-
-    const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
-    const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/pods/events`);
-    ws.onopen = function(evt) {
-      ws.send(`{"cluster": "${cluster}", "canary": ${canary}}`);
+  getInitialState() {
+    return {
+      infoModal: {
+        text: '',
+        title: '',
+        visible: false
+      },
+      scaleNum: 1,
+      rollbackRevisionNum: 0,
+      scaleVisible: false,
+      rollbackVisible: false
     };
-    ws.onclose = function(evt) {
-      console.info(`${canaryStr} pods websocket connection closed`);
-      let stateWs = that.state.podsWatcherWS;
-      if (canary) {
-        stateWs = that.state.canaryPodsWatcherWS;
-      }
-      if (ws == stateWs) {
-        console.info(`recreate ${canaryStr} pods watcher websocket..`);
-        setTimeout(function() {
-          that.createPodsWatcher(name, cluster, canary);
-        }, 5000);
-      }
-    };
-    ws.onerror = function(evt) {
-      console.error(`${canaryStr} pods websocket connection got an error`);
-      ws.close();
-    };
-    that.webSocketEvent(ws, canary);
-    // set websocket in state
-    if (canary) {
-      if (that.state.canaryPodsWatcherWS) {
-        // console.log("close canary pods watcher");
-        that.state.canaryPodsWatcherWS.close();
-      }
-      that.setState({
-        canaryPodsWatcherWS: ws
-      });
-    } else {
-      if (that.state.podsWatcherWS) {
-        // console.log("close pods watcher");
-        that.state.podsWatcherWS.close();
-      }
-      that.setState({
-        podsWatcherWS: ws
-      });
-    }
-    return ws;
-  }
-  // Websocket
-  webSocketEvent(socket, canary) {
-    let self = this;
-    socket.addEventListener('message', function (event) {
-      let tmp = JSON.parse(event.data);
-      let action = tmp.action;
-      let data = extractDataFromPod(tmp.object);
-
-      let { canarypodTableData, podTableData } = self.state;
-      let temp = canary ? canarypodTableData : podTableData;
-
-      let podIndex = undefined;
-      for (const [index, value] of temp.entries()) {
-        if (value.name === data.name) {
-          podIndex = index;
-        }
-      }
-      if(action === 'ADDED') {
-        if(podIndex === undefined) {
-          temp.push(data);
-        } else {
-          temp.splice(podIndex, 1, data);
-        }
-        if(canary) {
-          self.setState({
-            canarypodTableData: temp
-          });
-        }else {
-          self.setState({
-            podTableData: temp
-          });
-        }
-      }else if(action === 'MODIFIED') {
-        if(podIndex !== undefined) {
-          temp.splice(podIndex, 1, data);
-          if(canary) {
-            self.setState({
-              canarypodTableData: temp
-            });
-          }else {
-            self.setState({
-              podTableData: temp
-            });
-          }
-        }
-      }else if(action === 'DELETED') {
-        if(podIndex !== undefined) {
-          temp.splice(podIndex, 1);
-          if(canary) {
-            self.setState({
-              canarypodTableData: temp
-            });
-          }else {
-            self.setState({
-              podTableData: temp
-            });
-          }
-        }
-      }
-      if (! canary) {
-        let readyReplicas = 0;
-        for (const val of temp.values() ) {
-          if (val.ready_count === val.ready_total) {
-            readyReplicas++;
-          }
-        }
-        self.setState({
-          readyReplicas: readyReplicas
-        });
-      }
-    }, false);
   }
 
   componentWillMount() {
   }
 
-  fetchDeploymentData(name, cluster) {
-    getDeployment({name: name, cluster: cluster}).then(res => {
-      let deployment = res;
-
-      this.setState({
-        deploymentData: deployment,
-        replicas: deployment.spec.replicas,
-        readyReplicas: deployment.status.ready_replicas,
-        version: res.metadata.annotations.release_tag
-      });
-    }).catch(err => {
-      let resp = err.response;
-      if (resp.status !== 404) {
-        this.handleError(err);
-      }
-    });
-  }
-
   handleChangeCluster(newCluster) {
-    let {name} = this.state;
-    this.fetchAllData(name, newCluster);
+    const appName = this.getAppName();
     setArg('cluster', newCluster);
-  }
 
-  showInfoModal(title, data) {
-    if (!!!data) {
-      data = "";
-    }
-    if (typeof data != 'string') {
-      data = JSON.stringify(data, undefined, 2);
-    }
-    let text = data.replace(/\n/g, '<br/>');
-    text = text.replace(/ /g, '&nbsp;&nbsp;');
-    this.setState({
-      infoModal: {
-        title: title,
-        text: text,
-        visible: true
-      }
-    });
+    AppPodsWatcher.reload(appName, newCluster);
+    this.refreshPage();
   }
 
   hiddenInfoModal() {
     this.setState({
       infoModal: {
-        visible: false,
+        visible: false
       }
     });
   }
@@ -408,8 +118,14 @@ class AppDetail extends React.Component {
   }
 
   showAppDeployment() {
-    let infoModal = this.state.infoModal;
-    let dp = this.state.deploymentData;
+    let appName = this.getAppName();
+
+    const request = getRequestFromProps(this.props, 'GET_APP_DEPLOYMENT_REQUEST');
+    let dp = null;
+    if (request.statusCode === 200) {
+      dp = request.data;
+    }
+
     let labels = [],
         annotations = [],
         match_labels = [];
@@ -439,11 +155,12 @@ class AppDetail extends React.Component {
       }
     }
 
-    infoModal.visible = true;
-    infoModal.title = "Deployment";
-    infoModal.text = (
+    let cfg = {};
+    cfg.visible = true;
+    cfg.title = "Deployment";
+    cfg.text = (
       <div>
-        <p>appname: {this.state.name} </p>
+        <p>appName: {appName} </p>
         <p>命名空间：{namespace}</p>
         <p>标签： {labels}</p>
         <p>注释： {annotations ? annotations : '无'}</p>
@@ -457,210 +174,80 @@ class AppDetail extends React.Component {
       最大无效数：{rolling_update.max_unavailable}</p>
         </div>
     );
-    this.setState({infoModal: infoModal});
+    showInfoModal(cfg, false);
   }
+
   // 构建
   handleBuild(tag) {
     let self = this;
-    let { name } = self.state;
+    let appName = this.getAppName();
+    const {dispatch} = this.props;
 
     confirm({
       title: 'Build',
-      content: `Are you sure to build image for app ${name} release ${tag}?`,
+      content: `Are you sure to build image for app ${appName} release ${tag}?`,
       onOk() {
-        let infoModal = self.state.infoModal;
-        infoModal.visible = true;
-        infoModal.title = "Build Output";
-        self.setState({infoModal: infoModal});
-
-        let prodSchema = "ws:"
-        if (window.location.protocol === "https:") {
-          prodSchema = "wss:"
-        }
-        const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
-        const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/build`);
+        const ws = new WebSocket(`${baseWsUrl}/api/v1/ws/app/${appName}/build`);
         ws.onopen = function(evt) {
           ws.send(`{"tag": "${tag}"}`);
         };
         ws.onclose = function(evt) {
           // update release data
-          getReleases(name).then(res => {
-            self.setState({
-              releaseTableData: res
-            })
-          });
-          console.log("Build finished")
-        }
+          dispatch(AppActions.getReleases(appName));
+          console.log("Build finished");
+        };
 
-        let text = ""
-        let phase = null
+        let infoModal = {
+          isHtml: true,
+          visible: true,
+          title: "Build Output",
+          text: ''
+        };
+
+        self.setState({infoModal: infoModal});
+        let text = "";
+        let phase = null;
         ws.onmessage = function(evt) {
           let data = JSON.parse(evt.data);
           if (! data.success) {
-            text += `<p key=${data.error}>${data.error}</p>`
+            text += `<p key=${data.error}>${data.error}</p>`;
           } else {
             if (phase !== data['phase']) {
-              text += `<p>***** PHASE ${data.phase}</p>`
-              phase = data['phase']
+              text += `<p>***** PHASE ${data.phase}</p>`;
+              phase = data['phase'];
             }
             if (data.phase.toLowerCase() === "pushing") {
-              let raw_data = data['raw_data']
+              let raw_data = data['raw_data'];
               if (raw_data.id && raw_data.status) {
-                text += `<p>${raw_data.id}: ${raw_data.status}</p>`
+                text += `<p>${raw_data.id}: ${raw_data.status}</p>`;
               } else if (raw_data.digest) {
-                text += `<p>${raw_data.status}: digest: ${raw_data.digest} size: ${raw_data.size}</p>`
+                text += `<p>${raw_data.status}: digest: ${raw_data.digest} size: ${raw_data.size}</p>`;
               } else {
-                text += `<p>${JSON.stringify(data)}</p>`
+                text += `<p>${JSON.stringify(data)}</p>`;
               }
             } else {
-              text += `<p>${data.msg}</p>`
+              text += `<p>${data.msg}</p>`;
             }
           }
-
-          infoModal.text = text
-          self.setState({infoModal: infoModal})
-        }
+          infoModal.text = text;
+          self.setState({infoModal: infoModal});
+        };
       },
-      onCancel() {},
-    });
-  }
-
-  showConfigMap() {
-    const {name, nowCluster} = this.state
-
-    appGetConfigMap(name, {cluster: nowCluster}).then(res => {
-      this.setState({configMapData: res})
-      this.showInfoModal("ConfigMap", res)
-    }).catch(err => {
-      this.handleError(err);
-    });
-  }
-
-  handleConfigMap() {
-    let self = this;
-    let { name, nowCluster } = this.state;
-
-    function createConfigMap(configMapData) {
-      let div = document.createElement('div');
-      document.body.appendChild(div);
-
-      function destroy(...args: any[]) {
-        const unmountResult = ReactDOM.unmountComponentAtNode(div);
-        if (unmountResult && div.parentNode) {
-          div.parentNode.removeChild(div);
-        }
-      }
-
-      function submitForm(cluster_name, replace, cm_data) {
-        let params = {
-          replace: replace,
-          data: cm_data,
-          cluster: cluster_name
-        }
-
-        appPostConfigMap(name, params).then(res=> {
-          destroy()
-          self.handleMsg(res, "Create ConfigMap")
-        }).catch(err => {
-          self.handleError(err)
-        })
-      }
-      let config = {
-        destroy: destroy,
-        handler: submitForm
-      }
-
-      let initialValue = {
-        configMapData: configMapData,
-        clusterNameList: self.state.clusterNameList,
-        currentClusterName: self.state.nowCluster
-      }
-      console.log(initialValue)
-      const WrappedConfigMapModal = Form.create()(ConfigMapModal);
-
-      ReactDOM.render(<WrappedConfigMapModal config={config} initialValue={initialValue} />, div)
-    }
-
-    // we need initial value of form, so if configMapData is null, we need to get it from backend
-    if (self.state.configMapData === null) {
-      appGetConfigMap(name, {cluster: nowCluster}).then(res => {
-        self.setState({configMapData: res})
-        createConfigMap(res)
-      }).catch(err => {
-        let res = {}
-        self.setState({configMapData: res})
-        createConfigMap(res)
-      });
-    } else {
-      createConfigMap(self.state.configMapData)
-    }
-  }
-
-  showSecretModal() {
-    let self = this
-
-    function createSecret(secretData){
-      let div = document.createElement('div');
-      document.body.appendChild(div);
-
-      function destroy(...args: any[]) {
-        const unmountResult = ReactDOM.unmountComponentAtNode(div);
-        if (unmountResult && div.parentNode) {
-          div.parentNode.removeChild(div);
-        }
-      }
-
-      function submitForm(cluster_name, replace, data) {
-        let { name, nowCluster } = self.state;
-        let params = {
-          data: data,
-          replace: replace,
-          cluster: cluster_name
-        }
-        appPostSecret(name, params).then(res=> {
-          self.handleMsg(res, "Create Secret")
-          destroy()
-        }).catch(err => {
-          self.handleError(err)
-        })
-      }
-      let config = {
-        destroy: destroy,
-        handler: submitForm
-      }
-
-      let initialValue = {
-        secretData: JSON.stringify(secretData, undefined, 2),
-        clusterNameList: self.state.clusterNameList,
-        currentClusterName: self.state.nowCluster
-      }
-      const WrappedSecretFormModal = Form.create()(SecretFormModal);
-      ReactDOM.render(<WrappedSecretFormModal initialValue={initialValue} config={config} />, div)
-    }
-
-    // we need initial value of form, so if secretData is null, we need to get it from backend
-    const {name, nowCluster} = self.state
-
-    appGetSecret(name, {cluster: nowCluster}).then(res => {
-      self.setState({secretData: res})
-      createSecret(res)
-    }).catch(err => {
-      let res = {}
-      self.setState({secretData: res})
-      createSecret(res)
+      onCancel() {}
     });
   }
 
   // 部署
   showDeployModal(record, canary) {
     let self = this;
-    let appname = self.state.name;
-    let nowCluster = self.state.nowCluster;
-    let title = '';
+    let appName = self.getAppName(),
+        nowCluster = self.getNowCluster(),
+        clusterNameList = self.getClusterNameList(),
+        yamlList = self.getYamlList(),
+        {dispatch} = self.props;
+    let title = 'Deploy';
     if (canary) {
       title = "Deploy Canary";
-    } else {
-      title = "Deploy";
     }
     let div = document.createElement('div');
     document.body.appendChild(div);
@@ -674,22 +261,16 @@ class AppDetail extends React.Component {
 
     function handler(data) {
       if (canary) {
-        appDeployCanary(appname, data).then(res => {
-          destroy();
-          self.setState({canaryVisible: true});
-          self.handleMsg(res, 'Deploy Canary');
-        }).catch(err => {
-          self.handleError(err);
-        });
+        processApiResult(AppApi.deployCanary(appName, data), 'DeployCanary')
+          .then(data => {
+            destroy();
+          }).catch(v => {});
       } else {
-        appDeploy(appname, data).then(res => {
-          destroy();
-          self.handleMsg(res, 'Deploy');
-          // update version
-          self.fetchDeploymentData(appname, nowCluster);
-        }).catch(err => {
-          self.handleError(err);
-        });
+        processApiResult(AppApi.deploy(appName, data), 'Deploy')
+          .then( data => {
+            destroy();
+            dispatch(AppActions.getDeployment(appName, nowCluster));
+          }).catch(v => {});
       }
     }
 
@@ -701,81 +282,39 @@ class AppDetail extends React.Component {
     let initialValue = {
       tag: record.tag,
       replicas: 0,
-      yamlNameList: self.state.yamlList.map(item => item.name),
-      clusterNameList: self.state.clusterNameList,
-      currentClusterName: self.state.nowCluster
+      yamlNameList: yamlList.map(item => item.name),
+      clusterNameList: clusterNameList,
+      currentClusterName: nowCluster
     };
 
-    const WrappedDeployModal = Form.create()(DeployModal);
-    ReactDOM.render(<WrappedDeployModal config={config} initialValue={initialValue} />, div);
+    ReactDOM.render(<DeployModal config={config} initialValue={initialValue} />, div);
   }
 
   // 删除canary
   handleDeleteCanary() {
-    let self = this
+    let self = this,
+        appName = this.getAppName(),
+        nowCluster = this.getNowCluster(),
+        title = 'Delete Canary',
+        {dispatch} = self.props;
 
     confirm({
       title: 'Delete Canary',
       content: 'Are you sure to delete canary version?',
       onOk() {
-        let { name, nowCluster } = self.state;
-        appDeleteCanary({name: name, cluster: nowCluster}).then(res => {
-          self.setState({canaryVisible: false})
-          self.handleMsg(res, 'Delete Canary');
-        }).catch(err => {
-          self.handleError(err);
-        });
+        processApiResult(AppApi.deleteCanary(appName, nowCluster), title)
+          .then( data => {
+            dispatch(AppActions.getCanaryInfo(appName, nowCluster));
+          }).catch(v => {});
       },
-      onCancel() {},
-    });
-  }
-
-  handleSetABTestingRules() {
-    let self = this
-    const {name, nowCluster} = this.state
-
-    function handleABTestingSubmit(abtestingRulesValue, destroy) {
-      appSetABTestingRules({
-        name: name,
-        cluster: nowCluster,
-        rules: JSON.parse(abtestingRulesValue)
-      }).then(res => {
-        destroy()
-        self.handleMsg(res, 'SET ABTesting Rules');
-      }).catch(err => {
-        self.handleError(err);
-      });
-    }
-
-    function setRulesHelper(initialValue) {
-      let config = {
-        title: "Set A/B Testing Rules",
-        mode: "json",
-        initialValue: initialValue,
-        handler: handleABTestingSubmit
-      }
-      self.showAceEditorModal(config)
-    }
-
-    appGetABTestingRules({
-      name: name,
-      cluster: nowCluster
-    }).then(res => {
-      let str = ""
-      if (res) {
-        str = JSON.stringify(res, null, 2)
-      }
-      setRulesHelper(str)
-    }).catch(err => {
-      let res = ""
-      setRulesHelper(res)
+      onCancel() {}
     });
   }
 
   showDeleteAppConfirmModal() {
-    let self = this
-    let appname = self.state.name
-    let title = "Delete App " + appname
+    let self = this;
+    let appName = this.getAppName();
+    let title = "Delete App " + appName;
     let div = document.createElement('div');
     document.body.appendChild(div);
 
@@ -787,31 +326,31 @@ class AppDetail extends React.Component {
     }
 
     function handler() {
-      deleteApp(appname).then(res => {
-        destroy()
-        self.handleMsg(res, title)
-      }).catch(err => {
-        self.handleError(err)
-      })
+      processApiResult(AppApi.remove(appName), title)
+        .then(data => {
+          destroy();
+          // redict to app list page
+          self.props.history.push('/apps');
+        }).catch(e => {});
     }
 
     let config = {
       title: title,
       handler: handler,
       destroy: destroy
-    }
+    };
 
-    const WrappedDeleteAppConfirmModal = Form.create()(DeleteConfirmModal);
-    ReactDOM.render(<WrappedDeleteAppConfirmModal config={config} expectValue={appname} />, div)
+    ReactDOM.render(<DeleteConfirmModal config={config} expectValue={appName} />, div);
   }
 
   showAppYamlAddModal(record) {
-    let self = this
-    let appname = self.state.name
-    let title = "Change App Yaml"
+    let appName = this.getAppName();
+    const {dispatch} = this.props;
+
+    let title = "Change App Yaml";
     if (! record.name) {
-      title = "Add App Yaml"
-      record = {}
+      title = "Add App Yaml";
+      record = {};
     }
     let div = document.createElement('div');
     document.body.appendChild(div);
@@ -824,52 +363,39 @@ class AppDetail extends React.Component {
     }
 
     function handler(newRecord) {
-      createOrUpdateAppYaml(appname, newRecord).then(res => {
-        destroy()
-        self.handleMsg(res, title)
-
-        getAppYamlList(appname).then(res => {
-          self.setState({
-            yamlList: res
-          })
-        })
-      }).catch(err => {
-        self.handleError(err)
-      })
+      processApiResult(AppApi.createOrUpdateAppYaml(appName, newRecord), title)
+        .then(data => {
+          destroy();
+          dispatch(AppActions.listAppYaml(appName));
+        }).catch(e => {});
     }
 
     let config = {
       title: title,
       handler: handler,
       destroy: destroy
-    }
+    };
 
-    const WrappedAppYamlAddModal = Form.create()(AppYamlAddModal);
-    ReactDOM.render(<WrappedAppYamlAddModal config={config} record={record} />, div);
+    ReactDOM.render(<AppYamlAddModal config={config} record={record} />, div);
   }
 
   handleSetAppYaml(record) {
-    let self = this
-    const {name} = this.state
+    let self = this,
+        appName = this.getAppName(),
+        {dispatch} = this.props,
+        title = 'Set App Yaml';
 
     function setAppYamlHelper(specs_text, destroy) {
       let data = {
         name: record.name,
         specs_text: specs_text,
         comment: record.comment
-      }
-      createOrUpdateAppYaml(name, data).then(res => {
-        destroy()
-        self.handleMsg(res, "Set App Yaml")
-
-        getAppYamlList(name).then(res => {
-          self.setState({
-            yamlList: res
-          })
-        })
-      }).catch(err => {
-        self.handleError(err)
-      })
+      };
+      processApiResult(AppApi.createOrUpdateAppYaml(appName, data), title)
+        .then( data => {
+          destroy();
+          dispatch(AppActions.listAppYaml(appName));
+        }).catch(e => {});
     }
 
     let config = {
@@ -878,50 +404,47 @@ class AppDetail extends React.Component {
       visible: true,
       initialValue: record.specs_text,
       handler: setAppYamlHelper
-    }
-    self.showAceEditorModal(config)
+    };
+    self.showAceEditorModal(config);
   }
 
   handleDeleteAppYaml(record) {
-    let self = this
-    const {name} = this.state
+    let self = this,
+        appName = this.getAppName(),
+        {dispatch} = this.props,
+        title = 'Delete App Yaml';
 
     confirm({
       title: 'Delete App Yaml',
       content: <div>Are you sure to delete app yaml(<strong>{record.name}</strong>)?</div>,
       onOk() {
-        deleteAppYaml(name, record.name).then(res => {
-          self.handleMsg(res, "delete app yaml")
-
-          getAppYamlList(name).then(res => {
-            that.setState({
-              yamlList: res
-            })
-          })
-        }).catch(err => {
-          self.handleError(err)
-        })
+        processApiResult(AppApi.deleteAppYaml(name, record.name), title)
+          .then(data => {
+            dispatch(AppActions.listAppYaml(appName));
+          }).catch(e => {});
       },
-      onCancel() {},
+      onCancel() {}
     });
   }
 
   // 更新
   handleRenew() {
-    let self = this
+    let self = this,
+        appName = this.getAppName(),
+        title = `Renew App ${appName}`,
+        nowCluster = this.getNowCluster(),
+        {dispatch} = this.props;
 
     confirm({
-      title: <div>Recreate Pods(cluster: <span style={{color:'red'}}>{self.state.nowCluster}</span>)</div>,
-      content: <div>Are you sure to force kubernetes to recreate the pods of <strong>{self.state.name}</strong> app?</div>,
+      title: <div>Recreate Pods(cluster: <span style={{color:'red'}}>{nowCluster}</span>)</div>,
+      content: <div>Are you sure to force kubernetes to recreate the pods of <strong>{appName}</strong> app?</div>,
       onOk() {
-        let {name, nowCluster} = self.state;
-        appRenew({name: name, cluster: nowCluster}).then(res => {
-          self.handleMsg(res, 'Renew');
-        }).catch(err => {
-          self.handleError(err);
-        });
+        processApiResult(AppApi.renew(appName, nowCluster), title)
+          .then(data => {
+            dispatch(AppActions.getDeployment(appName, nowCluster));
+          }).catch(e => {});
       },
-      onCancel() {},
+      onCancel() {}
     });
 
   }
@@ -930,92 +453,109 @@ class AppDetail extends React.Component {
   handleScale() {
     let self = this;
     this.setState({scaleVisible: false});
-    let {name, scaleNum, nowCluster} = this.state;
-    appScale({name: name, replicas: scaleNum, cluster: nowCluster}).then(res => {
-      this.handleMsg(res, 'Scale');
-      // refresh deployment
-      this.fetchDeploymentData(name, nowCluster);
-    }).catch(err => {
-      this.handleError(err);
-    });
+    let {scaleNum} = this.state;
+    let appName = this.getAppName(),
+        nowCluster = this.getNowCluster(),
+        {dispatch} = this.props,
+        title = 'Scale App';
+    processApiResult(AppApi.scale(appName, nowCluster, scaleNum), title)
+      .then(data => {
+        dispatch(AppActions.getDeployment(appName, nowCluster));
+      }).catch(e => {});
   }
 
   // 回滚
   handleRollback() {
-    this.setState({rollbackVisible: false})
-    let {name, nowCluster, rollbackRevisionNum} = this.state
-    appRollback(name, {cluster: nowCluster, revision: rollbackRevisionNum}).then(res => {
-      this.handleMsg(res, 'Rollback');
-      this.fetchDeploymentData(name, nowCluster)
-    }).catch(err => {
-      this.handleError(err);
-    });
+    this.setState({rollbackVisible: false});
+    let {rollbackRevisionNum} = this.state;
+    let appName = this.getAppName(),
+        nowCluster = this.getNowCluster(),
+        title = 'Rollback App',
+        {dispatch} = this.props;
+    processApiResult(AppApi.rollback(appName, nowCluster, rollbackRevisionNum), title)
+      .then(data => {
+        dispatch(AppActions.getDeployment(appName, nowCluster));
+      }).catch(e => {});
   }
 
-  // 显示信息
-  handleMsg(data, action) {
-    // 提示成功或失败
-    let msg = JSON.parse(data);
-    // let msg = {error: '1', msg: '1111111'}
-    notification.destroy();
+  refreshPage() {
+    let appName = this.getAppName();
+    let nowCluster = this.getNowCluster();
 
-    if(msg.error === null) {
-      notification.success({
-        message: '成功！',
-        description: `${action} Success!`
-      });
-    }else {
-      // 报错信息以html格式显示
-      const description = (
-          <div>
-          <p>{msg.msg}</p>
-          </div>
-      );
-      notification.error({
-        message: '失败！',
-        description,
-        duration: 0,
-      });
+    const {dispatch} = this.props;
+
+    if (nowCluster) {
+      dispatch(AppActions.getCanaryInfo(appName, nowCluster));
+      dispatch(AppActions.getDeployment(appName, nowCluster));
     }
-  }
-
-  // 显示错误
-  handleError(err) {
-    let res = err.response;
-    let errorMsg;
-    let status;
-    if(!res) {
-      errorMsg = err.message;
-      status = 500;
-    } else {
-      status = res.status;
-      errorMsg = res.data;
-      if (res.data.error) {
-        errorMsg = res.data.error;
-      }
-    }
-    // destroy existing notifications first
-    notification.destroy();
-
-    notification.error({
-      message: '失败！',
-      description: `${status}: ${errorMsg}`,
-      duration: 0,
-    });
+    dispatch(AppActions.getReleases(appName));
+    dispatch(AppActions.listAppYaml(appName));
   }
 
   getAppName(props = this.props) {
-    return props.params.name;
+    return props.match.params.appName;
   }
 
-  render() {
+  getNowCluster() {
+    let nowCluster = getArg("cluster");
+    if(!nowCluster) {
+      let clusterNameList = this.getClusterNameList();
+      if (clusterNameList) {
+        nowCluster= clusterNameList[0];
+      }
+    }
+    return nowCluster;
+  }
 
-    let self = this;
-    const {name, canaryVisible, nowCluster} = this.state;
+  getClusterNameList() {
+    const request = getRequestFromProps(this.props, 'LIST_CLUSTER_REQUEST');
+    let clusterNameList = [];
+    if (request.statusCode === 200) {
+      clusterNameList = request.data;
+    }
+    return clusterNameList;
+  }
 
-    let healthPercent = 100 * (self.state.readyReplicas / self.state.replicas);
-    let healthStatus = healthPercent >= 100? 'success': 'exception';
-    let healthFormat = healthPercent >= 100? 'Health': `${healthPercent}%`;
+  getDeployment() {
+    const request = getRequestFromProps(this.props, 'GET_APP_DEPLOYMENT_REQUEST');
+    let dp = null;
+    if (request.statusCode === 200) {
+      dp = request.data;
+    }
+    return dp;
+  }
+
+  getYamlList() {
+    const request = getRequestFromProps(this.props, 'LIST_APP_YAML_REQUEST');
+    let yamlList = [];
+    if (request.statusCode === 200) {
+      yamlList = request.data;
+    }
+    return yamlList;
+  }
+
+  getReleases() {
+    const request = getRequestFromProps(this.props, 'GET_APP_RELEASES_REQUEST');
+    let releases = [];
+    if (request.statusCode === 200) {
+      releases = request.data;
+    }
+    return releases;
+  }
+
+  renderPods() {
+    const { requests, isFetching, error } =
+          getPageRequests(this.props, [
+            'APP_PODS_EVENT', 'APP_CANARY_PODS_EVENT'
+          ]);
+    let [podsReq, canaryPodsReq] = requests;
+
+    let self = this,
+        appName = this.getAppName(),
+        podTableData = podsReq.data? podsReq.data: [],
+        canaryPodTableData = canaryPodsReq.data? canaryPodsReq.data: [],
+        hasCanary = canaryPodTableData.length > 0;
+
     let podColumns = [
       {
         title: 'NAME',
@@ -1054,21 +594,85 @@ class AppDetail extends React.Component {
       }
     ];
 
+    return (
+      <div>
+        <Collapse bordered={false} defaultActiveKey={['1']}>
+            <Panel header={<h2>副本集</h2>} key="1">
+                <Table
+                    columns={podColumns}
+                    dataSource={podTableData}
+                    rowKey="name"
+                    size='small'
+                />
+            </Panel>
+        </Collapse>
+
+        {hasCanary && <Collapse bordered={false} defaultActiveKey={['1']}>
+            <Panel header={<h2>canary副本集</h2>} key="1">
+                <Table
+                    columns={podColumns}
+                    dataSource={canaryPodTableData}
+                    rowKey="name"
+                    pagination={false}
+                    size='small'
+                />
+            </Panel>
+        </Collapse>
+         }
+</div>
+    );
+  };
+
+  render() {
+    const { requests, isFetching, error } =
+          getPageRequests(this.props, [
+            'GET_APP_DEPLOYMENT_REQUEST',
+            'GET_APP_RELEASES_REQUEST', 'LIST_APP_YAML_REQUEST',
+            'APP_PODS_EVENT', 'APP_CANARY_PODS_EVENT'
+          ]);
+    let [dpReq, releasesReq, yamlReq, podsReq, canaryPodsReq] = requests;
+
+    let self = this,
+        appName = this.getAppName(),
+        dp = dpReq.data,
+        releaseTableData = releasesReq.data? releasesReq.data: [],
+        yamlList = yamlReq.data? yamlReq.data: [],
+        podsData = podsReq.data? podsReq.data: [],
+        canaryPodsData = canaryPodsReq.data? canaryPodsReq.data: [],
+        hasCanary = canaryPodsData.length > 0,
+        clusterNameList = this.getClusterNameList(),
+        nowCluster = this.getNowCluster();
+    let replicas = dp? dp.spec.replicas: 0,
+        readyReplicas = 0,
+        version = dp? dp.metadata.annotations.release_tag: "";
+
+    // calculate ready pods
+    for (const val of podsData.values() ) {
+      if (val.ready_count === val.ready_total) {
+        readyReplicas++;
+      }
+    }
+
+
+    let healthPercent = 100 * (readyReplicas / replicas);
+    let healthStatus = healthPercent >= 100? 'success': 'exception';
+    let healthFormat = healthPercent >= 100? 'Health': `${healthPercent}%`;
+
     let releaseColumns = [
       {
         title: 'tag',
         dataIndex: 'tag',
         width: '14%',
         render: tag => {
-          let nowVersion = this.state.version === tag;
+          let nowVersion = version === tag;
           if(nowVersion) {
             return (
                 <span>{tag} <span style={{fontSize: '12px', color: 'red'}}>(当前版本)</span></span>
-            )
+            );
           }else {
             return (
                 <span>{tag}</span>
-            )
+            );
           }
         }
       }, {
@@ -1079,12 +683,12 @@ class AppDetail extends React.Component {
         sorter: (a, b) => {
           let c = new Date(a.created).getTime();
           let d = new Date(b.created).getTime();
-          return c - d
+          return c - d;
         }
       }, {
         title: 'updated',
         dataIndex: 'updated',
-        width: '15%',
+        width: '15%'
       }, {
         title: 'image',
         dataIndex: 'image',
@@ -1117,19 +721,22 @@ class AppDetail extends React.Component {
               <Menu.Item key="2">
               <div onClick={() => { self.showDeployModal.bind(self)(record, true); }}>Canary</div>
               </Menu.Item>
-                            <Menu.Divider />
-                            <Menu.Item key="3">
-                                <div onClick={() => {
-                                    let config = {
-                                        title: "Spec",
-                                        mode: "yaml",
-                                        visible: true,
-                                        readOnly: true,
-                                        initialValue: record.specs_text
-                                    }
-                                    self.setState({nowTag: record.tag})
-                                    self.showAceEditorModal(config) }} >Spec Text</div>
-                            </Menu.Item>
+                <Menu.Divider />
+                <Menu.Item key="3">
+                    <div onClick={() => {
+                        let config = {
+                            title: "Spec",
+                            visible: true,
+                            text: (
+                              <SyntaxHighlighter language="yaml" style={docco}>
+                                {record.specs_text}
+                              </SyntaxHighlighter>
+                            )
+                        };
+                        showInfoModal(config, false);
+                     }}
+                     >Spec Text</div>
+                </Menu.Item>
               </Menu>
                     );
 
@@ -1146,88 +753,43 @@ class AppDetail extends React.Component {
             }
         ]
 
-        let yamlColumns = [
-            {
-                title: 'name',
-                dataIndex: 'name',
-                width: '14%',
-            }, {
-                title: 'created',
-                dataIndex: 'created',
-                width: '15%',
-                defaultSortOrder: 'descend',
-                sorter: (a, b) => {
-                    let c = new Date(a.created).getTime();
-                    let d = new Date(b.created).getTime();
-                    return c - d
-                }
-            }, {
-                title: 'updated',
-                dataIndex: 'updated',
-                width: '15%',
-            }, {
-                title: 'comment',
-                dataIndex: 'comment',
-                width: '35%',
-            }, {
-                title: 'Action',
-                dataIndex: 'Action',
-                width: '16%',
-                render(text, record) {
-                    return (
-                         <span>
-                            <a href="javascript:;" onClick={self.showAppYamlAddModal.bind(self, record)}>Edit</a>
-                            <Divider type="vertical" />
-                            <a href="javascript:;" onClick={self.handleDeleteAppYaml.bind(self, record)}>Delete</a>
-                        </span>
-                    )
-                }
-            }
-        ]
         return (
             <div>
-                <Row type="flex"  gutter={10} justify="space-between">
+                <Row type="flex"  gutter={5} justify="space-between">
                  <Col span={12}>
                   <div className="detailInfo">
-                    <div className="appHeader"><Icon type="setting" theme="filled" /> {name}</div>
+                    <div className="appHeader"><Icon type="setting" theme="filled" /> {appName}</div>
 
                     <div className="appBody">
                         <div style={{marginBottom: '10px'}}>集群：
                         <Select value={nowCluster} style={{ width: 100}}
-                                onChange={this.handleChangeCluster.bind(this)}>
-                             { this.state.clusterNameList.map(name => <Option key={name}>{name}</Option>) }
+                                onChange={self.handleChangeCluster.bind(self)}>
+                             { clusterNameList.map(name => <Option key={name}>{name}</Option>) }
                         </Select>
                         </div>
-                        <p>
-                         Canary: <span style={{color: 'blue'}}>{this.state.canaryVisible.toString()}</span><strong></strong>
-                        </p>
-                        <p>状态： {this.state.readyReplicas}个可用, 共计 {this.state.replicas}个 </p>
-                        <div>
-                            {this.state.canaryVisible &&
+                        <div style={{marginBottom: '10px'}}>
+                         Canary: <span style={{color: 'blue'}}>{hasCanary.toString()}</span><strong></strong>
+                            {hasCanary &&
                                 <span>
                                   <Divider type="vertical" />
-                                  <Button onClick={this.handleDeleteCanary.bind(this)}>DeleteCanary</Button>
-                                </span>
+                                  <Button onClick={self.handleDeleteCanary.bind(self)}>DeleteCanary</Button>
+              </span>
                             }
-                          </div>
-                          <p>Deployment:
-                              <Button onClick={this.showAppDeployment.bind(this)}>Show</Button>
-                          </p>
-                          <p>Config: <Button onClick={this.handleConfigMap.bind(this)}>Set</Button>
-                                 <Button onClick={this.showConfigMap.bind(this)}>Show</Button>
-                          </p>
-                          <p>Secret: <Button onClick={this.showSecretModal.bind(this)}>Set</Button>
-                          </p>
-                          {this.state.canaryVisible &&
+                        </div>
+                        <p>状态： {readyReplicas}个可用, 共计 {replicas}个 </p>
                           <p>
-                              ABTesting Rules: <Button onClick={this.handleSetABTestingRules.bind(this) }>Set</Button>
-                          </p>
+                              <Button onClick={self.showAppDeployment.bind(self)}>Deployment</Button>
+                              <Button><Link to={`/apps/${appName}/configmap?cluster=${nowCluster}`}>ConfigMap</Link></Button>
+                              <Button><Link to={`/apps/${appName}/secret?cluster=${nowCluster}`}>Secret</Link></Button>
+                          {hasCanary &&
+                           <Button><Link to={`/apps/${appName}/abtesting?cluster=${nowCluster}`}>ABTesting</Link></Button>
                           }
-                          <Button type="primary"><Link to={`/apps/${name}/audit_log`}>审计日志</Link></Button>
-                          <Button onClick={this.handleRenew.bind(this)}>Renew</Button>
-                          <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
-                          <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
-                          <Button type="danger" onClick={this.showDeleteAppConfirmModal.bind(this)}>Delete</Button>
+                          </p>
+                          <Button type="primary"><Link to={`/apps/${appName}/audit_logs?cluster=${nowCluster}`}>审计日志</Link></Button>
+                          <Button onClick={self.handleRenew.bind(self)}>Renew</Button>
+                          <Button onClick={() => {self.setState({scaleVisible: true})}}>Scale</Button>
+                          <Button onClick={() => {self.setState({rollbackVisible: true})}}>Rollback</Button>
+                          <Button type="danger" onClick={self.showDeleteAppConfirmModal.bind(self)}>Delete</Button>
                           </div>
                       </div>
               </Col>
@@ -1241,61 +803,23 @@ class AppDetail extends React.Component {
                       </Row>
                     <div style={{ height: '20px' }}></div>
 
-                    <Collapse bordered={false} defaultActiveKey={['1']}>
-                        <Panel header={<h2>副本集</h2>} key="1">
-                            <Table
-                                columns={podColumns}
-                                dataSource={this.state.podTableData}
-                                rowKey="name"
-                                size='small'
-                            />
-                        </Panel>
-                    </Collapse>
-
-                    <div style={{ height: '20px' }}></div>
-
-                    {this.state.canaryVisible && <Collapse bordered={false} defaultActiveKey={['1']}>
-                        <Panel header={<h2>canary副本集</h2>} key="1">
-                            <Table
-                                columns={podColumns}
-                                dataSource={this.state.canarypodTableData}
-                                rowKey="name"
-                                pagination={false}
-                                size='small'
-                            />
-                        </Panel>
-                    </Collapse> }
-                    {this.state.canaryVisible && <div style={{ height: '20px' }}></div> }
-
-                    <Collapse bordered={false} defaultActiveKey={['1']}>
-                        <Panel header={<h2>Yaml Template</h2>} key="1">
-                            <div className="table-operations">
-                              <Button type="primary" onClick={this.showAppYamlAddModal.bind(this, {})}>Add</Button>
-                            </div>
-
-                            <Table
-                                columns={yamlColumns}
-                                dataSource={this.state.yamlList}
-                                rowKey="id"
-                                pagination={false}
-                                size='small'
-                            />
-                        </Panel>
-                    </Collapse>
-                    <div style={{ height: '20px' }}></div>
-
+          {
+            this.renderPods()
+          }
+          {
+            this.renderYamlList()
+          }
                     <Collapse bordered={false} defaultActiveKey={['1']}>
                         <Panel header={<h2>版本信息</h2>} key="1">
                             <Table
                                 columns={releaseColumns}
-                                dataSource={this.state.releaseTableData}
+                                dataSource={releaseTableData}
                                 rowKey="id"
                                 size='small'
                             />
                         </Panel>
                     </Collapse>
-
-                    <Modal
+                  <Modal
                         title={this.state.infoModal.title}
                         visible={this.state.infoModal.visible}
                         onOk={this.hiddenInfoModal.bind(this)}
@@ -1306,30 +830,27 @@ class AppDetail extends React.Component {
                             </Button>,
                         ]}
                     >
-                        {this.state.infoModal.text}
-                    {/*
                         <div dangerouslySetInnerHTML={{__html: this.state.infoModal.text}}></div>
-                    */}
                     </Modal>
 
                     <Modal
-                        title={<div>Scale {this.state.name} (cluster:<span style={{color:'red'}}>{this.state.nowCluster}</span>)</div>}
+                        title={<div>Scale {appName} (cluster:<span style={{color:'red'}}>{nowCluster}</span>)</div>}
                         visible={this.state.scaleVisible}
                         onOk={this.handleScale.bind(this)}
                         onCancel={() => {this.setState({scaleVisible: false})}}
                     >
-                        <p>cluster：<span style={{color:'red'}}>{this.state.nowCluster}</span></p>
+                        <p>cluster：<span style={{color:'red'}}>{nowCluster}</span></p>
                         <span>所需容器数量：</span>
                         <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
                     </Modal>
 
                     <Modal
-                        title={<div>Rollback {this.state.name} (cluster:<span style={{color:'red'}}>{this.state.nowCluster}</span>)</div>}
+                        title={<div>Rollback {appName} (cluster:<span style={{color:'red'}}>{nowCluster}</span>)</div>}
                         visible={this.state.rollbackVisible}
                         onOk={this.handleRollback.bind(this)}
                         onCancel={() => {this.setState({rollbackVisible: false})}}
                     >
-                        <p>cluster：<span style={{color:'red'}}>{this.state.nowCluster}</span></p>
+                        <p>cluster：<span style={{color:'red'}}>{nowCluster}</span></p>
                         <span>revision：</span>
                         <InputNumber min={0} max={10} defaultValue={0} onChange={num => {this.setState({rollbackRevisionNum: num})}} />
                     </Modal>
@@ -1338,6 +859,72 @@ class AppDetail extends React.Component {
             </div>
         )
     }
+
+  renderYamlList() {
+    let self = this,
+        yamlList = this.getYamlList(),
+        yamlColumns = [
+          {
+            title: 'name',
+            dataIndex: 'name',
+            width: '14%',
+          }, {
+            title: 'created',
+            dataIndex: 'created',
+            width: '15%',
+            defaultSortOrder: 'descend',
+            sorter: (a, b) => {
+              let c = new Date(a.created).getTime();
+              let d = new Date(b.created).getTime();
+              return c - d;
+            }
+          }, {
+            title: 'updated',
+            dataIndex: 'updated',
+            width: '15%',
+          }, {
+            title: 'comment',
+            dataIndex: 'comment',
+            width: '35%',
+            render: (text) => (
+                <Tooltip title={text}>
+                  <span className=".col-ellipsis">{text}</span>
+                </Tooltip>
+            ),
+          }, {
+            title: 'Action',
+            dataIndex: 'Action',
+            width: '16%',
+            render(text, record) {
+              return (
+                  <span>
+                  <a href="javascript:;" onClick={self.showAppYamlAddModal.bind(self, record)}>Edit</a>
+                  <Divider type="vertical" />
+                  <a href="javascript:;" onClick={self.handleDeleteAppYaml.bind(self, record)}>Delete</a>
+                  </span>
+              );
+            }
+          }
+        ];
+    return (
+      <Collapse bordered={false} defaultActiveKey={['1']}>
+        <Panel header={<h2>Yaml Template</h2>} key="1">
+          <div className="table-operations">
+            <Button type="primary" onClick={this.showAppYamlAddModal.bind(this, {})}>Add</Button>
+          </div>
+
+          <Table
+            columns={yamlColumns}
+            dataSource={yamlList}
+            rowKey="id"
+            pagination={false}
+            size='small'
+          />
+        </Panel>
+      </Collapse>
+    );
+  }
+
 }
 
 export default AppDetail;
