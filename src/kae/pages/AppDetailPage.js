@@ -11,7 +11,7 @@ import {
   getDeployment, getAppCanaryInfo, getReleases, appDeploy, appDeployCanary,
   appDeleteCanary, appSetABTestingRules, appGetABTestingRules, appScale, appRollback,
   appRenew, getCluster, appPostConfigMap, appGetConfigMap, appPostSecret, appGetSecret,
-  appPostReleaseSpec, getAppYamlList, deleteAppYaml, createOrUpdateAppYaml, deleteApp} from 'api';
+  getAppYamlList, deleteAppYaml, createOrUpdateAppYaml, deleteApp} from 'api';
 
 import brace from 'brace';
 import AceEditor from 'react-ace';
@@ -19,11 +19,10 @@ import AceEditor from 'react-ace';
 import 'brace/mode/json';
 import 'brace/theme/xcode';
 
-import './index.css';
 import {
   DeleteConfirmModal, AppYamlAddModal, AceEditorModal,
   ConfigMapModal, SecretFormModal, DeployModal
-} from './modals';
+} from '../components/Modals';
 
 const Panel = Collapse.Panel;
 const { TextArea } = Input;
@@ -156,7 +155,7 @@ class AppDetail extends React.Component {
     let that = this;
 
     // 获取APP name
-    const name = getArg('app');
+    const name = getAppName;
     const defaultCluster = getArg('cluster');
 
     // 测试地址
@@ -988,7 +987,7 @@ class AppDetail extends React.Component {
     if(!res) {
       errorMsg = err.message;
       status = 500;
-    }else {
+    } else {
       status = res.status;
       errorMsg = res.data;
       if (res.data.error) {
@@ -1003,6 +1002,10 @@ class AppDetail extends React.Component {
       description: `${status}: ${errorMsg}`,
       duration: 0,
     });
+  }
+
+  getAppName(props = this.props) {
+    return props.params.name;
   }
 
   render() {
@@ -1220,7 +1223,7 @@ class AppDetail extends React.Component {
                               ABTesting Rules: <Button onClick={this.handleSetABTestingRules.bind(this) }>Set</Button>
                           </p>
                           }
-                          <Button type="primary"><Link to={`/logger?app=${name}`}>审计日志</Link></Button>
+                          <Button type="primary"><Link to={`/apps/${name}/audit_log`}>审计日志</Link></Button>
                           <Button onClick={this.handleRenew.bind(this)}>Renew</Button>
                           <Button onClick={() => {this.setState({scaleVisible: true})}}>Scale</Button>
                           <Button onClick={() => {this.setState({rollbackVisible: true})}}>Rollback</Button>
@@ -1337,4 +1340,4 @@ class AppDetail extends React.Component {
     }
 }
 
-export default Form.create()(AppDetail);
+export default AppDetail;

@@ -2,12 +2,12 @@ import React from 'react';
 import { render } from 'react-dom';
 import { HashRouter as Router } from 'react-router-dom';
 
-import App from './components/App.jsx';
+import KaeApp from './kae/App.js';
 
 const routes = (
     <Router>
-        <App />
+        <KaeApp />
     </Router>
-)
+);
 
 render(routes, document.getElementById('root'));
