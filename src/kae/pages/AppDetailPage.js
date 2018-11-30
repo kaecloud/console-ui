@@ -756,7 +756,7 @@ class AppDetail extends React.Component {
         return (
             <div>
                 <Row type="flex"  gutter={5} justify="space-between">
-                 <Col span={12}>
+                 <Col span={24}>
                   <div className="detailInfo">
                     <div className="appHeader"><Icon type="setting" theme="filled" /> {appName}</div>
 
@@ -767,7 +767,15 @@ class AppDetail extends React.Component {
                              { clusterNameList.map(name => <Option key={name}>{name}</Option>) }
                         </Select>
                         </div>
-                        <div style={{marginBottom: '10px'}}>
+                        <div>
+                         <div style={{float: 'left'}}>
+                        <p>状态： 当前版本为<strong>{version}</strong>，共计<strong>{replicas}</strong>个副本，其中<strong>{readyReplicas}</strong>个可用 </p>
+</div>
+                      <div style={{ width: 100, float: 'left', marginLeft: '10px'}}>
+                          <Progress size="small" status={healthStatus} percent={healthPercent} format={()=>healthFormat} />
+                        </div>
+                      </div>
+                        <div style={{marginBottom: '10px', clear: 'both'}}>
                          Canary: <span style={{color: 'blue'}}>{hasCanary.toString()}</span><strong></strong>
                             {hasCanary &&
                                 <span>
@@ -776,7 +784,6 @@ class AppDetail extends React.Component {
               </span>
                             }
                         </div>
-                        <p>状态： {readyReplicas}个可用, 共计 {replicas}个 </p>
                           <p>
                               <Button onClick={self.showAppDeployment.bind(self)}>Deployment</Button>
                               <Button><Link to={`/apps/${appName}/configmap?cluster=${nowCluster}`}>ConfigMap</Link></Button>
@@ -793,13 +800,14 @@ class AppDetail extends React.Component {
                           </div>
                       </div>
               </Col>
-
+{/*
               <Col span={12} style={{background: '#fff'}}>
                 <div style={{padding: '10px'}}>
                   <h2>Health State:</h2>
                   <Progress type="circle" status={healthStatus} percent={healthPercent} format={()=>healthFormat} />
                 </div>
               </Col>
+*/}
                       </Row>
                     <div style={{ height: '20px' }}></div>
 
