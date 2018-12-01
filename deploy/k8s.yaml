@@ -1,0 +1,48 @@
+kind: Deployment
+apiVersion: extensions/v1beta1
+metadata:
+  labels:
+    app: kae-console-ui
+  name: kae-console-ui
+  namespace: kae
+spec:
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      k8s-app: kae-console-ui
+  template:
+    metadata:
+      labels:
+        k8s-app: kae-console-ui
+    spec:
+      containers:
+      - name: kae-console-ui
+        image: registry.cn-hangzhou.aliyuncs.com/kae/kae-console-ui:v0.0.1
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "750m"
+      # Comment the following tolerations if console must not be deployed on master
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
+
+
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    app: kae-console-ui
+  name: kae-console-ui
+  namespace: kae
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    k8s-app: kae-console-ui

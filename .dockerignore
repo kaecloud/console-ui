@@ -1,0 +1,6 @@
+.dockerignore
+Dockerfile
+.gitignore
+.envrc
+.idea
+dist

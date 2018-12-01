@@ -4,6 +4,7 @@ yarn.lock
 yarn-error.log
 public/
 .DS_Store
-package-lock.json	
+package-lock.json
 *.zip
 dist/
+/app
