@@ -23,12 +23,60 @@ class AppList extends React.Component {
     const {dispatch} = this.props;
     dispatch(AppActions.list());
   }
+  handleSearch(selectedKeys, confirm) {
+    return () => {
+      confirm();
+      this.setState({ searchText: selectedKeys[0] });
+    };
+
+  }
+  handleReset(clearFilters){
+    return () => {
+      clearFilters();
+      this.setState({ searchText: '' });
+    };
+  }
 
   render() {
     const columns = [
       {
         title: 'name',
         dataIndex: 'name',
+        filterDropdown: ({
+          setSelectedKeys, selectedKeys, confirm, clearFilters,
+        }) => (
+          <div className="custom-filter-dropdown">
+            <Input
+              ref={ele => this.searchInput = ele}
+              placeholder="Search name"
+              value={selectedKeys[0]}
+              onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+              onPressEnter={this.handleSearch(selectedKeys, confirm)}
+            />
+            <Button type="primary" onClick={this.handleSearch(selectedKeys, confirm)}>Search</Button>
+            <Button onClick={this.handleReset(clearFilters)}>Reset</Button>
+          </div>
+        ),
+        filterIcon: filtered => <Icon type="search" style={{ color: filtered ? '#108ee9' : '#aaa' }} />,
+        onFilter: (value, record) => record.name.toLowerCase().includes(value.toLowerCase()),
+        onFilterDropdownVisibleChange: (visible) => {
+          if (visible) {
+            setTimeout(() => {
+              this.searchInput.focus();
+            });
+          }
+        },
+        render: (text) => {
+          const { searchText } = this.state;
+          return searchText ? (
+            <span>
+              {text.split(new RegExp(`(${searchText})`, 'gi')).map((fragment, i) => (
+                fragment.toLowerCase() === searchText.toLowerCase()
+                  ? <span key={i} className="highlight">{fragment}</span> : fragment // eslint-disable-line
+              ))}
+            </span>
+          ) : text;
+        },
       }, {
         title: 'Git',
         dataIndex: 'git'
