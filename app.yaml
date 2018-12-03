@@ -1,0 +1,41 @@
+appname: kae-ui
+type: web
+
+builds:
+- name: kae-ui
+
+service:
+  user: root
+  replicas: 2
+  mountpoints:
+  - host: www.geetest.com
+    paths:
+      - /static
+      - /
+    tlsSecret: geetest-com-tls
+  ports:
+  - port: 80
+    targetPort: 8080
+
+  containers:
+  - name: kae-ui
+    imagePullPolicy: Always
+    # args: ["xx", "xx"]
+    # command: ['hello-world']
+
+    tty: false               # whether allocate tty
+    # workingDir: xxx          # working dir
+    cpu:
+      limit: "1"
+    memory:
+      limit: 512M
+
+    ports:
+    - containerPort: 8080
+
+    readinessProbe:
+      httpGet:
+        path: /healthz
+        port: 8080
+      initialDelaySeconds: 10
+      timeoutSeconds: 10

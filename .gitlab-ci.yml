@@ -1,0 +1,27 @@
+stages:
+  - build
+  - test
+  - deploy
+
+build:
+  stage: build
+  image: yuyang0/kae-cli:latest
+  # before_script:
+  #   - sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
+  #   - apk update
+  #   - apk add --no-cache git
+  #   - pip install git+https://github.com/kaecloud/cli.git
+  script:
+    # Compile and name the binary as `hello`
+    - env
+    - kae app:register --force
+    - kae app:build
+  only:
+    - tags
+
+deploy:
+  stage: deploy
+  script:
+    - kae app:deploy --cluster kjy --yaml-name default
+  only:
+    - tags

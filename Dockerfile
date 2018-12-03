@@ -8,7 +8,8 @@ RUN mkdir -p /kae/app
 ADD . /kae/app
 
 WORKDIR /kae/app
-RUN npm install --registry=https://registry.npm.taobao.org && \
+RUN npm config set registry http://registry.cnpmjs.org && \
+    npm install && \
     npm run build
 
 FROM alpine:latest
