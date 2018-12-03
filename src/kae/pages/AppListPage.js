@@ -29,36 +29,6 @@ class AppList extends React.Component {
       {
         title: 'name',
         dataIndex: 'name',
-        filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-            <div className="custom-filter-dropdown">
-              <Input
-                ref={ele => this.searchInput = ele}
-                placeholder="Search name"
-                value={selectedKeys[0]}
-                onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-              />
-            </div>
-          ),
-        filterIcon: filtered => <Icon type="smile-o" style={{ color: filtered ? '#108ee9' : '#aaa' }} />,
-        onFilter: (value, record) => record.name.toLowerCase().includes(value.toLowerCase()),
-        onFilterDropdownVisibleChange: (visible) => {
-          if (visible) {
-            setTimeout(() => {
-              this.searchInput.focus();
-            });
-          }
-        },
-          render: (text) => {
-            const { searchText } = this.state;
-            return searchText ? (
-              <span>
-                {text.split(new RegExp(`(?<=${searchText})|(?=${searchText})`, 'i')).map((fragment, i) => (
-                  fragment.toLowerCase() === searchText.toLowerCase()
-                    ? <span key={i} className="highlight">{fragment}</span> : fragment // eslint-disable-line
-                ))}
-              </span>
-            ) : text;
-          },
       }, {
         title: 'Git',
         dataIndex: 'git'

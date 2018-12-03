@@ -8,11 +8,11 @@ service:
   user: root
   replicas: 2
   mountpoints:
-  - host: www.geetest.com
+  - host: console.gtapp.xyz
     paths:
       - /static
       - /
-    tlsSecret: geetest-com-tls
+    tlsSecret: gtapp-xyz-tls
   ports:
   - port: 80
     targetPort: 8080
