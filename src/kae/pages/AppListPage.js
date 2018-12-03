@@ -64,6 +64,7 @@ class AppList extends React.Component {
               dataSource={data}
               size='small'
               rowKey="name"
+              pagination={{ pageSize: 15 }}
               onRow={(record) => {
                 return {
                   onClick: () => {
