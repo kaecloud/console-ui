@@ -29,7 +29,7 @@ const columns = [
     title: 'TIME',
     dataIndex: 'created',
     key: 'created',
-    width: '10%',
+    width: '15%',
     defaultSortOrder: 'descend',
     sorter: (a, b) => {
       let c = new Date(a.created).getTime();
@@ -39,7 +39,7 @@ const columns = [
   }, {
     title: '操作',
     dataIndex: 'action',
-    width: '10%'
+    width: '15%'
 
   }, {
     title: '修改内容',

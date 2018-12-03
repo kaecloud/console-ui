@@ -758,7 +758,7 @@ class AppDetail extends React.Component {
                 <Row type="flex"  gutter={5} justify="space-between">
                  <Col span={24}>
                   <div className="detailInfo">
-                    <div className="appHeader"><Icon type="setting" theme="filled" /> {appName}</div>
+                    <div className="appHeader"><Icon type="deployment-unit" /> {appName}</div>
 
                     <div className="appBody">
                         <div style={{marginBottom: '10px'}}>集群：
