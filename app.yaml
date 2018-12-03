@@ -7,6 +7,7 @@ builds:
 service:
   user: root
   replicas: 2
+  httpsOnly: false
   mountpoints:
   - host: console.gtapp.xyz
     paths:
