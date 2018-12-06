@@ -143,7 +143,7 @@ export function createAppYaml(appName, params) {
     type: 'CREATE_APP_YAML_REQUEST',
     async: true,
     shouldCallApi: (state) => true,
-    callApi: () => AppApi.createOrUpdateAppYaml(appName, params),
+    callApi: () => AppApi.createAppYaml(appName, params),
     payload: {}
   };
 }

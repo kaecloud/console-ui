@@ -347,8 +347,9 @@ class AppDetail extends React.Component {
     let appName = this.getAppName();
     const {dispatch} = this.props;
 
-    let title = "Change App Yaml";
-    if (! record.name) {
+    let oldName = record.name,
+        title = "Change App Yaml";
+    if (! oldName) {
       title = "Add App Yaml";
       record = {};
     }
@@ -363,11 +364,19 @@ class AppDetail extends React.Component {
     }
 
     function handler(newRecord) {
-      processApiResult(AppApi.createOrUpdateAppYaml(appName, newRecord), title)
-        .then(data => {
-          destroy();
-          dispatch(AppActions.listAppYaml(appName));
-        }).catch(e => {});
+      if (oldName) {
+        processApiResult(AppApi.updateAppYaml(appName, oldName, newRecord), title)
+          .then(data => {
+            destroy();
+            dispatch(AppActions.listAppYaml(appName));
+          }).catch(e => {});
+      } else {
+        processApiResult(AppApi.createAppYaml(appName, newRecord), title)
+          .then(data => {
+            destroy();
+            dispatch(AppActions.listAppYaml(appName));
+          }).catch(e => {});
+      }
     }
 
     let config = {
@@ -377,35 +386,6 @@ class AppDetail extends React.Component {
     };
 
     ReactDOM.render(<AppYamlAddModal config={config} record={record} />, div);
-  }
-
-  handleSetAppYaml(record) {
-    let self = this,
-        appName = this.getAppName(),
-        {dispatch} = this.props,
-        title = 'Set App Yaml';
-
-    function setAppYamlHelper(specs_text, destroy) {
-      let data = {
-        name: record.name,
-        specs_text: specs_text,
-        comment: record.comment
-      };
-      processApiResult(AppApi.createOrUpdateAppYaml(appName, data), title)
-        .then( data => {
-          destroy();
-          dispatch(AppActions.listAppYaml(appName));
-        }).catch(e => {});
-    }
-
-    let config = {
-      title: "App Yaml",
-      mode: "yaml",
-      visible: true,
-      initialValue: record.specs_text,
-      handler: setAppYamlHelper
-    };
-    self.showAceEditorModal(config);
   }
 
   handleDeleteAppYaml(record) {
@@ -418,7 +398,7 @@ class AppDetail extends React.Component {
       title: 'Delete App Yaml',
       content: <div>Are you sure to delete app yaml(<strong>{record.name}</strong>)?</div>,
       onOk() {
-        processApiResult(AppApi.deleteAppYaml(name, record.name), title)
+        processApiResult(AppApi.deleteAppYaml(appName, record.name), title)
           .then(data => {
             dispatch(AppActions.listAppYaml(appName));
           }).catch(e => {});

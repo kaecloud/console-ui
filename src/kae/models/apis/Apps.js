@@ -132,7 +132,7 @@ export function listAppYaml(appName) {
     });
 }
 
-export function createOrUpdateAppYaml(appName, params) {
+export function createAppYaml(appName, params) {
   return Fetch.post(`${baseApiUrl}/app/${appName}/yaml`, params)
     .then(({statusCode, data}) => {
       const errMsg = `can't create app's yaml, statusCode: ${statusCode}`;
@@ -140,6 +140,13 @@ export function createOrUpdateAppYaml(appName, params) {
     });
 }
 
+export function updateAppYaml(appName, name, params) {
+  return Fetch.post(`${baseApiUrl}/app/${appName}/name/${name}/yaml`, params)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't create app's yaml, statusCode: ${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
 export function deleteAppYaml(appName, name) {
   return Fetch.delete(`${baseApiUrl}/app/${appName}/name/${name}/yaml`)
     .then(({statusCode, data}) => {
