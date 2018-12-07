@@ -53,7 +53,7 @@ class AppConfigMap extends React.Component {
 
   submitForm(cluster_name, replace, cm_data) {
     let self = this,
-        title = 'Create or Update ConfigMap';
+        title = 'Create or Update ConfigMap',
         appName = this.getAppName();
 
     let params = {
@@ -78,8 +78,8 @@ class AppConfigMap extends React.Component {
 
     this.props.form.validateFields((err, values) => {
       if (!err) {
-        let cm_data = { };
-        cm_data[values.key] = values.data;
+        let cmData = { };
+        cmData[values.key] = values.data;
         self.submitForm(values.cluster_name, values.replace, cmData);
       }
     });
