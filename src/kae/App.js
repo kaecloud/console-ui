@@ -15,6 +15,7 @@ import AppAuditLog from './pages/AppAuditLogPage';
 import AppConfigMap from './pages/AppConfigMapPage';
 import AppSecret from './pages/AppSecretPage';
 import AppABTesting from './pages/AppABTestingPage';
+import AppPodEntry from './pages/AppPodEntryPage';
 
 import './App.css';
 
@@ -61,6 +62,7 @@ class KaeApp extends React.Component {
                   <Route path="/apps/:appName/configmap" component={this.connectApi(AppConfigMap)} />
                   <Route path="/apps/:appName/secret" component={this.connectApi(AppSecret)} />
                   <Route path="/apps/:appName/abtesting" component={this.connectApi(AppABTesting)} />
+                  <Route path="/apps/:appName/entry" component={this.connectApi(AppPodEntry)} />
 
                   <Route path="/apps" component={this.connectApi(AppList)} />
                   <Route path="/jobs" component={this.connectApi(JobList)} />

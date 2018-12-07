@@ -47,12 +47,14 @@ const AppPodsWatcher = {
       return seconds + 's';
     };
     let status = pod.status.phase;
+    let container_names = [];
     // get ready count
     let restart_count = 0;
     let ready_count = 0;
     let ready_total = pod.spec.containers.length;
     if (pod.status.container_statuses) {
       for (let cont_status of pod.status.container_statuses) {
+        container_names.push(cont_status.name);
         if (cont_status.ready) {
           ready_count++;
         } else {
@@ -75,6 +77,7 @@ const AppPodsWatcher = {
     let interval = Date.now() - start_time;
 
     let data = {
+      container_names: container_names,
       ready_count: ready_count,
       ready_total: ready_total,
       ready: ready_count + "/" + ready_total,

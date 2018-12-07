@@ -22,6 +22,7 @@ import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import AppYamlAddModal from '../components/AppYamlAddModal';
 import DeployModal from '../components/DeployModal';
 import showInfoModal from '../components/InfoModal';
+import showSelectModal from '../components/SelectModal';
 
 import * as AppApi from '../models/apis/Apps';
 import {getPageRequests, getRequestFromProps} from '../models/Utils';
@@ -458,6 +459,34 @@ class AppDetail extends React.Component {
       }).catch(e => {});
   }
 
+  handleShowAppPodLog(record) {
+    let appName = this.getAppName(),
+        nowCluster= this.getNowCluster(),
+        podName = record.name;
+    console.log(record);
+    function handler(container, destroy) {
+      console.log(container);
+
+      processApiResult(AppApi.getPodLog(appName, podName, nowCluster, container), "get pod log")
+        .then(data => {
+          destroy();
+          let config = {
+            title: "Spec",
+            visible: true,
+            text: data.data
+          };
+          showInfoModal(config, true);
+        }).catch(e => {});
+    }
+    let config = {
+      title: "select container",
+      data: record.container_names,
+      current: record.container_names[0],
+      handler: handler
+    };
+    showSelectModal(config);
+  }
+
   refreshPage() {
     let appName = this.getAppName();
     let nowCluster = this.getNowCluster();
@@ -532,6 +561,7 @@ class AppDetail extends React.Component {
 
     let self = this,
         appName = this.getAppName(),
+        nowCluster = this.getNowCluster(),
         podTableData = podsReq.data? podsReq.data: [],
         canaryPodTableData = canaryPodsReq.data? canaryPodsReq.data: [],
         hasCanary = canaryPodTableData.length > 0;
@@ -540,7 +570,7 @@ class AppDetail extends React.Component {
       {
         title: 'NAME',
         dataIndex: 'name',
-        width: '15%'
+        width: '20%'
       },
       {
         title: 'READY',
@@ -560,17 +590,34 @@ class AppDetail extends React.Component {
       {
         title: 'AGE',
         dataIndex: 'age',
-        width: '15%'
+        width: '10%'
       },
       {
         title: 'IP',
         dataIndex: 'ip',
-        width: '15%'
+        width: '10%'
       },
       {
         title: 'NODE',
         dataIndex: 'node',
-        width: '15%'
+        width: '10%'
+      },
+      {
+        title: 'ACTION',
+        dataIndex: 'action',
+        width: '10%',
+        render(text, record) {
+          return (
+              <span>
+              {/*
+              <Link to={`/apps/${appName}/pod/${record.name}/log?cluster=${nowCluster}`}>log</Link>
+               */}
+              <a onClick={self.handleShowAppPodLog.bind(self, record)}>log</a>
+              <Divider type="vertical" />
+              <Link to={`/apps/${appName}/entry?cluster=${nowCluster}&pod=${record.name}`}>enter</Link>
+              </span>
+          );
+        }
       }
     ];
 

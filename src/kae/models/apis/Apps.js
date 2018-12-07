@@ -223,6 +223,14 @@ export function getSecret(name, cluster) {
     });
 }
 
+export function getPodLog(appName, podName, cluster, container) {
+  let url = `${baseApiUrl}/app/${appName}/pod/${podName}/log?cluster=${cluster}&container=${container}`;
+  return Fetch.get(url)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't get app's pod log, statusCode：${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
 // -----------------------------------------------------------------------
 // app_cluster
 export function listCluster() {
