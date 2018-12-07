@@ -21,6 +21,7 @@ class InfoModal extends React.Component {
         <Modal
           title={this.props.config.title}
           visible={true}
+          width={this.props.config.width}
           onCancel={this.props.config.destroy}
           footer={[
               <Button key="login" type="primary" onClick={this.props.config.destroy}>

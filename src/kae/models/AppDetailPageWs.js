@@ -77,6 +77,7 @@ const AppPodsWatcher = {
     let interval = Date.now() - start_time;
 
     let data = {
+      pod: pod,
       container_names: container_names,
       ready_count: ready_count,
       ready_total: ready_total,

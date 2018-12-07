@@ -459,7 +459,7 @@ class AppDetail extends React.Component {
       }).catch(e => {});
   }
 
-  handleShowAppPodLog(record) {
+  showAppPodLog(record) {
     let appName = this.getAppName(),
         nowCluster= this.getNowCluster(),
         podName = record.name;
@@ -485,6 +485,21 @@ class AppDetail extends React.Component {
       handler: handler
     };
     showSelectModal(config);
+  }
+
+  showAppPodStatus(record) {
+    let text = JSON.stringify(record.pod.status, undefined, 2);
+    let config = {
+      title: "Pod status",
+      width: 700,
+      visible: true,
+      text: (
+          <SyntaxHighlighter language="yaml" style={docco}>
+          {text}
+        </SyntaxHighlighter>
+      )
+    };
+    showInfoModal(config, false);
   }
 
   refreshPage() {
@@ -570,7 +585,7 @@ class AppDetail extends React.Component {
       {
         title: 'NAME',
         dataIndex: 'name',
-        width: '20%'
+        width: '25%'
       },
       {
         title: 'READY',
@@ -605,14 +620,16 @@ class AppDetail extends React.Component {
       {
         title: 'ACTION',
         dataIndex: 'action',
-        width: '10%',
+        width: '15%',
         render(text, record) {
           return (
               <span>
               {/*
               <Link to={`/apps/${appName}/pod/${record.name}/log?cluster=${nowCluster}`}>log</Link>
                */}
-              <a onClick={self.handleShowAppPodLog.bind(self, record)}>log</a>
+              <a onClick={self.showAppPodLog.bind(self, record)}>log</a>
+              <Divider type="vertical" />
+              <a onClick={self.showAppPodStatus.bind(self, record)}>status</a>
               <Divider type="vertical" />
               <Link to={`/apps/${appName}/entry?cluster=${nowCluster}&pod=${record.name}`}>enter</Link>
               </span>
