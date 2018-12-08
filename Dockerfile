@@ -3,7 +3,7 @@ WORKDIR /tmp
 COPY main.go .
 RUN go build -o app main.go
 
-FROM node:8.14 as nodebuilder
+FROM node:10-alpine as nodebuilder
 RUN mkdir -p /kae/app
 ADD . /kae/app
 

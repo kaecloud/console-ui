@@ -462,7 +462,8 @@ class AppDetail extends React.Component {
   showAppPodLog(record) {
     let appName = this.getAppName(),
         nowCluster= this.getNowCluster(),
-        podName = record.name;
+        podName = record.name,
+        containers = record.container_names;
     console.log(record);
     function handler(container, destroy) {
       console.log(container);
@@ -478,13 +479,19 @@ class AppDetail extends React.Component {
           showInfoModal(config, true);
         }).catch(e => {});
     }
-    let config = {
-      title: "select container",
-      data: record.container_names,
-      current: record.container_names[0],
-      handler: handler
-    };
-    showSelectModal(config);
+
+    // only show select modal when there exist multiple containers
+    if (containers.length == 1) {
+      handler(containers[0], ()=>{});
+    } else {
+      let config = {
+        title: "select container",
+        data: containers,
+        current: record.container_names[0],
+        handler: handler
+      };
+      showSelectModal(config);
+    }
   }
 
   showAppPodStatus(record) {
