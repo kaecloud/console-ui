@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import {Button, Modal, Row, Col, Input} from 'antd';
+import {Alert, Button, Modal, Row, Col, Input} from 'antd';
 
 class DeleteConfirmModal extends React.Component {
   constructor(props) {
@@ -34,11 +34,17 @@ class DeleteConfirmModal extends React.Component {
       onCancel={this.state.destroy}
       footer={null}
         >
+
+        <Alert
+      message="Unexpected bad things will happen if you don't read this! "
+      type="warning"
+        />
+        <div style={{marginTop: "15px"}}>
         <p>
         This action <strong>cannot</strong> be undone. This will permanently delete the <strong>{this.state.expectValue}</strong> app
       </p>
         <p>Please type in the name of the app to confirm.</p>
-
+        </div>
         <Row>
         <Input name="name" onChange={this.onChange} />
         </Row>

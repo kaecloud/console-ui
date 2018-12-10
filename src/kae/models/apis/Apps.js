@@ -80,6 +80,16 @@ export function deploy(appName, params) {
     });
 }
 
+export function undeploy(appName, cluster) {
+  let params = {
+    cluster: cluster
+  };
+  return Fetch.delete(`${baseApiUrl}/app/${appName}/undeploy`, params)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't undeploy app(${appName}, ${cluster}), statusCode: ${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
 // app_deploy canary
 export function deployCanary(appName, params) {
   return Fetch.put(`${baseApiUrl}/app/${appName}/canary/deploy`, params)

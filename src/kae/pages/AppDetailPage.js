@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 
 import {
-  Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select,
+  Alert, Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select,
   Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification,
   Progress, Tooltip
 } from 'antd';
@@ -21,8 +21,7 @@ import AceEditorModal from '../components/AceEditorModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import AppYamlAddModal from '../components/AppYamlAddModal';
 import DeployModal from '../components/DeployModal';
-import showInfoModal from '../components/InfoModal';
-import showSelectModal from '../components/SelectModal';
+import {showDynamicModal, showInfoModal } from '../components/DynamicModal';
 
 import * as AppApi from '../models/apis/Apps';
 import {getPageRequests, getRequestFromProps} from '../models/Utils';
@@ -408,6 +407,43 @@ class AppDetail extends React.Component {
     });
   }
 
+  handleUndeploy() {
+    let appName = this.getAppName(),
+        clusterNameList = this.getClusterNameList(),
+        nowCluster= this.getNowCluster();
+
+    function handler(destroy) {
+      processApiResult(AppApi.undeploy(appName, nowCluster), "undeploy")
+        .then(data => {
+          destroy();
+        }).catch(e => {});
+    }
+
+    function handleChange(newCluster) {
+      nowCluster = newCluster;
+    }
+    let config = {
+      title: "Undeploy",
+      children: (
+        <div>
+          <Alert
+        message={`该操作会删除 ${appName} 在指定集群上的部署，这是一个危险操作，请仔细确认集群是否正确`}
+        type="warning"
+          />
+          <div
+        style={{marginTop: '15px'}}
+          >
+      cluster: <Select defaultValue={nowCluster} style={{ width: 100}}
+      onChange={handleChange}>
+        { clusterNameList.map(name => <Option key={name}>{name}</Option>) }
+                 </Select>
+          </div>
+      </div>),
+      handler: handler
+    };
+    showDynamicModal(config);
+  }
+
   // 更新
   handleRenew() {
     let self = this,
@@ -463,12 +499,11 @@ class AppDetail extends React.Component {
     let appName = this.getAppName(),
         nowCluster= this.getNowCluster(),
         podName = record.name,
-        containers = record.container_names;
-    console.log(record);
-    function handler(container, destroy) {
-      console.log(container);
+        containers = record.container_names,
+        selectedContainer = record.container_names[0];
 
-      processApiResult(AppApi.getPodLog(appName, podName, nowCluster, container), "get pod log")
+    function handler(destroy) {
+      processApiResult(AppApi.getPodLog(appName, podName, nowCluster, selectedContainer), "get pod log")
         .then(data => {
           destroy();
           let config = {
@@ -482,15 +517,21 @@ class AppDetail extends React.Component {
 
     // only show select modal when there exist multiple containers
     if (containers.length == 1) {
-      handler(containers[0], ()=>{});
+      handler(()=>{});
     } else {
       let config = {
         title: "select container",
-        data: containers,
-        current: record.container_names[0],
+        children: (
+            <div>
+            container: <Select defaultValue={containers[0]} style={{ width: 100}}
+          onChange={v => {selectedContainer=v;}}>
+            { containers.map(name => <Option key={name}>{name}</Option>) }
+          </Select>
+            </div>
+        ),
         handler: handler
       };
-      showSelectModal(config);
+      showDynamicModal(config);
     }
   }
 
@@ -848,6 +889,7 @@ class AppDetail extends React.Component {
                           <Button onClick={() => {self.setState({scaleVisible: true})}}>Scale</Button>
                           <Button onClick={() => {self.setState({rollbackVisible: true})}}>Rollback</Button>
                           <Button type="danger" onClick={self.showDeleteAppConfirmModal.bind(self)}>Delete</Button>
+              <Button type="danger" onClick={self.handleUndeploy.bind(self)}>Undeploy</Button>
                           </div>
                       </div>
               </Col>
