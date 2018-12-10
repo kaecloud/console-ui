@@ -54,6 +54,9 @@ class AppDetail extends React.Component {
     this.showAceEditorModal = this.showAceEditorModal.bind(this);
   }
 
+  componentWillMount() {
+  }
+
   componentDidMount() {
     let that = this;
     let appName = this.getAppName(),
@@ -61,6 +64,10 @@ class AppDetail extends React.Component {
 
     AppPodsWatcher.reload(appName, nowCluster);
     this.refreshPage();
+  }
+
+  componentWillUnmount() {
+    AppPodsWatcher.close();
   }
 
   getInitialState() {
@@ -75,9 +82,6 @@ class AppDetail extends React.Component {
       scaleVisible: false,
       rollbackVisible: false
     };
-  }
-
-  componentWillMount() {
   }
 
   handleChangeCluster(newCluster) {

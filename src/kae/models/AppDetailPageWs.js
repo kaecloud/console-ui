@@ -28,6 +28,19 @@ const AppPodsWatcher = {
     this.createPodsWatcher(appName, cluster, true);
   },
 
+  close() {
+    if (this.podsWatcherWS) {
+      this.podsWatcherWS.close();
+    }
+    if (this.canaryPodsWatcherWS) {
+      this.canaryPodsWatcherWS.close();
+    }
+    this.appName = null;
+    this.cluster = null;
+    this.podsWatcherWS = null;
+    this.canaryPodsWatcherWS = null;
+  },
+
   extractDataFromPod(pod) {
     var msToHuman = function(ms) {
       var numdays, numhours, numminutes;
