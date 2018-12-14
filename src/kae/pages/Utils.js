@@ -69,7 +69,7 @@ export function getNowCluster(props) {
       nowCluster= clusterNameList[0];
     }
   }
-  return nowCluster;
+  return nowCluster? nowCluster: null;
 }
 
 export function getClusterNameList(props) {

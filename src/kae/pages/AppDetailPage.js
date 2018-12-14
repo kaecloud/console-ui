@@ -27,7 +27,7 @@ import * as AppApi from '../models/apis/Apps';
 import {getPageRequests, getRequestFromProps} from '../models/Utils';
 import * as AppActions from '../models/actions/Apps';
 import AppPodsWatcher from '../models/AppDetailPageWs';
-import {getArg, setArg, processApiResult} from './Utils';
+import {getArg, setArg, processApiResult, getNowCluster, getClusterNameList} from './Utils';
 import {baseWsUrl} from '../config';
 
 const Panel = Collapse.Panel;
@@ -58,16 +58,24 @@ class AppDetail extends React.Component {
   }
 
   componentDidMount() {
-    let that = this;
-    let appName = this.getAppName(),
-        nowCluster = this.getNowCluster();
+    // let self = this,
+    //     appName = this.getAppName(),
+    //     nowCluster = this.getNowCluster();
 
-    AppPodsWatcher.reload(appName, nowCluster);
-    this.refreshPage();
   }
 
   componentWillUnmount() {
     AppPodsWatcher.close();
+  }
+
+  componentWillReceiveProps(nextProps) {
+    let self = this,
+        appName = this.getAppName(),
+        oldNowCluster = this.state.nowCluster,
+        nowCluster = getNowCluster(nextProps);
+    if (nowCluster && (! oldNowCluster)) {
+      this.handleChangeCluster(nowCluster);
+    }
   }
 
   getInitialState() {
@@ -89,7 +97,10 @@ class AppDetail extends React.Component {
     setArg('cluster', newCluster);
 
     AppPodsWatcher.reload(appName, newCluster);
-    this.refreshPage();
+    this.refreshPage(newCluster);
+    this.setState({
+      nowCluster: newCluster
+    });
   }
 
   hiddenInfoModal() {
@@ -554,10 +565,10 @@ class AppDetail extends React.Component {
     showInfoModal(config, false);
   }
 
-  refreshPage() {
+  refreshPage(nowCluster) {
     let appName = this.getAppName();
-    let nowCluster = this.getNowCluster();
 
+    console.log("refresh page", appName, nowCluster)
     const {dispatch} = this.props;
 
     if (nowCluster) {
@@ -573,23 +584,11 @@ class AppDetail extends React.Component {
   }
 
   getNowCluster() {
-    let nowCluster = getArg("cluster");
-    if(!nowCluster) {
-      let clusterNameList = this.getClusterNameList();
-      if (clusterNameList) {
-        nowCluster= clusterNameList[0];
-      }
-    }
-    return nowCluster;
+    return getNowCluster(this.props);
   }
 
   getClusterNameList() {
-    const request = getRequestFromProps(this.props, 'LIST_CLUSTER_REQUEST');
-    let clusterNameList = [];
-    if (request.statusCode === 200) {
-      clusterNameList = request.data;
-    }
-    return clusterNameList;
+    return getClusterNameList(this.props);
   }
 
   getDeployment() {
