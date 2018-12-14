@@ -46,7 +46,8 @@ function genHandlers() {
 
     'LIST_JOB_REQUEST',
 
-    'LIST_CLUSTER_REQUEST', 'GET_CURRENT_USER_REQUEST'
+    'LIST_CLUSTER_REQUEST', "GET_CURRENT_CLUSTER_REQUEST",
+    'GET_CURRENT_USER_REQUEST'
   ];
   _.forEach(apiTypes, (ty) => {
     handlers[ty] = (state, action) => {
@@ -138,7 +139,21 @@ function genHandlers() {
     return _.assign({}, state, {
       'APP_CANARY_PODS_EVENT': newRequest
     });
-  }
+  };
+  handlers["SET_CURRENT_CLUSTER"] = (state, action) => {
+    let {payload} = action;
+
+    console.log("+++++++++++++++++", payload)
+    const newRequest = _.assign({}, getInitRequest(action), {
+      isFetching: false,
+      statusCode: 200,
+      data: payload,
+      opFlash: ''
+    });
+    return _.assign({}, state, {
+      'CURRENT_CLUSTER': newRequest
+    });
+  };
 
   return handlers;
 }

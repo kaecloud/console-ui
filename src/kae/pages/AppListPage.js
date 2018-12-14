@@ -116,7 +116,7 @@ class AppList extends React.Component {
               onRow={(record) => {
                 return {
                   onClick: () => {
-                    this.props.history.push(`/apps/${record.name}/detail?cluster=`);
+                    this.props.history.push(`/apps/${record.name}/detail`);
                   }
                 };
               }}

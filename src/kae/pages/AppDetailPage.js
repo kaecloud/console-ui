@@ -44,6 +44,8 @@ const spanStyle = {
   borderRadius: '6px'
 };
 
+let alreadyInitialized = false;
+
 class AppDetail extends React.Component {
 
   constructor() {
@@ -58,10 +60,23 @@ class AppDetail extends React.Component {
   }
 
   componentDidMount() {
-    // let self = this,
-    //     appName = this.getAppName(),
-    //     nowCluster = this.getNowCluster();
+    let self = this,
+        appName = this.getAppName(),
+        clusterNameList = this.getClusterNameList(),
+        nowCluster = this.getNowCluster();
 
+    console.log(nowCluster)
+    if (nowCluster) {
+      if (alreadyInitialized === false ) {
+        alreadyInitialized = true;
+        this.handleChangeCluster(nowCluster, false);
+      }
+    } else {
+      if (clusterNameList.length > 0) {
+        const {dispatch} = this.props;
+        dispatch(AppActions.setCurrentCluster(clusterNameList[0]));
+      }
+    }
   }
 
   componentWillUnmount() {
@@ -71,11 +86,21 @@ class AppDetail extends React.Component {
   componentWillReceiveProps(nextProps) {
     let self = this,
         appName = this.getAppName(),
-        oldNowCluster = this.state.nowCluster,
+        clusterNameList = this.getClusterNameList(),
         nowCluster = getNowCluster(nextProps);
-    if (nowCluster && (! oldNowCluster)) {
-      this.handleChangeCluster(nowCluster);
+
+    console.log(nowCluster)
+    if (nowCluster) {
+      if (alreadyInitialized === false) {
+        this.handleChangeCluster(nowCluster, false);
+      }
+    } else {
+      if (clusterNameList.length > 0) {
+        const {dispatch} = this.props;
+        dispatch(AppActions.setCurrentCluster(clusterNameList[0]));
+      }
     }
+
   }
 
   getInitialState() {
@@ -92,15 +117,18 @@ class AppDetail extends React.Component {
     };
   }
 
-  handleChangeCluster(newCluster) {
+  handleChangeCluster(newCluster, dispatchAction=true) {
     const appName = this.getAppName();
     setArg('cluster', newCluster);
 
     AppPodsWatcher.reload(appName, newCluster);
     this.refreshPage(newCluster);
-    this.setState({
-      nowCluster: newCluster
-    });
+
+    if (dispatchAction) {
+      const {dispatch} = this.props;
+
+      dispatch(AppActions.setCurrentCluster(newCluster));
+    }
   }
 
   hiddenInfoModal() {

@@ -246,6 +246,13 @@ export function listCluster() {
   };
 }
 
+export function setCurrentCluster(newCluster) {
+    return {
+      type: 'SET_CURRENT_CLUSTER',
+      payload: newCluster
+    };
+}
+
 export function getCurrentUser() {
   return {
     type: 'GET_CURRENT_USER_REQUEST',

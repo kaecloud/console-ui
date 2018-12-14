@@ -1,6 +1,8 @@
 import React from 'react';
 import {notification} from 'antd';
 
+import store from '../models/Store';
+import * as AppActions from '../models/actions/Apps';
 import {getPageRequests, getRequestFromProps} from '../models/Utils';
 
 export function getArg(name) {
@@ -62,13 +64,16 @@ export function processApiResult(promise, action) {
 }
 
 export function getNowCluster(props) {
-  let nowCluster = getArg("cluster");
-  if(!nowCluster) {
-    let clusterNameList = getClusterNameList(props);
-    if (clusterNameList.length > 0) {
-      nowCluster= clusterNameList[0];
-    }
-  }
+  const request = getRequestFromProps(props, 'CURRENT_CLUSTER');
+  let nowCluster = request.data;
+  // let nowCluster = getArg("cluster");
+  // if(!nowCluster) {
+  //   let clusterNameList = getClusterNameList(props);
+  //   if (clusterNameList.length > 0) {
+  //     nowCluster= clusterNameList[0];
+  //     store.dispatch(AppActions.setCurrentCluster(nowCluster));
+  //   }
+  // }
   return nowCluster? nowCluster: null;
 }
 
