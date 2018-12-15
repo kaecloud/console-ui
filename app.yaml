@@ -11,7 +11,6 @@ service:
   mountpoints:
   - host: console.gtapp.xyz
     paths:
-      - /static
       - /
     tlsSecret: gtapp-xyz-tls
   ports:
