@@ -1,5 +1,5 @@
 import React from 'react';
-import { Divider, Icon, Button, Modal } from 'antd';
+import { Icon, Button} from 'antd';
 import { Link } from 'react-router-dom';
 import {connect} from 'react-redux';
 
@@ -8,10 +8,6 @@ import {getRequestFromProps} from '../../models/Utils';
 import {baseLoginUrl} from '../../config';
 
 class PageHeader extends React.Component {
-
-  constructor() {
-    super();
-  }
 
   componentDidMount() {
     const app = document.getElementById('app');

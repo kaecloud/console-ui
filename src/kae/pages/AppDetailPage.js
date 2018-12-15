@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 
 import {
   Alert, Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select,
-  Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification,
+  InputNumber, Menu, Dropdown,
   Progress, Tooltip
 } from 'antd';
 import { Link } from 'react-router-dom';
@@ -27,12 +27,10 @@ import * as AppApi from '../models/apis/Apps';
 import {getPageRequests, getRequestFromProps} from '../models/Utils';
 import * as AppActions from '../models/actions/Apps';
 import AppPodsWatcher from '../models/AppDetailPageWs';
-import {getArg, setArg, processApiResult, getNowCluster, getClusterNameList} from './Utils';
+import {setArg, processApiResult, getNowCluster, getClusterNameList} from './Utils';
 import {baseWsUrl} from '../config';
 
 const Panel = Collapse.Panel;
-const { TextArea } = Input;
-const FormItem = Form.Item;
 const Option = Select.Option;
 const confirm = Modal.confirm;
 
@@ -110,7 +108,7 @@ class AppDetail extends React.Component {
     };
   }
 
-  changeCluster(newCluster, dispatchAction=true) {
+  changeCluster = (newCluster, dispatchAction=true) => {
     const appName = this.getAppName();
     setArg('cluster', newCluster);
 
@@ -133,8 +131,6 @@ class AppDetail extends React.Component {
   }
 
   showAceEditorModal(config) {
-    let self = this;
-
     if (! config.handler) {
       config.handler = function(specs, destroy) {
         destroy();
@@ -425,8 +421,7 @@ class AppDetail extends React.Component {
   }
 
   handleDeleteAppYaml(record) {
-    let self = this,
-        appName = this.getAppName(),
+    let appName = this.getAppName(),
         {dispatch} = this.props,
         title = 'Delete App Yaml';
 
@@ -482,8 +477,7 @@ class AppDetail extends React.Component {
 
   // 更新
   handleRenew() {
-    let self = this,
-        appName = this.getAppName(),
+    let appName = this.getAppName(),
         title = `Renew App ${appName}`,
         nowCluster = this.getNowCluster(),
         {dispatch} = this.props;
@@ -504,7 +498,6 @@ class AppDetail extends React.Component {
 
   // 伸缩
   handleScale() {
-    let self = this;
     this.setState({scaleVisible: false});
     let {scaleNum} = this.state;
     let appName = this.getAppName(),
@@ -552,7 +545,7 @@ class AppDetail extends React.Component {
     }
 
     // only show select modal when there exist multiple containers
-    if (containers.length == 1) {
+    if (containers.length === 1) {
       handler(()=>{});
     } else {
       let config = {
@@ -685,9 +678,9 @@ class AppDetail extends React.Component {
               {/*
               <Link to={`/apps/${appName}/pod/${record.name}/log?cluster=${nowCluster}`}>log</Link>
                */}
-              <a onClick={self.showAppPodLog.bind(self, record)}>log</a>
+              <a href onClick={self.showAppPodLog.bind(self, record)}>log</a>
               <Divider type="vertical" />
-              <a onClick={self.showAppPodStatus.bind(self, record)}>status</a>
+              <a href onClick={self.showAppPodStatus.bind(self, record)}>status</a>
               <Divider type="vertical" />
               <Link to={`/apps/${appName}/entry?cluster=${nowCluster}&pod=${record.name}`}>enter</Link>
               </span>
@@ -865,7 +858,7 @@ class AppDetail extends React.Component {
                     <div className="appBody">
                         <div style={{marginBottom: '10px'}}>集群：
                         <Select value={nowCluster} style={{ width: 100}}
-                                onChange={self.changeCluster.bind(self)}>
+                                onChange={self.changeCluster}>
                              { clusterNameList.map(name => <Option key={name}>{name}</Option>) }
                         </Select>
                         </div>
@@ -1009,9 +1002,9 @@ class AppDetail extends React.Component {
             render(text, record) {
               return (
                   <span>
-                  <a href="javascript:;" onClick={self.showAppYamlAddModal.bind(self, record)}>Edit</a>
+                  <a href onClick={self.showAppYamlAddModal.bind(self, record)}>Edit</a>
                   <Divider type="vertical" />
-                  <a href="javascript:;" onClick={self.handleDeleteAppYaml.bind(self, record)}>Delete</a>
+                  <a href onClick={self.handleDeleteAppYaml.bind(self, record)}>Delete</a>
                   </span>
               );
             }

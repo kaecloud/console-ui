@@ -2,14 +2,13 @@ import React from 'react';
 import {Link} from 'react-router-dom';
 
 import {
-  Icon, Divider, Button, Modal, Row, Col, Select, Form, Input, Menu,
-  Checkbox, Layout, Breadcrumb
+  Button, Select, Form, Layout, Breadcrumb
 } from 'antd';
 import AceEditor from 'react-ace';
 
 import * as AppApi from '../models/apis/Apps';
 import * as AppActions from '../models/actions/Apps';
-import {getPageRequests, getRequestFromProps } from '../models/Utils';
+import {getRequestFromProps } from '../models/Utils';
 import {getArg, setArg, processApiResult, getNowCluster, getClusterNameList} from './Utils';
 
 const FormItem = Form.Item;
@@ -44,7 +43,6 @@ class AppABTesting extends React.Component {
   }
 
   handleChangeCluster(newCluster) {
-    const appName = this.getAppName();
     setArg('cluster', newCluster);
 
     this.refreshABTesting();

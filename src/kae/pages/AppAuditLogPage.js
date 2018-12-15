@@ -1,6 +1,6 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
-import { Collapse, Table, Icon, Layout, Breadcrumb } from 'antd';
+import { Collapse, Table, Layout, Breadcrumb } from 'antd';
 import * as AppActions from '../models/actions/Apps';
 import { getRequestFromProps } from '../models/Utils';
 import {getNowCluster} from './Utils';
@@ -53,10 +53,6 @@ const columns = [
 ];
 
 class AppAuditLog extends React.Component {
-
-  constructor() {
-    super();
-  }
 
   componentDidMount() {
     this.refreshLogs();

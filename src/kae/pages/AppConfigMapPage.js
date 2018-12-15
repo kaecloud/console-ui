@@ -2,16 +2,15 @@ import React from 'react';
 import {Link} from 'react-router-dom';
 
 import {
-  Icon, Divider, Collapse, Table, Button, Modal, Row, Col, Select, Form, Input,
-  InputNumber, Menu, Dropdown, Checkbox, Layout, Breadcrumb
+  Button, Row, Col, Select, Form, Input,
+  Checkbox, Layout, Breadcrumb
 } from 'antd';
-import AceEditor from 'react-ace';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/styles/hljs';
 
 import * as AppApi from '../models/apis/Apps';
 import * as AppActions from '../models/actions/Apps';
-import {getPageRequests, getRequestFromProps } from '../models/Utils';
+import {getRequestFromProps } from '../models/Utils';
 import {getArg, setArg, processApiResult, getNowCluster, getClusterNameList} from './Utils';
 
 const FormItem = Form.Item;
@@ -45,7 +44,6 @@ class AppConfigMap extends React.Component {
   }
 
   handleChangeCluster(newCluster) {
-    const appName = this.getAppName();
     setArg('cluster', newCluster);
 
     this.refreshConfigMap();
@@ -116,7 +114,6 @@ class AppConfigMap extends React.Component {
       },
     };
 
-    let self = this;
     const { getFieldDecorator } = this.props.form;
 
     const appName = this.getAppName();

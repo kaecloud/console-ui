@@ -1,13 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, Input, InputNumber, Menu, Dropdown, Checkbox, notification } from 'antd';
+import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, Input, notification } from 'antd';
 import {Link} from 'react-router-dom';
 
 import brace from 'brace';
 import AceEditor from 'react-ace';
 import * as JobActions from '../models/actions/Jobs';
 import * as JobApi from '../models/apis/Jobs';
-import { getRequestFromProps, getPageRequests } from '../models/Utils';
+import { getPageRequests } from '../models/Utils';
 import {getClusterNameList, processApiResult} from './Utils';
 import CreateJobModal from '../components/CreateJobModal';
 import {baseWsUrl} from '../config';
@@ -15,15 +15,12 @@ import {baseWsUrl} from '../config';
 import 'brace/mode/yaml';
 import 'brace/theme/xcode';
 
-const { TextArea } = Input;
 const Panel = Collapse.Panel;
-const FormItem = Form.Item;
 const Option = Select.Option;
 
 class JobList extends React.Component {
   constructor() {
     super();
-    let self = this;
     this.state = {
       visible: false,
       logVisible: false,
