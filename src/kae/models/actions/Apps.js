@@ -53,7 +53,7 @@ export function remove(appName) {
     type: 'DELETE_APP_REQUEST',
     async: true,
     shouldCallApi: (state) => true,
-    callApi: () => AppApi.delete(appName),
+    callApi: () => AppApi.remove(appName),
     payload: { appName }
   };
 }
@@ -216,15 +216,15 @@ export function setABTestingRules(appName, cluster, rules) {
     payload: {}
   };
 }
-export function register(appName) {
-  return {
-    type: 'REGISTER_APP_REQUEST',
-    async: true,
-    shouldCallApi: (state) => true,
-    callApi: () => AppApi.register(appName),
-    payload: { appName },
-  };
-}
+// export function register(appName) {
+//   return {
+//     type: 'REGISTER_APP_REQUEST',
+//     async: true,
+//     shouldCallApi: (state) => true,
+//     callApi: () => AppApi.register(appName),
+//     payload: { appName },
+//   };
+// }
 
 export function deploy(appName) {
   return {

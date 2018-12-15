@@ -9,3 +9,7 @@ export function list() {
     payload: {}
   };
 }
+
+export function remove(jobName) {
+
+}

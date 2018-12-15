@@ -43,7 +43,7 @@ class JobList extends React.Component {
 
   handleDelete(name) {
     let self = this;
-    processApiResult(JobApi.delete(name), 'Delete Job')
+    processApiResult(JobApi.remove(name), 'Delete Job')
       .then(val => {
         self.refreshList();
       }).catch(v => {});
@@ -158,7 +158,8 @@ class JobList extends React.Component {
   }
 
   render() {
-    let jobList = this.getJobList(),
+    let self = this,
+        jobList = this.getJobList(),
         clusterNameList = getClusterNameList(this.props),
         nowCluster = this.state.nowCluster;
     if (! nowCluster) {

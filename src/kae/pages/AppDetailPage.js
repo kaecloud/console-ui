@@ -44,14 +44,13 @@ const spanStyle = {
   borderRadius: '6px'
 };
 
-let alreadyInitialized = false;
 
 class AppDetail extends React.Component {
 
   constructor() {
     super();
 
-    let self = this;
+    this.alreadyInitialized = false;
     this.state = this.getInitialState();
     this.showAceEditorModal = this.showAceEditorModal.bind(this);
   }
@@ -59,24 +58,34 @@ class AppDetail extends React.Component {
   componentWillMount() {
   }
 
-  componentDidMount() {
-    let self = this,
-        appName = this.getAppName(),
-        clusterNameList = this.getClusterNameList(),
-        nowCluster = this.getNowCluster();
+  refreshIfNedded() {
+    let nowCluster = this.getNowCluster();
 
-    console.log(nowCluster)
+    console.log(nowCluster);
     if (nowCluster) {
-      if (alreadyInitialized === false ) {
-        alreadyInitialized = true;
-        this.handleChangeCluster(nowCluster, false);
-      }
-    } else {
-      if (clusterNameList.length > 0) {
-        const {dispatch} = this.props;
-        dispatch(AppActions.setCurrentCluster(clusterNameList[0]));
+      if (this.alreadyInitialized === false ) {
+        this.alreadyInitialized = true;
+        this.changeCluster(nowCluster, false);
       }
     }
+  }
+
+  refreshPage(nowCluster) {
+    let appName = this.getAppName();
+
+    console.log("refresh page", appName, nowCluster)
+    const {dispatch} = this.props;
+
+    if (nowCluster) {
+      dispatch(AppActions.getCanaryInfo(appName, nowCluster));
+      dispatch(AppActions.getDeployment(appName, nowCluster));
+    }
+    dispatch(AppActions.getReleases(appName));
+    dispatch(AppActions.listAppYaml(appName));
+  }
+
+  componentDidMount() {
+    this.refreshIfNedded();
   }
 
   componentWillUnmount() {
@@ -84,23 +93,7 @@ class AppDetail extends React.Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    let self = this,
-        appName = this.getAppName(),
-        clusterNameList = this.getClusterNameList(),
-        nowCluster = getNowCluster(nextProps);
-
-    console.log(nowCluster)
-    if (nowCluster) {
-      if (alreadyInitialized === false) {
-        this.handleChangeCluster(nowCluster, false);
-      }
-    } else {
-      if (clusterNameList.length > 0) {
-        const {dispatch} = this.props;
-        dispatch(AppActions.setCurrentCluster(clusterNameList[0]));
-      }
-    }
-
+    this.refreshIfNedded();
   }
 
   getInitialState() {
@@ -117,7 +110,7 @@ class AppDetail extends React.Component {
     };
   }
 
-  handleChangeCluster(newCluster, dispatchAction=true) {
+  changeCluster(newCluster, dispatchAction=true) {
     const appName = this.getAppName();
     setArg('cluster', newCluster);
 
@@ -593,20 +586,6 @@ class AppDetail extends React.Component {
     showInfoModal(config, false);
   }
 
-  refreshPage(nowCluster) {
-    let appName = this.getAppName();
-
-    console.log("refresh page", appName, nowCluster)
-    const {dispatch} = this.props;
-
-    if (nowCluster) {
-      dispatch(AppActions.getCanaryInfo(appName, nowCluster));
-      dispatch(AppActions.getDeployment(appName, nowCluster));
-    }
-    dispatch(AppActions.getReleases(appName));
-    dispatch(AppActions.listAppYaml(appName));
-  }
-
   getAppName(props = this.props) {
     return props.match.params.appName;
   }
@@ -886,7 +865,7 @@ class AppDetail extends React.Component {
                     <div className="appBody">
                         <div style={{marginBottom: '10px'}}>集群：
                         <Select value={nowCluster} style={{ width: 100}}
-                                onChange={self.handleChangeCluster.bind(self)}>
+                                onChange={self.changeCluster.bind(self)}>
                              { clusterNameList.map(name => <Option key={name}>{name}</Option>) }
                         </Select>
                         </div>

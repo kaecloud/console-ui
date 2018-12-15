@@ -6,6 +6,7 @@ import {Button, Modal, Row, Col, Select, Form, Input, InputNumber, Checkbox} fro
 import brace from 'brace';
 
 const FormItem = Form.Item;
+const Option = Select.Option;
 
 const formItemLayout = {
   labelCol: {

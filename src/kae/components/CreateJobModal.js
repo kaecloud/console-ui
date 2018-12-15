@@ -78,7 +78,7 @@ class CreateJobModal extends React.Component {
           }
         } else {
           job = {
-            specs_text: yamlConfig
+            specs_text: this.state.yamlValue
           };
         }
         this.props.config.hander(job);

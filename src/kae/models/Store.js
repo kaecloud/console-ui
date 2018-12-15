@@ -1,3 +1,4 @@
+import _ from 'lodash';
 import {createStore, applyMiddleware} from 'redux';
 import { createLogger } from 'redux-logger';
 import rootReducer from './reducers';

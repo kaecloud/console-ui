@@ -19,6 +19,6 @@ RUN apk --no-cache add ca-certificates && \
 WORKDIR /kae/app
 
 COPY --from=gobuilder /tmp/app .
-COPY --from=nodebuilder /kae/app/dist ./dist
+COPY --from=nodebuilder /kae/app/build ./build
 
 CMD ["./app"]

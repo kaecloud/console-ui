@@ -7,14 +7,14 @@ import {getPageRequests, getRequestFromProps} from '../models/Utils';
 
 export function getArg(name) {
   var i = new RegExp(name + "=([^&]+)","i")
-  , n = location.href.match(i);
+  , n = window.location.href.match(i);
   return n ? n[1]:false;
 }
 
 export function setArg(name, val) {
   var re = new RegExp(name + "=([^&]*)","i");
-  var newUrl = location.href.replace(re, name+"="+val);
-  location.href = newUrl;
+  var newUrl = window.location.href.replace(re, name+"="+val);
+  window.location.href = newUrl;
 }
 
 export function isHttpOK(code) {

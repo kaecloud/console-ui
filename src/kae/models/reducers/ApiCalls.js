@@ -140,6 +140,32 @@ function genHandlers() {
       'APP_CANARY_PODS_EVENT': newRequest
     });
   };
+
+  handlers[`LIST_CLUSTER_REQUEST_COMPLETED`] = (state, action) => {
+    const newRequest = _.assign({}, getInitRequest(action), {
+      isFetching: false,
+      statusCode: action.statusCode,
+      data: action.response,
+      opFlash: action.flash,
+    });
+
+    let clusterNameList = newRequest.data,
+        currentClusterRequest = _.assign({}, state['CURRENT_CLUSTER']),
+        currentCluster = currentClusterRequest.data;
+    let changePart = {
+      [action.asyncType]: newRequest,
+    };
+    if (( ! currentCluster ) && (clusterNameList.length > 0)) {
+      changePart['CURRENT_CLUSTER'] = {
+        isFetching: false,
+        statusCode: 200,
+        data: clusterNameList[0],
+        opFlash: ''
+      };
+    }
+    return _.assign({}, state, changePart);
+  };
+
   handlers["SET_CURRENT_CLUSTER"] = (state, action) => {
     let {payload} = action;
 
