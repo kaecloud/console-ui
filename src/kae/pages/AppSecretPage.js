@@ -8,7 +8,7 @@ import AceEditor from 'react-ace';
 import * as AppApi from '../models/apis/Apps';
 import * as AppActions from '../models/actions/Apps';
 import {getRequestFromProps } from '../models/Utils';
-import {getArg, setArg, processApiResult, getNowCluster, getClusterNameList} from './Utils';
+import {setArg, processApiResult, getNowCluster, getClusterNameList} from './Utils';
 
 const FormItem = Form.Item;
 const {Content} = Layout;
@@ -17,19 +17,32 @@ class AppSecret extends React.Component {
 
   constructor() {
     super();
+    this.alreadyInitialized = false;
     this.state = {
       value: ""
     };
-    this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  refreshIfNedded(nowCluster) {
+    if (nowCluster) {
+      if (this.alreadyInitialized === false ) {
+        this.alreadyInitialized = true;
+        this.refreshSecret(nowCluster);
+      }
+    }
   }
 
   componentDidMount() {
-    this.refreshSecret();
+    let cluster = getNowCluster(this.props);
+    this.refreshIfNedded(cluster);
   }
 
   componentWillReceiveProps(nextProps) {
     let secretReq = getRequestFromProps(nextProps, 'GET_APP_SECRET_REQUEST'),
-        secretData = {};
+      secretData = {},
+      cluster = getNowCluster(nextProps);
+    this.refreshIfNedded(cluster);
+
     if (secretReq.statusCode === 200) {
       secretData = secretReq.data;
     }
@@ -39,15 +52,18 @@ class AppSecret extends React.Component {
     });
   }
 
-  handleChangeCluster(newCluster) {
+  changeCluster = (newCluster) => {
     setArg('cluster', newCluster);
 
-    this.refreshSecret();
+    const {dispatch} = this.props;
+
+    dispatch(AppActions.setCurrentCluster(newCluster));
+    this.refreshSecret(newCluster);
   }
 
   submitForm(cluster_name, data) {
     let self = this,
-        appName = this.getAppName();
+      appName = this.getAppName();
 
     let params = {
       data: data,
@@ -56,7 +72,7 @@ class AppSecret extends React.Component {
     };
     processApiResult(AppApi.createSecret(appName, params), "Create or Update Secret")
       .then(data => {
-        self.refreshSecret();
+        self.refreshSecret(cluster_name);
       }).catch(e => {});
   }
 
@@ -64,7 +80,7 @@ class AppSecret extends React.Component {
     this.setState({value: newValue});
   }
 
-  handleSubmit(event) {
+  handleSubmit = (event) => {
     event.preventDefault();
 
     event.preventDefault();
@@ -76,9 +92,8 @@ class AppSecret extends React.Component {
     });
   }
 
-  refreshSecret() {
+  refreshSecret(cluster) {
     const appName = this.getAppName();
-    const cluster = getNowCluster(this.props);
     const {dispatch} = this.props;
     dispatch(AppActions.getSecret(appName, cluster));
   }
@@ -88,7 +103,7 @@ class AppSecret extends React.Component {
     const { getFieldDecorator } = this.props.form;
 
     const appName = this.getAppName();
-    const cluster = getArg('cluster');
+    const cluster = getNowCluster(this.props);
     let clusterNameList = getClusterNameList(this.props);
     const formItemLayout = {
       labelCol: {
@@ -120,7 +135,7 @@ class AppSecret extends React.Component {
             <Link to={`/`}>Home</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>
-            <Link to={`/apps/${appName}/detail?cluster=${cluster}`}>App</Link>
+            <Link to={`/apps/${appName}/detail`}>App</Link>
           </Breadcrumb.Item>
             <Breadcrumb.Item>Secret</Breadcrumb.Item>
         </Breadcrumb>
@@ -136,7 +151,7 @@ class AppSecret extends React.Component {
                   {getFieldDecorator('cluster_name', {
                       initialValue: cluster
                   })(
-                      <Select style={{width: 120}} onChange={this.handleChangeCluster.bind(this)}>
+                      <Select style={{width: 120}} onChange={this.changeCluster}>
                            { clusterNameList.map(name => <Select.Option key={name}>{name}</Select.Option>) }
                       </Select>
                   )}

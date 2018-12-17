@@ -3,7 +3,6 @@ import {Link} from 'react-router-dom';
 import { Collapse, Table, Layout, Breadcrumb } from 'antd';
 import * as AppActions from '../models/actions/Apps';
 import { getRequestFromProps } from '../models/Utils';
-import {getNowCluster} from './Utils';
 
 const Panel = Collapse.Panel;
 const {Content} = Layout;
@@ -67,8 +66,7 @@ class AppAuditLog extends React.Component {
   render() {
     const request = getRequestFromProps(this.props, 'GET_APP_LOGS_REQUEST');
     let data = [],
-        appName = this.props.match.params.appName,
-        cluster = getNowCluster(this.props);
+        appName = this.props.match.params.appName;
     if (request.statusCode === 200) {
       data = request.data;
     }
@@ -80,7 +78,7 @@ class AppAuditLog extends React.Component {
             <Link to={`/`}>Home</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>
-            <Link to={`/apps/${appName}/detail?cluster=${cluster}`}>App</Link>
+            <Link to={`/apps/${appName}/detail`}>App</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>AuditLog</Breadcrumb.Item>
         </Breadcrumb>

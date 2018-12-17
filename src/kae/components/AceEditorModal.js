@@ -1,5 +1,4 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 
 import {Button, Modal, Row} from 'antd';
 import AceEditor from 'react-ace';

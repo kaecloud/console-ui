@@ -12,7 +12,7 @@ const AppPodsWatcher = {
       console.log("null value found, skip reload.", cluster, appName);
       return;
     }
-    if ((cluster == this.cluster) && (appName == this.appName)) {
+    if ((cluster === this.cluster) && (appName === this.appName)) {
       console.log("appName and cluster are equal to current, skip reload.", cluster, appName);
       return;
     }
@@ -124,7 +124,7 @@ const AppPodsWatcher = {
       if (canary) {
         stateWs = that.canaryPodsWatcherWS;
       }
-      if (ws == stateWs) {
+      if (ws === stateWs) {
         console.info(`recreate ${canaryStr} pods watcher websocket..`);
         setTimeout(function() {
           that.createPodsWatcher(name, cluster, canary);
@@ -189,7 +189,6 @@ const AppPodsWatcher = {
 
   // Websocket
   webSocketEvent(socket, canary) {
-    let self = this;
     socket.addEventListener('message', function (event) {
 
       if (canary) {

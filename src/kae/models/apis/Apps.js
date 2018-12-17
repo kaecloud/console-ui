@@ -33,6 +33,18 @@ export function remove(appName) {
     });
 }
 
+export function create(appName, git, type) {
+  let params = {
+    appname: appName,
+    git: git,
+    type: type
+  };
+  return Fetch.post(`${baseApiUrl}/app`, params)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't create app(${appName}), statusCode：${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
 // app_scale
 export function scale(appName, cluster, replicas) {
   let data= {

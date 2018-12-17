@@ -169,7 +169,6 @@ function genHandlers() {
   handlers["SET_CURRENT_CLUSTER"] = (state, action) => {
     let {payload} = action;
 
-    console.log("+++++++++++++++++", payload)
     const newRequest = _.assign({}, getInitRequest(action), {
       isFetching: false,
       statusCode: 200,

@@ -1,8 +1,7 @@
 import React from 'react';
-import { Layout, Menu, Breadcrumb } from 'antd';
-import {HashRouter, Switch, Link, Route, Redirect} from 'react-router-dom';
+import {HashRouter, Switch, Route, Redirect} from 'react-router-dom';
 import {Provider, connect} from 'react-redux';
-import Radium from 'radium';
+/* import Radium from 'radium';*/
 
 import PageHeader from './components/header';
 import store from './models/Store';
@@ -18,8 +17,6 @@ import AppABTesting from './pages/AppABTestingPage';
 import AppPodEntry from './pages/AppPodEntryPage';
 
 import './App.css';
-
-const { Header, Content, Footer } = Layout;
 
 class KaeApp extends React.Component {
 
@@ -62,7 +59,7 @@ class KaeApp extends React.Component {
                   <Route path="/apps/:appName/configmap" component={this.connectApi(AppConfigMap)} />
                   <Route path="/apps/:appName/secret" component={this.connectApi(AppSecret)} />
                   <Route path="/apps/:appName/abtesting" component={this.connectApi(AppABTesting)} />
-                  <Route path="/apps/:appName/entry" component={this.connectApi(AppPodEntry)} />
+                  <Route path="/apps/:appName/cluster/:cluster/pod/:podName/entry" component={this.connectApi(AppPodEntry)} />
 
                   <Route path="/apps" component={this.connectApi(AppList)} />
                   <Route path="/jobs" component={this.connectApi(JobList)} />

@@ -1,14 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import {Button, Modal, Row, Col, Input, Select} from 'antd';
-
-const Option = Select.Option;
+import {Button, Modal} from 'antd';
 
 class DynamicModal extends React.Component {
-  constructor(props) {
-    super(props);
-  }
-
   handleSubmit() {
     this.props.config.handler(this.props.config.destroy);
   }

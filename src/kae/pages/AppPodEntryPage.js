@@ -1,6 +1,6 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
-import { Collapse, Table, Icon, Layout, Breadcrumb, Button, Select, Divider } from 'antd';
+import { Layout, Breadcrumb, Button, Select, Divider } from 'antd';
 import {
   Terminal
 } from 'xterm';
@@ -10,10 +10,8 @@ import * as attach from 'xterm/lib/addons/attach/attach';
 
 import * as AppActions from '../models/actions/Apps';
 import { getRequestFromProps } from '../models/Utils';
-import {getNowCluster, getArg} from './Utils';
 import {baseWsUrl} from '../config';
 
-const Panel = Collapse.Panel;
 const {Content} = Layout;
 const Option = Select.Option;
 
@@ -21,16 +19,17 @@ Terminal.applyAddon(fit);
 Terminal.applyAddon(attach);
 
 var printInfo = (data) => {
-  return '\x1B[32m>>> ' + data + '\x1B[0m';
+  return '\x1B[92m>>> ' + data + '\x1B[0m';
 };
 
 var printError = (data) => {
-  return '\x1B[31m>>> ' + data + '\x1B[0m';
+  return '\x1B[91m>>> ' + data + '\x1B[0m';
 };
 
 class AppPodEntry extends React.Component {
   constructor() {
     super();
+    this.alreadyInitialized = false;
     this.state={
       term: null,
       ws: null
@@ -39,13 +38,11 @@ class AppPodEntry extends React.Component {
   }
 
   componentDidMount() {
+    let appName = this.getAppName(),
+      cluster = this.getCluster();
+
     const {dispatch} = this.props;
-
-    let appName = this.props.match.params.appName,
-        cluster = getNowCluster(this.props),
-        podName = getArg('pod');
     dispatch(AppActions.getDeployment(appName, cluster));
-
   }
 
   componentWillUnmount() {
@@ -84,8 +81,8 @@ class AppPodEntry extends React.Component {
 
   handleReplay(container) {
     let appName = this.props.match.params.appName,
-        cluster = getNowCluster(this.props),
-        podName = getArg('pod');
+        cluster = this.getCluster(),
+        podName = this.getPodName();
 
     let {term, ws} = this.state;
     if (ws) {
@@ -99,8 +96,7 @@ class AppPodEntry extends React.Component {
     });
     term.open(document.getElementById('term'));
     term.fit();
-    term.writeln(printInfo("welcome to use docker web terminal!"));
-    console.log('hahah');
+    term.writeln(printInfo("welcome to use KAE web terminal!"));
 
     ws = new WebSocket(`${baseWsUrl}/api/v1/ws/app/${appName}/entry`);
     let containerInfo = {
@@ -117,7 +113,7 @@ class AppPodEntry extends React.Component {
     ws.onclose = function(evt) {
       // update release data
       console.log("entry socket closed");
-      term.writeln("\nclosed. Thank you for use!");
+        term.writeln(printError("\nclosed. Thank you for use!"));
     };
     term.attach(ws);
 
@@ -127,12 +123,12 @@ class AppPodEntry extends React.Component {
     });
   }
 
-  handleReconnect() {
+  handleReconnect = () => {
     let { activeContaner } = this.state;
     this.handleReplay(activeContaner);
   }
 
-  handleChangeContainer(newContainer) {
+  handleChangeContainer = (newContainer) => {
     this.setState({
       activeContaner: newContainer
     });
@@ -140,10 +136,7 @@ class AppPodEntry extends React.Component {
   }
 
   render() {
-    let data = [],
-        appName = this.props.match.params.appName,
-        cluster = getNowCluster(this.props),
-        podName = getArg('pod');
+    let appName = this.getAppName();
 
     let {containers, activeContaner} = this.state;
     if (!containers) {
@@ -157,7 +150,7 @@ class AppPodEntry extends React.Component {
             <Link to={`/`}>Home</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>
-            <Link to={`/apps/${appName}/detail?cluster=${cluster}`}>App</Link>
+            <Link to={`/apps/${appName}/detail`}>App</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>Entry</Breadcrumb.Item>
         </Breadcrumb>
@@ -165,12 +158,12 @@ class AppPodEntry extends React.Component {
         <div style={{background: '#fff', padding: '20px'}}>
 
         <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}}
-                onClick={this.handleReconnect.bind(this)}>Reconnect</Button>
+                onClick={this.handleReconnect}>Reconnect</Button>
 
         <Divider type="vertical" />
 
       Container: <Select value={activeContaner} style={{ width: 100}}
-      onChange={this.handleChangeContainer.bind(this)}>
+      onChange={this.handleChangeContainer}>
         { containers.map(name => <Option key={name}>{name}</Option>) }
       </Select>
           <div id="term"></div>
@@ -183,6 +176,13 @@ class AppPodEntry extends React.Component {
     return props.match.params.appName;
   }
 
+  getCluster(props = this.props) {
+    return props.match.params.cluster;
+  }
+
+  getPodName(props = this.props) {
+    return props.match.params.podName;
+  }
 }
 
 export default AppPodEntry;

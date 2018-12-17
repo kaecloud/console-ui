@@ -1,9 +1,6 @@
-import React from 'react';
 import {notification} from 'antd';
 
-import store from '../models/Store';
-import * as AppActions from '../models/actions/Apps';
-import {getPageRequests, getRequestFromProps} from '../models/Utils';
+import {getRequestFromProps} from '../models/Utils';
 
 export function getArg(name) {
   var i = new RegExp(name + "=([^&]+)","i")

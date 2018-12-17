@@ -1,10 +1,10 @@
 import React from 'react';
-import { Link, withRouter } from 'react-router-dom';
+import { withRouter } from 'react-router-dom';
 import {Collapse, Table, Input, Button, Icon } from 'antd';
 
 import { getRequestFromProps } from '../models/Utils';
 import * as AppActions from '../models/actions/Apps';
-
+import {showRegisterAppModal} from "../components/RegisterAppModal";
 const Panel = Collapse.Panel;
 
 class AppList extends React.Component {
@@ -107,6 +107,9 @@ class AppList extends React.Component {
       <div className="appList">
         <Collapse bordered={false} defaultActiveKey={['1']}>
           <Panel header={<h2>应用列表</h2>} key="1">
+            <div className="table-operations">
+              <Button type="primary" onClick={showRegisterAppModal}>Add</Button>
+            </div>
             <Table
               columns={columns}
               dataSource={data}

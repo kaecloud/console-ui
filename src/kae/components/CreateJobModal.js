@@ -1,8 +1,7 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 
 import {
-  Button, Modal, Row, Form, Select, Input, InputNumber,
+  Button, Modal, Form, Select, Input, InputNumber,
   Checkbox
 } from 'antd';
 import AceEditor from 'react-ace';

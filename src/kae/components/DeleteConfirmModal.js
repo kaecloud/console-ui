@@ -1,6 +1,5 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
-import {Alert, Button, Modal, Row, Col, Input} from 'antd';
+import {Alert, Button, Modal, Row, Input} from 'antd';
 
 class DeleteConfirmModal extends React.Component {
   constructor(props) {
@@ -19,7 +18,7 @@ class DeleteConfirmModal extends React.Component {
 
   onChange(e) {
     var newValue = e.target.value;
-    if (this.state.expectValue == newValue) {
+    if (this.state.expectValue === newValue) {
       this.setState({buttonDisabled: false});
     } else {
       this.setState({buttonDisabled: true});

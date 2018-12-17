@@ -9,7 +9,7 @@ import AceEditor from 'react-ace';
 import * as AppApi from '../models/apis/Apps';
 import * as AppActions from '../models/actions/Apps';
 import {getRequestFromProps } from '../models/Utils';
-import {getArg, setArg, processApiResult, getNowCluster, getClusterNameList} from './Utils';
+import {processApiResult, getNowCluster, getClusterNameList} from './Utils';
 
 const FormItem = Form.Item;
 const {Content} = Layout;
@@ -18,6 +18,7 @@ class AppABTesting extends React.Component {
 
   constructor() {
     super();
+    this.alreadyInitialized = false;
     this.state = {
       value: ""
     };
@@ -26,13 +27,26 @@ class AppABTesting extends React.Component {
   componentWillMount() {
   }
 
+  refreshIfNedded(nowCluster) {
+    if (nowCluster) {
+      if (this.alreadyInitialized === false ) {
+        this.alreadyInitialized = true;
+        this.refreshABTesting(nowCluster);
+      }
+    }
+  }
+
   componentDidMount() {
-    this.refreshABTesting();
+    let cluster = getNowCluster(this.props);
+    this.refreshIfNedded(cluster);
   }
 
   componentWillReceiveProps(nextProps) {
     let abtestingReq = getRequestFromProps(nextProps, 'GET_APP_ABTESTING_REQUEST'),
-        abtestingData = {};
+      abtestingData = {},
+      cluster = getNowCluster(nextProps);
+    this.refreshIfNedded(cluster);
+
     if (abtestingReq.statusCode === 200) {
       abtestingData = abtestingReq.data;
     }
@@ -42,10 +56,12 @@ class AppABTesting extends React.Component {
     });
   }
 
-  handleChangeCluster(newCluster) {
-    setArg('cluster', newCluster);
+  chagneCluster = (newCluster) => {
 
-    this.refreshABTesting();
+    const {dispatch} = this.props;
+
+    dispatch(AppActions.setCurrentCluster(newCluster));
+    this.refreshABTesting(newCluster);
   }
 
   onAceEditorChange(newValue) {
@@ -54,8 +70,9 @@ class AppABTesting extends React.Component {
 
   handleSubmit(event) {
     let self = this,
-        title = 'Set A/B Testing rules',
-        appName = this.getAppName();
+      title = 'Set A/B Testing rules',
+      cluster = getNowCluster(this.props),
+      appName = this.getAppName();
 
     event.preventDefault();
     this.props.form.validateFields((err, values) => {
@@ -64,15 +81,14 @@ class AppABTesting extends React.Component {
 
         processApiResult(AppApi.setABTestingRules(appName, values.cluster_name, rules), title)
           .then(data => {
-            self.refreshABTesting();
+            self.refreshABTesting(cluster);
           }).catch(e => {});
       }
     });
   }
 
-  refreshABTesting() {
+  refreshABTesting(cluster) {
     const appName = this.getAppName();
-    const cluster = getNowCluster(this.props);
     const {dispatch} = this.props;
     dispatch(AppActions.getABTestingRules(appName, cluster));
   }
@@ -82,7 +98,7 @@ class AppABTesting extends React.Component {
     const { getFieldDecorator } = this.props.form;
 
     const appName = this.getAppName();
-    const cluster = getArg('cluster');
+    const cluster = getNowCluster(this.props);
     let clusterNameList = getClusterNameList(this.props);
     const formItemLayout = {
       labelCol: {
@@ -130,7 +146,7 @@ class AppABTesting extends React.Component {
                   {getFieldDecorator('cluster_name', {
                       initialValue: cluster
                   })(
-                      <Select style={{width: 120}} onChange={this.handleChangeCluster.bind(this)}>
+                      <Select style={{width: 120}} onChange={this.chagneCluster}>
                            { clusterNameList.map(name => <Select.Option key={name}>{name}</Select.Option>) }
                       </Select>
                   )}

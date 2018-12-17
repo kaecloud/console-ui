@@ -1,3 +1,6 @@
+/*eslint-disable no-script-url*/
+/*eslint-disable jsx-a11y/anchor-is-valid*/
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 
@@ -10,12 +13,6 @@ import { Link } from 'react-router-dom';
 
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/styles/hljs';
-
-import brace from 'brace';
-import AceEditor from 'react-ace';
-
-import 'brace/mode/json';
-import 'brace/theme/xcode';
 
 import AceEditorModal from '../components/AceEditorModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
@@ -50,7 +47,6 @@ class AppDetail extends React.Component {
 
     this.alreadyInitialized = false;
     this.state = this.getInitialState();
-    this.showAceEditorModal = this.showAceEditorModal.bind(this);
   }
 
   componentWillMount() {
@@ -59,7 +55,6 @@ class AppDetail extends React.Component {
   refreshIfNedded() {
     let nowCluster = this.getNowCluster();
 
-    console.log(nowCluster);
     if (nowCluster) {
       if (this.alreadyInitialized === false ) {
         this.alreadyInitialized = true;
@@ -71,7 +66,6 @@ class AppDetail extends React.Component {
   refreshPage(nowCluster) {
     let appName = this.getAppName();
 
-    console.log("refresh page", appName, nowCluster)
     const {dispatch} = this.props;
 
     if (nowCluster) {
@@ -130,7 +124,7 @@ class AppDetail extends React.Component {
     });
   }
 
-  showAceEditorModal(config) {
+  showAceEditorModal = (config) => {
     if (! config.handler) {
       config.handler = function(specs, destroy) {
         destroy();
@@ -149,7 +143,7 @@ class AppDetail extends React.Component {
     ReactDOM.render(<AceEditorModal config={config} destroy={destroy} />, div);
   }
 
-  showAppDeployment() {
+  showAppDeployment = () => {
     let appName = this.getAppName();
 
     const request = getRequestFromProps(this.props, 'GET_APP_DEPLOYMENT_REQUEST');
@@ -194,6 +188,7 @@ class AppDetail extends React.Component {
       <div>
         <p>appName: {appName} </p>
         <p>命名空间：{namespace}</p>
+        <p>副本数量：{replicas}</p>
         <p>标签： {labels}</p>
         <p>注释： {annotations ? annotations : '无'}</p>
         <p>创建时间： {created}</p>
@@ -271,6 +266,7 @@ class AppDetail extends React.Component {
 
   // 部署
   showDeployModal(record, canary) {
+    console.log(this, record, canary);
     let self = this;
     let appName = self.getAppName(),
         nowCluster = self.getNowCluster(),
@@ -323,7 +319,7 @@ class AppDetail extends React.Component {
   }
 
   // 删除canary
-  handleDeleteCanary() {
+  handleDeleteCanary = () => {
     let self = this,
         appName = this.getAppName(),
         nowCluster = this.getNowCluster(),
@@ -343,7 +339,7 @@ class AppDetail extends React.Component {
     });
   }
 
-  showDeleteAppConfirmModal() {
+  showDeleteAppConfirmModal = () => {
     let self = this;
     let appName = this.getAppName();
     let title = "Delete App " + appName;
@@ -438,7 +434,7 @@ class AppDetail extends React.Component {
     });
   }
 
-  handleUndeploy() {
+  handleUndeploy = () => {
     let appName = this.getAppName(),
         clusterNameList = this.getClusterNameList(),
         nowCluster= this.getNowCluster();
@@ -476,7 +472,7 @@ class AppDetail extends React.Component {
   }
 
   // 更新
-  handleRenew() {
+  handleRenew = () => {
     let appName = this.getAppName(),
         title = `Renew App ${appName}`,
         nowCluster = this.getNowCluster(),
@@ -497,7 +493,7 @@ class AppDetail extends React.Component {
   }
 
   // 伸缩
-  handleScale() {
+  handleScale = () => {
     this.setState({scaleVisible: false});
     let {scaleNum} = this.state;
     let appName = this.getAppName(),
@@ -511,7 +507,7 @@ class AppDetail extends React.Component {
   }
 
   // 回滚
-  handleRollback() {
+  handleRollback = () => {
     this.setState({rollbackVisible: false});
     let {rollbackRevisionNum} = this.state;
     let appName = this.getAppName(),
@@ -619,15 +615,18 @@ class AppDetail extends React.Component {
   }
 
   renderPods() {
-    const { requests, isFetching, error } =
+    const { requests, error } =
           getPageRequests(this.props, [
             'APP_PODS_EVENT', 'APP_CANARY_PODS_EVENT'
           ]);
+      if (error !== '') {
+          console.error(error);
+      }
     let [podsReq, canaryPodsReq] = requests;
 
     let self = this,
         appName = this.getAppName(),
-        nowCluster = this.getNowCluster(),
+        nowCluster = getNowCluster(this.props),
         podTableData = podsReq.data? podsReq.data: [],
         canaryPodTableData = canaryPodsReq.data? canaryPodsReq.data: [],
         hasCanary = canaryPodTableData.length > 0;
@@ -678,11 +677,11 @@ class AppDetail extends React.Component {
               {/*
               <Link to={`/apps/${appName}/pod/${record.name}/log?cluster=${nowCluster}`}>log</Link>
                */}
-              <a href onClick={self.showAppPodLog.bind(self, record)}>log</a>
+              <a href="javascript:;" onClick={self.showAppPodLog.bind(self, record)}>log</a>
               <Divider type="vertical" />
-              <a href onClick={self.showAppPodStatus.bind(self, record)}>status</a>
+              <a href="javascript:;" onClick={self.showAppPodStatus.bind(self, record)}>status</a>
               <Divider type="vertical" />
-              <Link to={`/apps/${appName}/entry?cluster=${nowCluster}&pod=${record.name}`}>enter</Link>
+              <Link to={`/apps/${appName}/cluster/${nowCluster}/pod/${record.name}/entry`}>enter</Link>
               </span>
           );
         }
@@ -719,19 +718,20 @@ class AppDetail extends React.Component {
   };
 
   render() {
-    const { requests, isFetching, error } =
+    const { requests, error} =
           getPageRequests(this.props, [
-            'GET_APP_DEPLOYMENT_REQUEST',
-            'GET_APP_RELEASES_REQUEST', 'LIST_APP_YAML_REQUEST',
+            'GET_APP_DEPLOYMENT_REQUEST', 'GET_APP_RELEASES_REQUEST',
             'APP_PODS_EVENT', 'APP_CANARY_PODS_EVENT'
           ]);
-    let [dpReq, releasesReq, yamlReq, podsReq, canaryPodsReq] = requests;
+    if (error !== '') {
+      console.error(error);
+    }
+    let [dpReq, releasesReq, podsReq, canaryPodsReq] = requests;
 
     let self = this,
         appName = this.getAppName(),
         dp = dpReq.data,
         releaseTableData = releasesReq.data? releasesReq.data: [],
-        yamlList = yamlReq.data? yamlReq.data: [],
         podsData = podsReq.data? podsReq.data: [],
         canaryPodsData = canaryPodsReq.data? canaryPodsReq.data: [],
         hasCanary = canaryPodsData.length > 0,
@@ -805,16 +805,15 @@ class AppDetail extends React.Component {
               {
                 record.build_status ? '' : (
                     <Menu.Item key="0">
-                    <div onClick={() => {
-                      self.handleBuild.bind(self)(record.tag)}}>Build</div>
+                    <div onClick={self.handleBuild.bind(self, record.tag)}>Build</div>
                     </Menu.Item>
                 )
               }
               <Menu.Item key="1">
-              <div onClick={() => { self.showDeployModal.bind(self)(record, false); }}>Deploy</div>
+              <div onClick={self.showDeployModal.bind(self, record, false)}>Deploy</div>
               </Menu.Item>
               <Menu.Item key="2">
-              <div onClick={() => { self.showDeployModal.bind(self)(record, true); }}>Canary</div>
+              <div onClick={self.showDeployModal.bind(self, record, true)}>Canary</div>
               </Menu.Item>
                 <Menu.Divider />
                 <Menu.Item key="3">
@@ -837,7 +836,7 @@ class AppDetail extends React.Component {
 
                     return (
                         <Dropdown overlay={menu} trigger={['click']}>
-                            <a className="ant-dropdown-link" href="#">
+                            <a className="ant-dropdown-link" href="javascript:;">
                                 <div style={{width: '40px', textAlign: 'center'}}>
                                     <Icon type="ellipsis" className="btnIcon" />
                                 </div>
@@ -875,24 +874,24 @@ class AppDetail extends React.Component {
                             {hasCanary &&
                                 <span>
                                   <Divider type="vertical" />
-                                  <Button onClick={self.handleDeleteCanary.bind(self)}>DeleteCanary</Button>
+                                  <Button onClick={self.handleDeleteCanary}>DeleteCanary</Button>
               </span>
                             }
                         </div>
                           <p>
-                              <Button onClick={self.showAppDeployment.bind(self)}>Deployment</Button>
-                              <Button><Link to={`/apps/${appName}/configmap?cluster=${nowCluster}`}>ConfigMap</Link></Button>
-                              <Button><Link to={`/apps/${appName}/secret?cluster=${nowCluster}`}>Secret</Link></Button>
+                              <Button onClick={this.showAppDeployment}>Deployment</Button>
+                              <Button><Link to={`/apps/${appName}/configmap`}>ConfigMap</Link></Button>
+                              <Button><Link to={`/apps/${appName}/secret`}>Secret</Link></Button>
                           {hasCanary &&
-                           <Button><Link to={`/apps/${appName}/abtesting?cluster=${nowCluster}`}>ABTesting</Link></Button>
+                           <Button><Link to={`/apps/${appName}/abtesting`}>ABTesting</Link></Button>
                           }
                           </p>
-                          <Button type="primary"><Link to={`/apps/${appName}/audit_logs?cluster=${nowCluster}`}>审计日志</Link></Button>
-                          <Button onClick={self.handleRenew.bind(self)}>Renew</Button>
+                          <Button type="primary"><Link to={`/apps/${appName}/audit_logs`}>审计日志</Link></Button>
+                          <Button onClick={self.handleRenew}>Renew</Button>
                           <Button onClick={() => {self.setState({scaleVisible: true})}}>Scale</Button>
                           <Button onClick={() => {self.setState({rollbackVisible: true})}}>Rollback</Button>
-                          <Button type="danger" onClick={self.showDeleteAppConfirmModal.bind(self)}>Delete</Button>
-              <Button type="danger" onClick={self.handleUndeploy.bind(self)}>Undeploy</Button>
+                          <Button type="danger" onClick={self.showDeleteAppConfirmModal}>Delete</Button>
+              <Button type="danger" onClick={self.handleUndeploy}>Undeploy</Button>
                           </div>
                       </div>
               </Col>
@@ -940,7 +939,7 @@ class AppDetail extends React.Component {
                     <Modal
                         title={<div>Scale {appName} (cluster:<span style={{color:'red'}}>{nowCluster}</span>)</div>}
                         visible={this.state.scaleVisible}
-                        onOk={this.handleScale.bind(this)}
+                        onOk={this.handleScale}
                         onCancel={() => {this.setState({scaleVisible: false})}}
                     >
                         <p>cluster：<span style={{color:'red'}}>{nowCluster}</span></p>
@@ -951,7 +950,7 @@ class AppDetail extends React.Component {
                     <Modal
                         title={<div>Rollback {appName} (cluster:<span style={{color:'red'}}>{nowCluster}</span>)</div>}
                         visible={this.state.rollbackVisible}
-                        onOk={this.handleRollback.bind(this)}
+                        onOk={this.handleRollback}
                         onCancel={() => {this.setState({rollbackVisible: false})}}
                     >
                         <p>cluster：<span style={{color:'red'}}>{nowCluster}</span></p>
@@ -1002,9 +1001,9 @@ class AppDetail extends React.Component {
             render(text, record) {
               return (
                   <span>
-                  <a href onClick={self.showAppYamlAddModal.bind(self, record)}>Edit</a>
+                  <a href="javascript:;" onClick={self.showAppYamlAddModal.bind(self, record)}>Edit</a>
                   <Divider type="vertical" />
-                  <a href onClick={self.handleDeleteAppYaml.bind(self, record)}>Delete</a>
+                  <a href="javascript:;" onClick={self.handleDeleteAppYaml.bind(self, record)}>Delete</a>
                   </span>
               );
             }

@@ -11,7 +11,7 @@ import { docco } from 'react-syntax-highlighter/styles/hljs';
 import * as AppApi from '../models/apis/Apps';
 import * as AppActions from '../models/actions/Apps';
 import {getRequestFromProps } from '../models/Utils';
-import {getArg, setArg, processApiResult, getNowCluster, getClusterNameList} from './Utils';
+import {processApiResult, getNowCluster, getClusterNameList} from './Utils';
 
 const FormItem = Form.Item;
 const { TextArea } = Input;
@@ -21,19 +21,31 @@ class AppConfigMap extends React.Component {
 
   constructor() {
     super();
+    this.alreadyInitialized = false;
     this.state = {
       value: ""
     };
     this.handleSubmit = this.handleSubmit.bind(this);
   }
 
+  refreshIfNedded(nowCluster) {
+    if (nowCluster) {
+      if (this.alreadyInitialized === false ) {
+        this.alreadyInitialized = true;
+        this.refreshConfigMap(nowCluster);
+      }
+    }
+  }
   componentDidMount() {
-    this.refreshConfigMap();
+    let nowCluster = getNowCluster(this.props);
+    this.refreshIfNedded(nowCluster);
   }
 
   componentWillReceiveProps(nextProps) {
-    let cmReq = getRequestFromProps(nextProps, 'GET_APP_CONFIGMAP_REQUEST'),
-        cmData = {};
+    let nowCluster = getNowCluster(nextProps),
+      cmReq = getRequestFromProps(nextProps, 'GET_APP_CONFIGMAP_REQUEST'),
+      cmData = {};
+    this.refreshIfNedded(nowCluster);
     if (cmReq.statusCode === 200) {
       cmData = cmReq.data;
     }
@@ -44,15 +56,17 @@ class AppConfigMap extends React.Component {
   }
 
   handleChangeCluster(newCluster) {
-    setArg('cluster', newCluster);
+    const {dispatch} = this.props;
 
-    this.refreshConfigMap();
+    dispatch(AppActions.setCurrentCluster(newCluster));
+    this.refreshConfigMap(newCluster);
   }
 
   submitForm(cluster_name, replace, cm_data) {
     let self = this,
-        title = 'Create or Update ConfigMap',
-        appName = this.getAppName();
+      title = 'Create or Update ConfigMap',
+      nowCluster = getNowCluster(this.props),
+      appName = this.getAppName();
 
     let params = {
       replace: replace,
@@ -62,7 +76,7 @@ class AppConfigMap extends React.Component {
 
     processApiResult(AppApi.createConfigMap(appName, params), title)
       .then(data => {
-        self.refreshConfigMap();
+        self.refreshConfigMap(nowCluster);
       }).catch(e => {});
   }
 
@@ -83,9 +97,8 @@ class AppConfigMap extends React.Component {
     });
   }
 
-  refreshConfigMap() {
+  refreshConfigMap(cluster) {
     const appName = this.getAppName();
-    const cluster = getNowCluster(this.props);
     const {dispatch} = this.props;
     dispatch(AppActions.getConfigMap(appName, cluster));
   }
@@ -117,9 +130,9 @@ class AppConfigMap extends React.Component {
     const { getFieldDecorator } = this.props.form;
 
     const appName = this.getAppName();
-    const cluster = getArg('cluster');
+    const cluster = getNowCluster(this.props);
     let clusterNameList = getClusterNameList(this.props),
-        curVal = this.state.value? this.state.value: "";
+      curVal = this.state.value? this.state.value: "";
 
     return (
       <Content>
@@ -128,14 +141,14 @@ class AppConfigMap extends React.Component {
             <Link to={`/`}>Home</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>
-            <Link to={`/apps/${appName}/detail?cluster=${cluster}`}>App</Link>
+            <Link to={`/apps/${appName}/detail`}>App</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>Config</Breadcrumb.Item>
         </Breadcrumb>
         <Row gutter={5} justify="space-between" tyep="flex" style={{background: '#fff'}}>
           <Col span={12} style={{height: '100%'}}>
             <div style={{padding: '20px 10px', background: '#fff'}}>
-              <h2>{appName}的当前Config</h2>
+              <h2>{appName}在{cluster}集群的当前Config</h2>
               <div >
                 <SyntaxHighlighter language="json" style={docco}>
                   {curVal}
@@ -145,7 +158,7 @@ class AppConfigMap extends React.Component {
           </Col>
           <Col span={12} style={{background: '#fff'}}>
             <div style={{padding: '20px 10px'}}>
-              <h2>修改{appName}的Config</h2>
+              <h2>修改{appName}在{cluster}集群的Config</h2>
               <div >
                 <Form onSubmit={this.handleSubmit}>
                   <FormItem

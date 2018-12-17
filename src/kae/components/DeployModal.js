@@ -1,9 +1,6 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 
-import {Button, Modal, Row, Col, Select, Form, Input, InputNumber, Checkbox} from 'antd';
-
-import brace from 'brace';
+import {Button, Modal, Select, Form, Input, InputNumber} from 'antd';
 
 const FormItem = Form.Item;
 const Option = Select.Option;

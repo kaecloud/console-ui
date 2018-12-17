@@ -1,13 +1,11 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 
-import {Icon, Button, Modal, Row, Col, Form, Input,  notification } from 'antd';
-import { Link } from 'react-router-dom';
+import {Button, Modal, Row, Form, Input} from 'antd';
 
 import brace from 'brace';
 import AceEditor from 'react-ace';
 
-import 'brace/mode/json';
+import 'brace/mode/yaml';
 import 'brace/theme/xcode';
 
 const { TextArea } = Input;
