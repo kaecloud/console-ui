@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 
 import {
   Button, Modal, Form, Select, Input, InputNumber,
@@ -9,6 +10,11 @@ import AceEditor from 'react-ace';
 import 'brace/mode/json';
 import 'brace/theme/xcode';
 
+import {Provider, connect} from 'react-redux';
+import store from '../models/Store';
+import {processApiResult} from '../Utils';
+import * as JobActions from '../models/actions/Jobs';
+import * as JobApi from '../models/apis/Jobs';
 const { TextArea } = Input;
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -37,6 +43,15 @@ class CreateJobModal extends React.Component {
       config: this.props.config
     };
     this.handleSubmit = this.handleSubmit.bind(this);
+  }
+
+  handler(job) {
+    processApiResult(JobApi.create(job), 'Create Job')
+      .then(data => {
+        this.props.config.destroy();
+        const {dispatch} = this.props;
+        dispatch(JobActions.list());
+      }).catch(e => {});
   }
 
   onAceEditorChange(newValue) {
@@ -80,7 +95,7 @@ class CreateJobModal extends React.Component {
             specs_text: this.state.yamlValue
           };
         }
-        this.props.config.hander(job);
+        this.handler(job);
       }
     });
   }
@@ -237,6 +252,26 @@ class CreateJobModal extends React.Component {
       </Modal>
     );
   }
+}
+
+export function showCreateJobModal() {
+  let div = document.createElement('div');
+  document.body.appendChild(div);
+
+  function destroy(...args: any[]) {
+    const unmountResult = ReactDOM.unmountComponentAtNode(div);
+    if (unmountResult && div.parentNode) {
+      div.parentNode.removeChild(div);
+    }
+  }
+  let config = {
+    isForm: true,
+    destroy: destroy,
+  };
+
+  let WrapperModal = Form.create()(CreateJobModal);
+  let MyModal = connect((state) => state.apiCalls)(WrapperModal);
+  ReactDOM.render(<Provider store={store}><MyModal config={config} /></Provider>, div);
 }
 
 export default Form.create()(CreateJobModal);

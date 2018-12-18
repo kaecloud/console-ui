@@ -11,7 +11,7 @@ import { docco } from 'react-syntax-highlighter/styles/hljs';
 import * as AppApi from '../models/apis/Apps';
 import * as AppActions from '../models/actions/Apps';
 import {getRequestFromProps } from '../models/Utils';
-import {processApiResult, getNowCluster, getClusterNameList} from './Utils';
+import {processApiResult, getNowCluster, getClusterNameList} from '../Utils';
 
 const FormItem = Form.Item;
 const { TextArea } = Input;

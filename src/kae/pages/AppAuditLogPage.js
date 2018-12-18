@@ -1,10 +1,9 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
-import { Collapse, Table, Layout, Breadcrumb } from 'antd';
+import { Table, Layout, Breadcrumb } from 'antd';
 import * as AppActions from '../models/actions/Apps';
 import { getRequestFromProps } from '../models/Utils';
 
-const Panel = Collapse.Panel;
 const {Content} = Layout;
 
 const columns = [
@@ -83,17 +82,14 @@ class AppAuditLog extends React.Component {
           <Breadcrumb.Item>AuditLog</Breadcrumb.Item>
         </Breadcrumb>
 
-        <div className="logStyle">
-          <Collapse bordered={false} defaultActiveKey={['1']}>
-            <Panel header={<h2>Operation Log</h2>} key="1">
+        <div className="mainContent">
+          <h2>Operation Log</h2>
               <Table
                 columns={columns}
                 dataSource={data}
                 rowKey="id"
                 size='small'
               />
-            </Panel>
-          </Collapse>
         </div>
 </Content>
         );

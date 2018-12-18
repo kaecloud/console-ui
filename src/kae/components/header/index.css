@@ -1,22 +1,13 @@
-.headerStyle {
+.ant-layout-header {
     position: fixed;
     z-index: 1003;
     width: 100%;
-    height: 50px;
-    background: #f7f7f9;
-    margin-bottom: 20px;
-    box-shadow: 0 1px 3px 0 rgba(0,0,0,.2), 0 1px 1px 0 rgba(0,0,0,.14), 0 2px 1px -1px rgba(0,0,0,.12);
+    height: 48px;
+    line-height: 48px !important;
+    background: rgb(255, 255, 255) !important;
 }
 
-.headerStyle .container {
-    width: 98%;
-    height: 50px;
-    margin: 0 auto;
-}
-
-.headerStyle .container .logo {
-    float: left;
-    margin-top: 10px;
+.ant-layout-header .logo {
     width: 100px;
     height: 30px;
     text-align: left;
@@ -25,55 +16,14 @@
     font-family: "PingFang SC";
 }
 
-.headerStyle .container .logo a {
+.ant-layout-header .logo a {
     line-height: 30px;
     color: #000;
     text-decoration: none;
     text-shadow: 1px 2px 7px rgba(255, 255, 255, 0.6);
 }
 
-.headerStyle .container .menuList {
-    float: left;
-    height: 50px;
-    text-align: left;
-    font-weight: bold;
-    font-size: 18px;
-    font-family: "PingFang SC";
-}
-
-.headerStyle .container .menuList div {
-    float: left;
-    height: 100%;
-    padding: 12px 15px;
-    margin: 0 10px;
-}
-
-.headerStyle .container .menuList div a {
-    color: #777;
-    text-decoration: none;
-}
-
-.headerStyle .container .menuList div a:hover {
-    color: #fff;
-    text-shadow: 1px 2px 3px rgba(0, 0, 0, .8);
-}
-
-.on{
-    background: #e7e7e7;
-    box-shadow: inset 0px -4px 0px rgba(0,0,0,0.14);
-}
-
-.on a {
-    color: #fff !important;
-    text-shadow: 1px 2px 3px rgba(0, 0, 0, .8);
-}
-
-.headerStyle .container .login {
-    float: right;
-    height: 50px;
-    line-height: 50px;
-    color: #777;
-    cursor: pointer;
-    text-align: center;
-    font-size: 16px;
+.ant-layout-header .user {
+  float: left;
+  margin-left: 20px;
 }

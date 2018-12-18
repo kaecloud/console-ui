@@ -1,6 +1,6 @@
 import {notification} from 'antd';
 
-import {getRequestFromProps} from '../models/Utils';
+import {getRequestFromProps} from './models/Utils';
 
 export function getArg(name) {
   var i = new RegExp(name + "=([^&]+)","i")

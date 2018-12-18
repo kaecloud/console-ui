@@ -1,13 +1,6 @@
-import Fetch from './Fetch';
-import {baseUrl, baseApiUrl} from '../../config';
+import { Fetch, apiCallback } from './Fetch';
+import {baseApiUrl} from '../../config';
 
-function apiCallback(statusCode, data, defaultErrMsg) {
-  if (statusCode === 200 && data) {
-    return Fetch.wrap(statusCode, data);
-  }
-  const rej = Fetch.wrap(statusCode, data.msg || defaultErrMsg);
-  return Promise.reject(rej);
-}
 // 获取app列表
 export function list() {
   return Fetch.get(`${baseApiUrl}/app`)
@@ -259,15 +252,6 @@ export function listCluster() {
   return Fetch.get(`${baseApiUrl}/cluster`)
     .then(({statusCode, data}) => {
       const errMsg = `can't get cluster list, statusCode：${statusCode}`;
-      return apiCallback(statusCode, data, errMsg);
-    });
-}
-
-// get current user
-export function getCurrentUser() {
-  return Fetch.get(`${baseUrl}/user/me`)
-    .then(({statusCode, data}) => {
-      const errMsg = `can't get current user, statusCode：${statusCode}`;
       return apiCallback(statusCode, data, errMsg);
     });
 }

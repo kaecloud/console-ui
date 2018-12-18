@@ -7,7 +7,7 @@ import {
 import {Provider, connect} from 'react-redux';
 import store from '../models/Store';
 import * as AppApi from '../models/apis/Apps';
-import {processApiResult} from '../pages/Utils';
+import {processApiResult} from '../Utils';
 import * as AppActions from '../models/actions/Apps';
 
 const { TextArea } = Input;
@@ -26,10 +26,6 @@ const formItemLayout = {
 };
 
 class RegisterAppModal extends React.Component {
-  componentDidMount() {
-    const {dispatch} = this.props;
-    dispatch(AppActions.list());
-  }
   handleSubmit = (e) => {
     e.preventDefault();
 

@@ -2,18 +2,16 @@
 /*eslint-disable jsx-a11y/anchor-is-valid*/
 
 import React from 'react';
-import ReactDOM from 'react-dom';
-import {Icon, Divider, Collapse, Table, Button, Modal, Select, Form, notification } from 'antd';
+import {Icon, Divider, Table, Button, Modal, Select, Form, notification } from 'antd';
 
 import * as AppActions from '../models/actions/Apps';
 import * as JobActions from '../models/actions/Jobs';
 import * as JobApi from '../models/apis/Jobs';
 import { getPageRequests } from '../models/Utils';
-import {getNowCluster, getClusterNameList, processApiResult} from './Utils';
-import CreateJobModal from '../components/CreateJobModal';
+import {getNowCluster, getClusterNameList, processApiResult} from '../Utils';
+import {showCreateJobModal} from '../components/CreateJobModal';
 import {baseWsUrl} from '../config';
 
-const Panel = Collapse.Panel;
 const Option = Select.Option;
 
 class JobList extends React.Component {
@@ -128,34 +126,6 @@ class JobList extends React.Component {
     dispatch(JobActions.list());
   }
 
-  showCreateJobModal() {
-    let self = this;
-
-    let div = document.createElement('div');
-    document.body.appendChild(div);
-
-    function destroy(...args: any[]) {
-      const unmountResult = ReactDOM.unmountComponentAtNode(div);
-      if (unmountResult && div.parentNode) {
-        div.parentNode.removeChild(div);
-      }
-    }
-    function handler(job) {
-      processApiResult(JobApi.create(job), 'Create Job')
-        .then(data => {
-          destroy();
-          self.refreshList();
-        }).catch(e => {});
-    }
-    let config = {
-      isForm: true,
-      destroy: destroy,
-      hander: handler
-    };
-
-    ReactDOM.render(<CreateJobModal config={config} />, div);
-  }
-
   render() {
     let self = this,
         jobList = this.getJobList(),
@@ -226,10 +196,9 @@ class JobList extends React.Component {
       }
     ];
     return (
-        <div className="jobList">
-            <Collapse bordered={false} defaultActiveKey={['1']}>
-                <Panel header={<h2>job列表</h2>} key="1">
-        <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}} onClick={this.showCreateJobModal.bind(this)}>Create Job</Button>
+        <div class="jobList mainContent">
+        <h2>job列表</h2>
+        <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}} onClick={showCreateJobModal}>Create Job</Button>
                     <Icon type="reload" className="reload" onClick={this.refreshList.bind(this)}/>
 
                     <Divider type="vertical" />
@@ -244,8 +213,6 @@ class JobList extends React.Component {
                         rowKey="name"
                     />
 
-                </Panel>
-            </Collapse>
             <Modal
                 title="logger"
                 visible={this.state.logVisible}

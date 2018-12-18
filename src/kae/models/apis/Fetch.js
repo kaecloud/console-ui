@@ -3,7 +3,7 @@ import axios from 'axios';
 // axios请求带上cookie
 axios.defaults.withCredentials = true;
 
-const Fetch = {
+export const Fetch = {
 
   wrap(statusCode, data, flash='') {
     return { statusCode, data, flash };
@@ -97,4 +97,10 @@ const Fetch = {
   },
 };
 
-export default Fetch;
+export function apiCallback(statusCode, data, defaultErrMsg) {
+  if (statusCode === 200 && data) {
+    return Fetch.wrap(statusCode, data);
+  }
+  const rej = Fetch.wrap(statusCode, data.msg || defaultErrMsg);
+  return Promise.reject(rej);
+}

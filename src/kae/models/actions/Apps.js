@@ -1,4 +1,5 @@
 import * as AppApi from '../apis/Apps';
+import * as UserApi from '../apis/User';
 
 export function resetApiFlash(apiType) {
   return {
@@ -258,7 +259,7 @@ export function getCurrentUser() {
     type: 'GET_CURRENT_USER_REQUEST',
     async: true,
     shouldCallApi: (state) => true,
-    callApi: () => AppApi.getCurrentUser(),
+    callApi: () => UserApi.getCurrentUser(),
     payload: {}
   };
 }

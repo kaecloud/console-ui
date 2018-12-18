@@ -4,6 +4,10 @@ body {
     background: #eee;
 }
 
+.mainContent {
+  background: #fff;
+  padding: 20px;
+}
 .col-ellipsis{
     overflow : hidden;
     text-overflow: ellipsis;

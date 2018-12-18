@@ -2,6 +2,7 @@ import React from 'react';
 
 import {Button, Modal, Row, Form, Input} from 'antd';
 
+// eslint-disable-next-line
 import brace from 'brace';
 import AceEditor from 'react-ace';
 

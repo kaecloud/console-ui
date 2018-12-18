@@ -24,7 +24,7 @@ import * as AppApi from '../models/apis/Apps';
 import {getPageRequests, getRequestFromProps} from '../models/Utils';
 import * as AppActions from '../models/actions/Apps';
 import AppPodsWatcher from '../models/AppDetailPageWs';
-import {setArg, processApiResult, getNowCluster, getClusterNameList} from './Utils';
+import {setArg, processApiResult, getNowCluster, getClusterNameList} from '../Utils';
 import {baseWsUrl} from '../config';
 
 const Panel = Collapse.Panel;

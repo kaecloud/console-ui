@@ -1,13 +1,6 @@
 import {baseApiUrl} from '../../config';
-import Fetch from './Fetch';
+import { Fetch, apiCallback } from './Fetch';
 
-function apiCallback(statusCode, data, defaultErrMsg) {
-  if (statusCode === 200 && data) {
-    return Fetch.wrap(statusCode, data);
-  }
-  const rej = Fetch.wrap(statusCode, data.msg || defaultErrMsg);
-  return Promise.reject(rej);
-}
 // 获取job列表
 export function list() {
   return Fetch.get(`${baseApiUrl}/job`)
