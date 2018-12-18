@@ -52,8 +52,8 @@ class AppDetail extends React.Component {
   componentWillMount() {
   }
 
-  refreshIfNedded() {
-    let nowCluster = this.getNowCluster();
+  refreshIfNeeded(props) {
+    let nowCluster = getNowCluster(props);
 
     if (nowCluster) {
       if (this.alreadyInitialized === false ) {
@@ -77,7 +77,7 @@ class AppDetail extends React.Component {
   }
 
   componentDidMount() {
-    this.refreshIfNedded();
+    this.refreshIfNeeded(this.props);
   }
 
   componentWillUnmount() {
@@ -85,7 +85,7 @@ class AppDetail extends React.Component {
   }
 
   componentWillReceiveProps(nextProps) {
-    this.refreshIfNedded();
+    this.refreshIfNeeded(nextProps);
   }
 
   getInitialState() {
