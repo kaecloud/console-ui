@@ -266,7 +266,6 @@ class AppDetail extends React.Component {
 
   // 部署
   showDeployModal(record, canary) {
-    console.log(this, record, canary);
     let self = this;
     let appName = self.getAppName(),
         nowCluster = self.getNowCluster(),
@@ -615,13 +614,10 @@ class AppDetail extends React.Component {
   }
 
   renderPods() {
-    const { requests, error } =
+    const { requests } =
           getPageRequests(this.props, [
             'APP_PODS_EVENT', 'APP_CANARY_PODS_EVENT'
           ]);
-      if (error !== '') {
-          console.error(error);
-      }
     let [podsReq, canaryPodsReq] = requests;
 
     let self = this,
@@ -718,14 +714,12 @@ class AppDetail extends React.Component {
   };
 
   render() {
-    const { requests, error} =
+    const { requests } =
           getPageRequests(this.props, [
             'GET_APP_DEPLOYMENT_REQUEST', 'GET_APP_RELEASES_REQUEST',
             'APP_PODS_EVENT', 'APP_CANARY_PODS_EVENT'
           ]);
-    if (error !== '') {
-      console.error(error);
-    }
+
     let [dpReq, releasesReq, podsReq, canaryPodsReq] = requests;
 
     let self = this,
