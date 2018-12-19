@@ -49,9 +49,8 @@ class AppConfigMap extends React.Component {
     if (cmReq.statusCode === 200) {
       cmData = cmReq.data;
     }
-    let cmDataStr = JSON.stringify(cmData, undefined, 2);
     this.setState({
-      value: cmDataStr
+      value: cmData
     });
   }
 
@@ -132,7 +131,15 @@ class AppConfigMap extends React.Component {
     const appName = this.getAppName();
     const cluster = getNowCluster(this.props);
     let clusterNameList = getClusterNameList(this.props),
-      curVal = this.state.value? this.state.value: "";
+      cmJsxContent = [],
+      cmData = this.state.value;
+    console.log(cmData)
+    Object.entries(cmData).forEach(([key, value]) => {
+      cmJsxContent.push(<div><h3>{key}</h3> <SyntaxHighlighter  style={docco}>
+        {value}
+      </SyntaxHighlighter>
+      </div>)
+    })
 
     return (
       <Content>
@@ -150,9 +157,7 @@ class AppConfigMap extends React.Component {
             <div style={{padding: '20px 10px', background: '#fff'}}>
               <h2>{appName}在{cluster}集群的当前Config</h2>
               <div >
-                <SyntaxHighlighter language="json" style={docco}>
-                  {curVal}
-                </SyntaxHighlighter>
+                {cmJsxContent}
               </div>
             </div>
           </Col>
