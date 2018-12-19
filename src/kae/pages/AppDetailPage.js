@@ -218,12 +218,6 @@ class AppDetail extends React.Component {
         ws.onopen = function(evt) {
           ws.send(`{"tag": "${tag}"}`);
         };
-        ws.onclose = function(evt) {
-          // update release data
-          dispatch(AppActions.getReleases(appName));
-          console.log("Build finished");
-        };
-
         let infoModal = {
           isHtml: true,
           visible: true,
@@ -259,6 +253,19 @@ class AppDetail extends React.Component {
           infoModal.text = text;
           self.setState({infoModal: infoModal});
         };
+
+        ws.onclose = function(evt) {
+          // update release data
+          dispatch(AppActions.getReleases(appName));
+          if (phase.toLowerCase() !== "finished") {
+            text += `<p style="color:red;">Build terminate prematurely </p>`;
+          } else {
+            text += `<p>Build finished successfully</p>`;
+          }
+          infoModal.text = text;
+          self.setState({infoModal: infoModal});
+        };
+
       },
       onCancel() {}
     });

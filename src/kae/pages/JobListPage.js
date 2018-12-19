@@ -196,7 +196,7 @@ class JobList extends React.Component {
       }
     ];
     return (
-        <div class="jobList mainContent">
+        <div className="jobList mainContent">
         <h2>job列表</h2>
         <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}} onClick={showCreateJobModal}>Create Job</Button>
                     <Icon type="reload" className="reload" onClick={this.refreshList.bind(this)}/>
