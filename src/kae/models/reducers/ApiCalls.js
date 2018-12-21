@@ -141,6 +141,7 @@ function genHandlers() {
     });
   };
 
+  // in order to set CURRENT_CLUSTER, so we override the default reducer
   handlers[`LIST_CLUSTER_REQUEST_COMPLETED`] = (state, action) => {
     const newRequest = _.assign({}, getInitRequest(action), {
       isFetching: false,

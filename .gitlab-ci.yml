@@ -14,7 +14,7 @@ build:
   #   - pip install git+https://github.com/kaecloud/cli.git
   script:
     # Compile and name the binary as `hello`
-    # - kae version
+    - kae version
     - kae app:register --force
     - kae app:build
   only:
