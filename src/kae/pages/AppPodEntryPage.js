@@ -72,14 +72,20 @@ class AppPodEntry extends React.Component {
     if (! activeContaner) {
       activeContaner = containers.length > 0? containers[0]: null;
     }
+    if (! activeContaner) {
+      return;
+    }
     this.setState({
       containers: containers,
       activeContaner: activeContaner
     });
-    this.handleReplay(activeContaner);
+    if (this.alreadyInitialized === false) {
+      this.alreadyInitialized = true;
+      this.createTermAndWs(activeContaner);
+    }
   }
 
-  handleReplay(container) {
+  createTermAndWs(container) {
     let appName = this.props.match.params.appName,
         cluster = this.getCluster(),
         podName = this.getPodName();
@@ -125,14 +131,14 @@ class AppPodEntry extends React.Component {
 
   handleReconnect = () => {
     let { activeContaner } = this.state;
-    this.handleReplay(activeContaner);
+    this.createTermAndWs(activeContaner);
   }
 
   handleChangeContainer = (newContainer) => {
     this.setState({
       activeContaner: newContainer
     });
-    this.handleReplay(newContainer);
+    this.createTermAndWs(newContainer);
   }
 
   render() {
