@@ -190,7 +190,10 @@ const AppPodsWatcher = {
   // Websocket
   webSocketEvent(socket, canary) {
     socket.addEventListener('message', function (event) {
-
+      // ignore heartbeart message
+      if (event.data === "PONG") {
+        return;
+      }
       if (canary) {
         store.dispatch(AppActions.canaryPods(event));
       } else {

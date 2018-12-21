@@ -229,6 +229,10 @@ class AppDetail extends React.Component {
         let text = "";
         let phase = null;
         ws.onmessage = function(evt) {
+          // ignore heartbeart message
+          if (evt.data === "PONG") {
+            return;
+          }
           let data = JSON.parse(evt.data);
           if (! data.success) {
             text += `<p key=${data.error}>${data.error}</p>`;
