@@ -135,7 +135,7 @@ class AppSecret extends React.Component {
             <Link to={`/`}>Home</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>
-            <Link to={`/apps/${appName}/detail`}>App</Link>
+            <Link to={`/apps/${appName}/detail?cluster=${cluster}`}>App</Link>
           </Breadcrumb.Item>
             <Breadcrumb.Item>Secret</Breadcrumb.Item>
         </Breadcrumb>

@@ -142,7 +142,8 @@ class AppPodEntry extends React.Component {
   }
 
   render() {
-    let appName = this.getAppName();
+    let appName = this.getAppName(),
+      cluster = this.getCluster();
 
     let {containers, activeContaner} = this.state;
     if (!containers) {
@@ -156,7 +157,7 @@ class AppPodEntry extends React.Component {
             <Link to={`/`}>Home</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>
-            <Link to={`/apps/${appName}/detail`}>App</Link>
+            <Link to={`/apps/${appName}/detail?cluster=${cluster}`}>App</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>Entry</Breadcrumb.Item>
         </Breadcrumb>

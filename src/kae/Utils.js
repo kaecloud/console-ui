@@ -61,8 +61,12 @@ export function processApiResult(promise, action) {
 }
 
 export function getNowCluster(props) {
+  let nowCluster = getArg('cluster');
+  if (nowCluster) {
+    return nowCluster;
+  }
   const request = getRequestFromProps(props, 'CURRENT_CLUSTER');
-  let nowCluster = request.data;
+  nowCluster = request.data;
   // let nowCluster = getArg("cluster");
   // if(!nowCluster) {
   //   let clusterNameList = getClusterNameList(props);

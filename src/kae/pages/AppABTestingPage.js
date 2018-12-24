@@ -9,7 +9,7 @@ import AceEditor from 'react-ace';
 import * as AppApi from '../models/apis/Apps';
 import * as AppActions from '../models/actions/Apps';
 import {getRequestFromProps } from '../models/Utils';
-import {processApiResult, getNowCluster, getClusterNameList} from '../Utils';
+import {processApiResult, getNowCluster, getClusterNameList, setArg} from '../Utils';
 
 const FormItem = Form.Item;
 const {Content} = Layout;
@@ -56,8 +56,9 @@ class AppABTesting extends React.Component {
     });
   }
 
-  chagneCluster = (newCluster) => {
+  changeCluster = (newCluster) => {
 
+    setArg('cluster', newCluster);
     const {dispatch} = this.props;
 
     dispatch(AppActions.setCurrentCluster(newCluster));
@@ -146,7 +147,7 @@ class AppABTesting extends React.Component {
                   {getFieldDecorator('cluster_name', {
                       initialValue: cluster
                   })(
-                      <Select style={{width: 120}} onChange={this.chagneCluster}>
+                      <Select style={{width: 120}} onChange={this.changeCluster}>
                            { clusterNameList.map(name => <Select.Option key={name}>{name}</Select.Option>) }
                       </Select>
                   )}

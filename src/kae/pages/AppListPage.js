@@ -3,6 +3,7 @@ import { withRouter } from 'react-router-dom';
 import { Table, Input, Button, Icon } from 'antd';
 
 import { getRequestFromProps } from '../models/Utils';
+import {getNowCluster} from '../Utils';
 import * as AppActions from '../models/actions/Apps';
 
 class AppList extends React.Component {
@@ -36,6 +37,8 @@ class AppList extends React.Component {
   }
 
   render() {
+    let nowCluster = getNowCluster(this.props);
+
     const columns = [
       {
         title: 'name',
@@ -113,7 +116,7 @@ class AppList extends React.Component {
           onRow={(record) => {
             return {
               onClick: () => {
-                this.props.history.push(`/apps/${record.name}/detail`);
+                this.props.history.push(`/apps/${record.name}/detail?cluster=${nowCluster}`);
               }
             };
           }}

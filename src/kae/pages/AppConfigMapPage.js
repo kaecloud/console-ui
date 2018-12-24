@@ -11,7 +11,7 @@ import { docco } from 'react-syntax-highlighter/styles/hljs';
 import * as AppApi from '../models/apis/Apps';
 import * as AppActions from '../models/actions/Apps';
 import {getRequestFromProps } from '../models/Utils';
-import {processApiResult, getNowCluster, getClusterNameList} from '../Utils';
+import {processApiResult, getNowCluster, getClusterNameList, setArg} from '../Utils';
 
 const FormItem = Form.Item;
 const { TextArea } = Input;
@@ -56,6 +56,7 @@ class AppConfigMap extends React.Component {
 
   handleChangeCluster(newCluster) {
     const {dispatch} = this.props;
+    setArg('cluster', newCluster);
 
     dispatch(AppActions.setCurrentCluster(newCluster));
     this.refreshConfigMap(newCluster);
@@ -135,7 +136,7 @@ class AppConfigMap extends React.Component {
       cmData = this.state.value;
     console.log(cmData)
     Object.entries(cmData).forEach(([key, value]) => {
-      cmJsxContent.push(<div><h3>{key}</h3> <SyntaxHighlighter  style={docco}>
+      cmJsxContent.push(<div key={key}><h3>{key}</h3> <SyntaxHighlighter  style={docco}>
         {value}
       </SyntaxHighlighter>
       </div>)
@@ -148,7 +149,7 @@ class AppConfigMap extends React.Component {
             <Link to={`/`}>Home</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>
-            <Link to={`/apps/${appName}/detail`}>App</Link>
+            <Link to={`/apps/${appName}/detail?cluster=${cluster}`}>App</Link>
           </Breadcrumb.Item>
           <Breadcrumb.Item>Config</Breadcrumb.Item>
         </Breadcrumb>

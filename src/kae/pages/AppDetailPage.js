@@ -885,10 +885,10 @@ class AppDetail extends React.Component {
                         </div>
                           <p>
                               <Button onClick={this.showAppDeployment}>Deployment</Button>
-                              <Button><Link to={`/apps/${appName}/configmap`}>ConfigMap</Link></Button>
-                              <Button><Link to={`/apps/${appName}/secret`}>Secret</Link></Button>
+                              <Button><Link to={`/apps/${appName}/configmap?cluster=${nowCluster}`}>ConfigMap</Link></Button>
+                              <Button><Link to={`/apps/${appName}/secret?cluster=${nowCluster}`}>Secret</Link></Button>
                           {hasCanary &&
-                           <Button><Link to={`/apps/${appName}/abtesting`}>ABTesting</Link></Button>
+                           <Button><Link to={`/apps/${appName}/abtesting?cluster=${nowCluster}`}>ABTesting</Link></Button>
                           }
                           </p>
                           <Button type="primary"><Link to={`/apps/${appName}/audit_logs`}>审计日志</Link></Button>
