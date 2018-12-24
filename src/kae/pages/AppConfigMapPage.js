@@ -134,7 +134,6 @@ class AppConfigMap extends React.Component {
     let clusterNameList = getClusterNameList(this.props),
       cmJsxContent = [],
       cmData = this.state.value;
-    console.log(cmData)
     Object.entries(cmData).forEach(([key, value]) => {
       cmJsxContent.push(<div key={key}><h3>{key}</h3> <SyntaxHighlighter  style={docco}>
         {value}

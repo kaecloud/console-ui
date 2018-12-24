@@ -110,7 +110,6 @@ function genHandlers() {
     let {payload} = action;
     let oldData = _.assign({}, state['APP_PODS_EVENT']);
     let oldPods = oldData.data? oldData.data: [];
-    // console.log(state, oldData, event);
     let newData = AppPodsWatcher.mergeEvent(oldPods, payload);
 
     const newRequest = _.assign({}, getInitRequest(action), {

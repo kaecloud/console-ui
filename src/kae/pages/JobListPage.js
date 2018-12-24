@@ -45,7 +45,6 @@ class JobList extends React.Component {
   handleShowMessage(name) {
     let self = this;
     let showMsg = [];
-    // console.log(name);
     this.setState({logVisible: true});
 
     const ws = new WebSocket(`${baseWsUrl}/api/v1/ws/job/${name}/log/events`);

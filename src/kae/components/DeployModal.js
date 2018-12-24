@@ -46,7 +46,6 @@ class DeployModal extends React.Component {
             if (values.replicas > 0) {
                 data.replicas = values.replicas
             }
-            console.log(values, data)
             this.state.config.handler(data)
         }
     })
