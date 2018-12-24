@@ -798,7 +798,11 @@ class AppDetail extends React.Component {
         dataIndex: 'build_status',
         width: '10%',
         render(build_status) {
-          return build_status.toString()
+          if (build_status) {
+            return <span style={{color: '#52c41a'}}>true</span>;
+          } else {
+            return <span style={{color: 'red'}}>false</span>;
+          }
         }
       }, {
         title: 'Action',
