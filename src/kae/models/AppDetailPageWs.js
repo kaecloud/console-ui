@@ -155,6 +155,9 @@ const AppPodsWatcher = {
 
   mergeEvent(oldData, event) {
     let tmp = JSON.parse(event.data);
+    if (tmp.error) {
+      console.log(tmp.error);
+    }
     let action = tmp.action;
     if (! tmp.object) {
       return oldData;
