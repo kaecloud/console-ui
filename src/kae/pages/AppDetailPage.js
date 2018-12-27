@@ -530,6 +530,40 @@ class AppDetail extends React.Component {
       }).catch(e => {});
   }
 
+  stopContainer(record) {
+    let appName = this.getAppName(),
+        nowCluster= this.getNowCluster(),
+        podName = record.name,
+        containers = record.container_names,
+        selectedContainer = record.container_names[0];
+
+    function handler(destroy) {
+      processApiResult(AppApi.stopContainer(appName, podName, nowCluster, selectedContainer), "stop container")
+        .then(data => {
+          destroy();
+        }).catch(e => {});
+    }
+
+    // only show select modal when there exist multiple containers
+    if (containers.length === 1) {
+      handler(()=>{});
+    } else {
+      let config = {
+        title: "select container",
+        children: (
+            <div>
+            container: <Select defaultValue={containers[0]} style={{ width: 100}}
+          onChange={v => {selectedContainer=v;}}>
+            { containers.map(name => <Option key={name}>{name}</Option>) }
+          </Select>
+            </div>
+        ),
+        handler: handler
+      };
+      showDynamicModal(config);
+    }
+  }
+
   showAppPodLog(record) {
     let appName = this.getAppName(),
         nowCluster= this.getNowCluster(),
@@ -642,7 +676,7 @@ class AppDetail extends React.Component {
       {
         title: 'NAME',
         dataIndex: 'name',
-        width: '25%'
+        width: '20%'
       },
       {
         title: 'READY',
@@ -677,7 +711,7 @@ class AppDetail extends React.Component {
       {
         title: 'ACTION',
         dataIndex: 'action',
-        width: '15%',
+        width: '20%',
         render(text, record) {
           return (
               <span>
@@ -687,6 +721,8 @@ class AppDetail extends React.Component {
               <a href="javascript:;" onClick={self.showAppPodLog.bind(self, record)}>log</a>
               <Divider type="vertical" />
               <a href="javascript:;" onClick={self.showAppPodStatus.bind(self, record)}>status</a>
+              <Divider type="vertical" />
+              <a href="javascript:;" onClick={self.stopContainer.bind(self, record)}>restart</a>
               <Divider type="vertical" />
               <Link to={`/apps/${appName}/cluster/${nowCluster}/pod/${record.name}/entry`}>enter</Link>
               </span>
@@ -896,7 +932,7 @@ class AppDetail extends React.Component {
                           }
                           </p>
                           <Button type="primary"><Link to={`/apps/${appName}/audit_logs`}>审计日志</Link></Button>
-                          <Button onClick={self.handleRenew}>Renew</Button>
+                          <Button onClick={self.handleRenew}>Recreate</Button>
                           <Button onClick={() => {self.setState({scaleVisible: true})}}>Scale</Button>
                           <Button onClick={() => {self.setState({rollbackVisible: true})}}>Rollback</Button>
                           <Button type="danger" onClick={self.showDeleteAppConfirmModal}>Delete</Button>

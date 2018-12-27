@@ -246,6 +246,23 @@ export function getPodLog(appName, podName, cluster, container) {
       return apiCallback(statusCode, data, errMsg);
     });
 }
+
+export function stopContainer(appName, podName, cluster, container) {
+  let params = {
+    'podname': podName,
+    'cluster': cluster,
+    'namespace': 'kae-app'
+  };
+  if (container) {
+    params.container = container;
+  }
+  let url = `${baseApiUrl}/app/${appName}/container/stop`;
+  return Fetch.post(url, params)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't stop contaienr, statusCode：${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
 // -----------------------------------------------------------------------
 // app_cluster
 export function listCluster() {
