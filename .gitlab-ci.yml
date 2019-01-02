@@ -5,13 +5,8 @@ stages:
 
 build:
   stage: build
-  retry: 2
-  image: yuyang0/kae-cli:latest
-  # before_script:
-  #   - sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories
-  #   - apk update
-  #   - apk add --no-cache git
-  #   - pip install git+https://github.com/kaecloud/cli.git
+  # retry: 2
+  image: kaecloud/cli:latest
   script:
     # Compile and name the binary as `hello`
     - kae version
