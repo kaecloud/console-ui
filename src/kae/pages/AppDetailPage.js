@@ -71,6 +71,7 @@ class AppDetail extends React.Component {
     if (nowCluster) {
       dispatch(AppActions.getCanaryInfo(appName, nowCluster));
       dispatch(AppActions.getDeployment(appName, nowCluster));
+      dispatch(AppActions.getIngress(appName, nowCluster));
     }
     dispatch(AppActions.getReleases(appName));
     dispatch(AppActions.listAppYaml(appName));
@@ -347,6 +348,51 @@ class AppDetail extends React.Component {
       },
       onCancel() {}
     });
+  }
+
+  handleChangeCanaryWeight = () => {
+    let self = this,
+        appName = this.getAppName(),
+        ing = this.getIngress(),
+        nowCluster= this.getNowCluster(),
+        weight = 10;
+    if (ing) {
+      let weightStr = ing.metadata.annotations['traefik.ingress.kubernetes.io/service-weights'];
+      if (weightStr) {
+        weight = Number.parseInt(weightStr.split(":")[1]);
+      }
+    }
+
+    console.log(weight);
+    function handler(destroy) {
+      processApiResult(AppApi.setCanaryWeight(appName, weight, nowCluster), "set canary weight")
+        .then(data => {
+          destroy();
+          const {dispatch} = self.props;
+          dispatch(AppActions.getIngress(appName, nowCluster));
+        }).catch(e => {});
+    }
+
+    function handleChange(newWeight) {
+      weight = newWeight;
+    }
+    let config = {
+      title: "Change Canary Weight",
+      children: (
+        <div>
+          weight:
+          <InputNumber
+            defaultValue={weight}
+            min={0}
+            max={100}
+            formatter={value => `${value}%`}
+            parser={value => value.replace('%', '')}
+            onChange={handleChange}
+          />
+          </div>),
+      handler: handler
+    };
+    showDynamicModal(config);
   }
 
   showDeleteAppConfirmModal = () => {
@@ -640,6 +686,15 @@ class AppDetail extends React.Component {
     return dp;
   }
 
+  getIngress() {
+    const request = getRequestFromProps(this.props, 'GET_APP_INGRESS_REQUEST');
+    let ing = null;
+    if (request.statusCode === 200) {
+      ing = request.data;
+    }
+    return ing;
+  }
+
   getYamlList() {
     const request = getRequestFromProps(this.props, 'LIST_APP_YAML_REQUEST');
     let yamlList = [];
@@ -919,6 +974,7 @@ class AppDetail extends React.Component {
                             {hasCanary &&
                                 <span>
                                   <Divider type="vertical" />
+                                  <Button onClick={self.handleChangeCanaryWeight}>ChangeWeight</Button>
                                   <Button onClick={self.handleDeleteCanary}>DeleteCanary</Button>
               </span>
                             }

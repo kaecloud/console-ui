@@ -121,6 +121,15 @@ export function getDeployment(appName, cluster) {
     });
 }
 
+// get app's k8s ingress
+export function getIngress(appName, cluster) {
+  return Fetch.get(`${baseApiUrl}/app/${appName}/ingress?cluster=${cluster}`)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't get app ingress(${appName}-${cluster}), statusCode：${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
+
 // 获取releases
 export function getReleases(appName) {
   return Fetch.get(`${baseApiUrl}/app/${appName}/releases`)
@@ -181,7 +190,18 @@ export function deleteCanary(appName, cluster) {
       return apiCallback(statusCode, data, errMsg);
     });
 }
+export function setCanaryWeight(appName, weight, cluster) {
+  let data = {
+    'cluster': cluster,
+    'weight': weight
+  };
 
+  return Fetch.post(`${baseApiUrl}/app/${appName}/canary/weight`, data)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't set app canarys weight, statusCode：${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
 // set abtesting rules
 export function setABTestingRules(appName, cluster, rules) {
   let data= {

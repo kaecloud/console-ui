@@ -109,6 +109,16 @@ export function getDeployment(appName, cluster) {
   };
 }
 
+export function getIngress(appName, cluster) {
+  return {
+    type: 'GET_APP_INGRESS_REQUEST',
+    async: true,
+    shouldCallApi: (state) => true,
+    callApi: () => AppApi.getIngress(appName, cluster),
+    payload: { }
+  };
+}
+
 export function getReleases(appName) {
   return {
     type: 'GET_APP_RELEASES_REQUEST',
