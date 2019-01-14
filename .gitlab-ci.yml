@@ -17,7 +17,7 @@ build:
 
 deploy:
   stage: deploy
-  image: yuyang0/kae-cli:latest
+  image: kaecloud/cli:latest
   script:
     - kae app:deploy --cluster kjy --yaml-name default
   only:
