@@ -12,7 +12,6 @@ service:
   - host: console.gtapp.xyz
     paths:
       - /
-    tlsSecret: gtapp-xyz-tls
   ports:
   - port: 80
     targetPort: 8080
