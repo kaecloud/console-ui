@@ -91,11 +91,6 @@ class AppDetail extends React.Component {
 
   getInitialState() {
     return {
-      infoModal: {
-        text: '',
-        title: '',
-        visible: false
-      },
       scaleNum: 1,
       rollbackRevisionNum: 0,
       scaleVisible: false,
@@ -115,14 +110,6 @@ class AppDetail extends React.Component {
 
       dispatch(AppActions.setCurrentCluster(newCluster));
     }
-  }
-
-  hiddenInfoModal() {
-    this.setState({
-      infoModal: {
-        visible: false
-      }
-    });
   }
 
   showAceEditorModal = (config) => {
@@ -215,62 +202,7 @@ class AppDetail extends React.Component {
       title: 'Build',
       content: `Are you sure to build image for app ${appName} release ${tag}?`,
       onOk() {
-        const ws = new WebSocket(`${baseWsUrl}/api/v1/ws/app/${appName}/build`);
-        ws.onopen = function(evt) {
-          ws.send(`{"tag": "${tag}"}`);
-        };
-        let infoModal = {
-          isHtml: true,
-          visible: true,
-          title: "Build Output",
-          text: ''
-        };
-
-        self.setState({infoModal: infoModal});
-        let text = "";
-        let phase = null;
-        ws.onmessage = function(evt) {
-          // ignore heartbeart message
-          if (evt.data === "PONG") {
-            return;
-          }
-          let data = JSON.parse(evt.data);
-          if (! data.success) {
-            text += `<p key=${data.error}>${data.error}</p>`;
-          } else {
-            if (phase !== data['phase']) {
-              text += `<p>***** PHASE ${data.phase}</p>`;
-              phase = data['phase'];
-            }
-            if (data.phase.toLowerCase() === "pushing") {
-              let raw_data = data['raw_data'];
-              if (raw_data.id && raw_data.status) {
-                text += `<p>${raw_data.id}: ${raw_data.status}</p>`;
-              } else if (raw_data.digest) {
-                text += `<p>${raw_data.status}: digest: ${raw_data.digest} size: ${raw_data.size}</p>`;
-              } else {
-                text += `<p>${JSON.stringify(data)}</p>`;
-              }
-            } else {
-              text += `<p>${data.msg}</p>`;
-            }
-          }
-          infoModal.text = text;
-          self.setState({infoModal: infoModal});
-        };
-
-        ws.onclose = function(evt) {
-          // update release data
-          dispatch(AppActions.getReleases(appName));
-          if (phase.toLowerCase() !== "finished") {
-            text += `<p style="color:red;">Build terminate prematurely </p>`;
-          } else {
-            text += `<p>Build finished successfully</p>`;
-          }
-          infoModal.text = text;
-          self.setState({infoModal: infoModal});
-        };
-
+        self.props.history.push(`/apps/${appName}/tag/${tag}/build`);
       },
       onCancel() {}
     });
@@ -1023,19 +955,6 @@ class AppDetail extends React.Component {
                             />
                         </Panel>
                     </Collapse>
-                  <Modal
-                        title={this.state.infoModal.title}
-                        visible={this.state.infoModal.visible}
-                        onOk={this.hiddenInfoModal.bind(this)}
-                        onCancel={this.hiddenInfoModal.bind(this)}
-                        footer={[
-                            <Button key="login" type="primary" onClick={this.hiddenInfoModal.bind(this)}>
-                                确定
-                            </Button>,
-                        ]}
-                    >
-                        <div dangerouslySetInnerHTML={{__html: this.state.infoModal.text}}></div>
-                    </Modal>
 
                     <Modal
                         title={<div>Scale {appName} (cluster:<span style={{color:'red'}}>{nowCluster}</span>)</div>}

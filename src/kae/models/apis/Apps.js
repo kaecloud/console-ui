@@ -283,6 +283,14 @@ export function stopContainer(appName, podName, cluster, container) {
       return apiCallback(statusCode, data, errMsg);
     });
 }
+export function killBuildTask(appName) {
+  let url = `${baseApiUrl}/app/${appName}/build/kill`;
+  return Fetch.delete(url)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't kill build task, statusCode：${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
 // -----------------------------------------------------------------------
 // app_cluster
 export function listCluster() {
