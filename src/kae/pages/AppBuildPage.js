@@ -1,15 +1,12 @@
 import React from 'react';
 import {Link} from 'react-router-dom';
-import { Layout, Breadcrumb, Button, Select, Divider } from 'antd';
+import { Layout, Breadcrumb, Button } from 'antd';
 
-import * as AppActions from '../models/actions/Apps';
-import { getRequestFromProps } from '../models/Utils';
-import {setArg, processApiResult, getNowCluster, getClusterNameList} from '../Utils';
+import {processApiResult} from '../Utils';
 import * as AppApi from '../models/apis/Apps';
 import {baseWsUrl} from '../config';
 
 const {Content} = Layout;
-const Option = Select.Option;
 
 class AppBuild extends React.Component {
   constructor() {
@@ -23,8 +20,6 @@ class AppBuild extends React.Component {
   }
 
   componentDidMount() {
-    let appName = this.getAppName();
-
     this.buildApp();
   }
 
@@ -47,8 +42,9 @@ class AppBuild extends React.Component {
     ws.onopen = function(evt) {
       ws.send(`{"tag": "${tag}"}`);
     };
-    let outputs = [];
-    let phase = null;
+    let outputs = [],
+      phase = null,
+      keyIdx = 0;
     ws.onmessage = function(evt) {
       // ignore heartbeart message
       if (evt.data === "PONG") {
@@ -56,23 +52,23 @@ class AppBuild extends React.Component {
       }
       let data = JSON.parse(evt.data);
       if (! data.success) {
-        outputs.push(<p key={data.error}>{data.error}</p>)
+        outputs.push(<p key={keyIdx++} style={{color: 'red'}}>{data.error}</p>)
       } else {
         if (phase !== data['phase']) {
-          outputs.push(<p>***** PHASE {data.phase}</p>);
+          outputs.push(<p key={keyIdx++} style={{color: '#00d600'}}>***** PHASE {data.phase}</p>);
           phase = data['phase'];
         }
         if (data.phase.toLowerCase() === "pushing") {
           let raw_data = data['raw_data'];
           if (raw_data.id && raw_data.status) {
-            outputs.push(<p>{raw_data.id}: {raw_data.status}</p>);
+            outputs.push(<p key={keyIdx++}>{raw_data.id}: {raw_data.status}</p>);
           } else if (raw_data.digest) {
-            outputs.push(<p>{raw_data.status}: digest: {raw_data.digest} size: {raw_data.size}</p>);
+            outputs.push(<p key={keyIdx++}>{raw_data.status}: digest: {raw_data.digest} size: {raw_data.size}</p>);
           } else {
-            outputs.push(<p>{JSON.stringify(data)}</p>);
+            outputs.push(<p key={keyIdx++}>{JSON.stringify(data)}</p>);
           }
         } else {
-          outputs.push(<p>{data.msg}</p>);
+          outputs.push(<p key={keyIdx++}>{data.msg}</p>);
         }
       }
       self.setState({buildOutput: outputs});
@@ -81,12 +77,16 @@ class AppBuild extends React.Component {
     ws.onclose = function(evt) {
       // update release data
       if (phase.toLowerCase() !== "finished") {
-        outputs.push(<p style={{color: 'red'}}>Build terminate prematurely </p>);
+        outputs.push(<p key={keyIdx++} style={{color: 'red'}}>Build terminate prematurely </p>);
       } else {
-        outputs.push(<p>Build finished successfully</p>);
+        outputs.push(<p key={keyIdx++}>Build finished successfully</p>);
       }
       self.setState({buildOutput: outputs});
     };
+
+    this.setState({
+      ws: ws
+    });
   }
 
   handleKill = () => {
@@ -111,14 +111,14 @@ class AppBuild extends React.Component {
           <Breadcrumb.Item>
             <Link to={`/apps/${appName}/detail?cluster=`}>App</Link>
           </Breadcrumb.Item>
-          <Breadcrumb.Item>Entry</Breadcrumb.Item>
+          <Breadcrumb.Item>Build</Breadcrumb.Item>
         </Breadcrumb>
 
         <div style={{background: '#fff', padding: '20px'}}>
 
         <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}}
                 onClick={this.handleKill}>Kill</Button>
-        <div style={{background:'#000', padding: '15px', color: '#c4c4c4'}}>
+        <div id="build-output" style={{background:'#000', padding: '15px', color: '#c4c4c4'}}>
           <pre>{this.state.buildOutput}</pre>
         </div>
         </div>

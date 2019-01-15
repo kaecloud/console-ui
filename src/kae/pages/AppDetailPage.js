@@ -25,7 +25,6 @@ import {getPageRequests, getRequestFromProps} from '../models/Utils';
 import * as AppActions from '../models/actions/Apps';
 import AppPodsWatcher from '../models/AppDetailPageWs';
 import {setArg, processApiResult, getNowCluster, getClusterNameList} from '../Utils';
-import {baseWsUrl} from '../config';
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
@@ -196,7 +195,6 @@ class AppDetail extends React.Component {
   handleBuild(tag) {
     let self = this;
     let appName = this.getAppName();
-    const {dispatch} = this.props;
 
     confirm({
       title: 'Build',
