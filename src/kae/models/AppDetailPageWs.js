@@ -1,5 +1,6 @@
 import store from './Store';
 import * as AppActions from './actions/Apps';
+import {baseWsUrl} from '../config';
 
 const AppPodsWatcher = {
   podsWatcherWs: null,
@@ -107,14 +108,9 @@ const AppPodsWatcher = {
 
   createPodsWatcher(name, cluster, canary) {
     let that = this;
-    let prodSchema = "ws:";
-    if (window.location.protocol === "https:") {
-      prodSchema = "wss:";
-    }
     const canaryStr = canary? "canary": "";
 
-    const wsUrl = process.env.NODE_ENV === 'production' ? prodSchema + '//'+window.location.host : 'ws://192.168.1.17:5000';
-    const ws = new WebSocket(`${wsUrl}/api/v1/ws/app/${name}/pods/events`);
+    const ws = new WebSocket(`${baseWsUrl}/api/v1/ws/app/${name}/pods/events`);
     ws.onopen = function(evt) {
       ws.send(`{"cluster": "${cluster}", "canary": ${canary}}`);
     };
