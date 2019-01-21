@@ -287,13 +287,15 @@ class AppDetail extends React.Component {
         nowCluster= this.getNowCluster(),
         weight = 10;
     if (ing) {
-      let weightStr = ing.metadata.annotations['traefik.ingress.kubernetes.io/service-weights'];
-      if (weightStr) {
-        weight = Number.parseInt(weightStr.split(":")[1]);
+      let annotations = ing.metadata.annotations;
+      if (annotations) {
+        let weightStr = ing.metadata.annotations['traefik.ingress.kubernetes.io/service-weights'];
+        if (weightStr) {
+          weight = Number.parseInt(weightStr.split(":")[1]);
+        }
       }
     }
 
-    console.log(weight);
     function handler(destroy) {
       processApiResult(AppApi.setCanaryWeight(appName, weight, nowCluster), "set canary weight")
         .then(data => {
