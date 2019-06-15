@@ -554,7 +554,8 @@ class AppDetail extends React.Component {
         .then(data => {
           destroy();
           let config = {
-            title: "Spec",
+            title: "App Log",
+            width: 700,
             visible: true,
             text: data.data
           };
@@ -852,6 +853,7 @@ class AppDetail extends React.Component {
                     <div onClick={() => {
                         let config = {
                             title: "Spec",
+                            width: 700,
                             visible: true,
                             text: (
                               <SyntaxHighlighter language="yaml" style={docco}>

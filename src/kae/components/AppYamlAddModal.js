@@ -61,6 +61,7 @@ class AppYamlAddModal extends React.Component {
     return (
         <Modal
           title= {this.state.config.title}
+          width={760}
           visible={this.state.visible}
           onCancel={this.state.destroy}
           footer={null}
@@ -95,7 +96,7 @@ class AppYamlAddModal extends React.Component {
             onChange={this.onChange}
             name="yaml"
             fontSize={18}
-            width="450px"
+            width="700px"
             height="600px"
             editorProps={{$blockScrolling: true}}
           />

@@ -58,7 +58,7 @@ class RegisterAppModal extends React.Component {
                   {getFieldDecorator('appname', {
                       rules: [{ required: true, message: 'Please input your appname!' }],
                   })(
-                      <Input placeholder="Jobname"/>
+                      <Input placeholder="Appname"/>
                   )}
               </FormItem>
               <FormItem

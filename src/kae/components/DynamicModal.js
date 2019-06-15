@@ -9,9 +9,14 @@ class DynamicModal extends React.Component {
 
   render() {
     let self = this;
+    let modalWidth = 520;
+    if (this.props.config.width) {
+      modalWidth = this.props.config.width;
+    }
     return (
         <Modal
           title={this.props.config.title}
+          width={modalWidth}
           visible={true}
           onCancel={this.props.config.destroy}
           footer={[
