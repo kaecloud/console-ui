@@ -12,7 +12,6 @@ import * as AppActions from './models/actions/Apps';
 
 import AppList from './pages/AppListPage';
 import AppDetail from './pages/AppDetailPage';
-import JobList from './pages/JobListPage';
 import AppAuditLog from './pages/AppAuditLogPage';
 import AppConfigMap from './pages/AppConfigMapPage';
 import AppSecret from './pages/AppSecretPage';
@@ -61,7 +60,6 @@ class KaeApp extends React.Component {
                         <Route path="/apps/:appName/tag/:tag/build" component={this.connectApi(AppBuild)} />
 
                         <Route path="/apps" component={this.connectApi(AppList)} />
-                        <Route path="/jobs" component={this.connectApi(JobList)} />
 
                         <Redirect from='/' to='/apps' />
                       </Switch>

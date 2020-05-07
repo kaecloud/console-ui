@@ -44,10 +44,7 @@ function genHandlers() {
     'REGISTER_APP_REQUEST', 'DEPLOY_APP_REQUEST',
     'GET_APP_YAML_REQUEST',
 
-    'LIST_JOB_REQUEST',
-
-    'LIST_CLUSTER_REQUEST', "GET_CURRENT_CLUSTER_REQUEST",
-    'GET_CURRENT_USER_REQUEST'
+    'LIST_CLUSTER_REQUEST', "GET_CURRENT_CLUSTER_REQUEST"
   ];
   _.forEach(apiTypes, (ty) => {
     handlers[ty] = (state, action) => {

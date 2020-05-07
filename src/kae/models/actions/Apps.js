@@ -1,5 +1,4 @@
 import * as AppApi from '../apis/Apps';
-import * as UserApi from '../apis/User';
 
 export function resetApiFlash(apiType) {
   return {
@@ -262,14 +261,4 @@ export function setCurrentCluster(newCluster) {
       type: 'SET_CURRENT_CLUSTER',
       payload: newCluster
     };
-}
-
-export function getCurrentUser() {
-  return {
-    type: 'GET_CURRENT_USER_REQUEST',
-    async: true,
-    shouldCallApi: (state) => true,
-    callApi: () => UserApi.getCurrentUser(),
-    payload: {}
-  };
 }
