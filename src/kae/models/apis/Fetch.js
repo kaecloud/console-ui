@@ -35,7 +35,10 @@ export const Fetch = {
   },
 
   get(url) {
-    return axios.get(url).then(res => {
+    const token = localStorage.getItem("user-token");
+    const headers = { "Authorization" : `Bearer ${token}` };
+
+    return axios.get(url, {headers: headers}).then(res => {
       return this.wrap(200, res.data);
     }).catch(err => {
       return this.handleError(err);
@@ -48,7 +51,8 @@ export const Fetch = {
       url: url,
       data: data,
       headers: {
-			  'Content-Type': 'application/json'
+			  'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem("user-token")
       },
       transformResponse: [function (data) {
         return data;
@@ -66,7 +70,8 @@ export const Fetch = {
       url: url,
       data: data,
       headers: {
-			  'Content-Type': 'application/json'
+			  'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem("user-token")
       },
       transformResponse: [function (data) {
         return data;
@@ -84,7 +89,8 @@ export const Fetch = {
       url: url,
       data: data,
       headers: {
-			  'Content-Type': 'application/json'
+			  'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + localStorage.getItem("user-token")
       },
       transformResponse: [function (data) {
         return data;

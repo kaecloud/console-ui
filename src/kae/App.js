@@ -2,6 +2,8 @@ import React from 'react';
 import {HashRouter, Switch, Route, Redirect} from 'react-router-dom';
 import {Provider, connect} from 'react-redux';
 import {Layout} from 'antd';
+import Keycloak from 'keycloak-js';
+
 /* import Radium from 'radium';*/
 
 import PageHeader from './components/header';
@@ -24,38 +26,57 @@ class KaeApp extends React.Component {
 
   constructor() {
     super();
-    store.dispatch(AppActions.listCluster());
-    store.dispatch(AppActions.getCurrentUser());
+    this.state = { keycloak: null, authenticated: false };
+
+  }
+
+  componentDidMount() {
+    const keycloak = Keycloak('/keycloak.json');
+    keycloak.init({onLoad: 'login-required'}).then(authenticated => {
+      this.setState({ keycloak: keycloak, authenticated: authenticated });
+      localStorage.setItem('user-token', keycloak.token);
+
+      store.dispatch(AppActions.listCluster());
+    });
   }
 
   render() {
+    if (this.state.keycloak) {
+      if (this.state.authenticated) {
+        return (
+            <Provider store={store}>
+              <HashRouter>
+                <Layout>
+            <PageHeader keycloak={this.state.keycloak}/>
+                  <div className="box-container">
+                    <div style={{margin: "0 15% 0 15%"}}>
+                      <Switch>
+
+                        <Route path="/apps/:appName/detail" component={this.connectApi(AppDetail)} />
+                        <Route path="/apps/:appName/audit_logs" component={this.connectApi(AppAuditLog)} />
+                        <Route path="/apps/:appName/configmap" component={this.connectApi(AppConfigMap)} />
+                        <Route path="/apps/:appName/secret" component={this.connectApi(AppSecret)} />
+                        <Route path="/apps/:appName/abtesting" component={this.connectApi(AppABTesting)} />
+                        <Route path="/apps/:appName/cluster/:cluster/pod/:podName/entry" component={this.connectApi(AppPodEntry)} />
+                        <Route path="/apps/:appName/tag/:tag/build" component={this.connectApi(AppBuild)} />
+
+                        <Route path="/apps" component={this.connectApi(AppList)} />
+                        <Route path="/jobs" component={this.connectApi(JobList)} />
+
+                        <Redirect from='/' to='/apps' />
+                      </Switch>
+                    </div>
+                  </div>
+                </Layout>
+              </HashRouter>
+            </Provider>
+        );
+      } else {
+        return (<div>Unable to authenticate!</div>);
+      }
+    }
     return (
-        <Provider store={store}>
-          <HashRouter>
-            <Layout>
-              <PageHeader />
-              <div className="box-container">
-                <div style={{margin: "0 15% 0 15%"}}>
-                  <Switch>
-
-                    <Route path="/apps/:appName/detail" component={this.connectApi(AppDetail)} />
-                    <Route path="/apps/:appName/audit_logs" component={this.connectApi(AppAuditLog)} />
-                    <Route path="/apps/:appName/configmap" component={this.connectApi(AppConfigMap)} />
-                    <Route path="/apps/:appName/secret" component={this.connectApi(AppSecret)} />
-                    <Route path="/apps/:appName/abtesting" component={this.connectApi(AppABTesting)} />
-                    <Route path="/apps/:appName/cluster/:cluster/pod/:podName/entry" component={this.connectApi(AppPodEntry)} />
-                    <Route path="/apps/:appName/tag/:tag/build" component={this.connectApi(AppBuild)} />
-
-                    <Route path="/apps" component={this.connectApi(AppList)} />
-                    <Route path="/jobs" component={this.connectApi(JobList)} />
-
-                    <Redirect from='/' to='/apps' />
-                  </Switch>
-                </div>
-              </div>
-            </Layout>
-          </HashRouter>
-        </Provider>
+        <div>Initializing Keycloak...</div>
     );
   }
 

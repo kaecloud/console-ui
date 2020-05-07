@@ -15,7 +15,8 @@
     "react-syntax-highlighter": "^8.0.1",
     "redux": "^4.0.1",
     "redux-logger": "^3.0.6",
-    "xterm": "^3.9.1"
+    "xterm": "^3.9.1",
+    "keycloak-js": "^9.0.3"
   },
   "scripts": {
     "start": "react-scripts start",
