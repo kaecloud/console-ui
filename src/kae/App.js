@@ -19,24 +19,41 @@ import AppABTesting from './pages/AppABTestingPage';
 import AppPodEntry from './pages/AppPodEntryPage';
 import AppBuild from './pages/AppBuildPage';
 
+import { setAccessToken } from './models/apis/Fetch';
+
 import './App.css';
+
+const keycloak = Keycloak('/keycloak.json');
 
 class KaeApp extends React.Component {
 
   constructor() {
     super();
     this.state = { keycloak: null, authenticated: false };
-
   }
 
   componentDidMount() {
-    const keycloak = Keycloak('/keycloak.json');
+    keycloak.onTokenExpired = this.refreshKeycloakToken;
     keycloak.init({onLoad: 'login-required'}).then(authenticated => {
       this.setState({ keycloak: keycloak, authenticated: authenticated });
-      localStorage.setItem('user-token', keycloak.token);
-
+      setAccessToken(keycloak.token);
       store.dispatch(AppActions.listCluster());
     });
+  }
+
+  refreshKeycloakToken = () => {
+    keycloak.updateToken(5)
+      .then(function(refreshed) {
+        if (refreshed) {
+          console.log('Token was successfully refreshed');
+          console.debug("new token: ", keycloak.token);
+          setAccessToken(keycloak.token);
+        } else {
+          console.log('Token is still valid');
+        }
+      }).catch(function() {
+        console.error('Failed to refresh the token, or the session has expired');
+      });
   }
 
   render() {

@@ -108,7 +108,6 @@ class AppPodEntry extends React.Component {
     let containerInfo = {
       cluster: cluster,
       podname: podName,
-      namespace: "kae-app"
     };
     if (container) {
       containerInfo.container = container;

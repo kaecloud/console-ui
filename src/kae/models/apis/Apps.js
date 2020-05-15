@@ -271,7 +271,6 @@ export function stopContainer(appName, podName, cluster, container) {
   let params = {
     'podname': podName,
     'cluster': cluster,
-    'namespace': 'kae-app'
   };
   if (container) {
     params.container = container;

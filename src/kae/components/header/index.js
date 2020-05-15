@@ -80,7 +80,7 @@ class PageHeader extends React.Component {
         <Col span={4} offset={18}>
           <div style={{float: 'left'}}>
           <Dropdown overlay={addMenu}>
-            <Button className="ant-dropdown-link" href="javascript:;">
+            <Button className="ant-dropdown-link">
              <Icon type="plus" /> <Icon type="down" />
             </Button>
           </Dropdown>

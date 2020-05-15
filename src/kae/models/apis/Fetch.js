@@ -4,6 +4,7 @@ import axios from 'axios';
 axios.defaults.withCredentials = true;
 
 export const Fetch = {
+  accessToken: null,
 
   wrap(statusCode, data, flash='') {
     return { statusCode, data, flash };
@@ -34,9 +35,19 @@ export const Fetch = {
     }
   },
 
+  getHeaders() {
+    var headers = {
+			'Content-Type': 'application/json',
+    };
+    if (this.accessToken) {
+      headers['Authorization'] = 'Bearer ' + this.accessToken;
+    }
+    return headers;
+  },
+
   get(url) {
-    const token = localStorage.getItem("user-token");
-    const headers = { "Authorization" : `Bearer ${token}` };
+    const headers = this.getHeaders();
+    console.debug("+++++++++", url, headers);
 
     return axios.get(url, {headers: headers}).then(res => {
       return this.wrap(200, res.data);
@@ -46,14 +57,13 @@ export const Fetch = {
   },
 
   post(url, data) {
+    const headers = this.getHeaders();
+
     return axios({
       method: 'post',
       url: url,
       data: data,
-      headers: {
-			  'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem("user-token")
-      },
+      headers: headers,
       transformResponse: [function (data) {
         return data;
       }],
@@ -65,14 +75,13 @@ export const Fetch = {
   },
 
   put(url, data) {
+    const headers = this.getHeaders();
+
     return axios({
       method: 'put',
       url: url,
       data: data,
-      headers: {
-			  'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem("user-token")
-      },
+      headers: headers,
       transformResponse: [function (data) {
         return data;
       }],
@@ -84,14 +93,13 @@ export const Fetch = {
   },
 
   delete(url, data) {
+    const headers = this.getHeaders();
+
     return axios({
       method: 'delete',
       url: url,
       data: data,
-      headers: {
-			  'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + localStorage.getItem("user-token")
-      },
+      headers: headers,
       transformResponse: [function (data) {
         return data;
       }],
@@ -109,4 +117,12 @@ export function apiCallback(statusCode, data, defaultErrMsg) {
   }
   const rej = Fetch.wrap(statusCode, data.msg || defaultErrMsg);
   return Promise.reject(rej);
+}
+
+export function setAccessToken(token) {
+  Fetch.accessToken = token;
+}
+
+export function getAccessToken() {
+  return Fetch.accessToken;
 }

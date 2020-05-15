@@ -706,11 +706,11 @@ class AppDetail extends React.Component {
               {/*
               <Link to={`/apps/${appName}/pod/${record.name}/log?cluster=${nowCluster}`}>log</Link>
                */}
-              <a href="javascript:;" onClick={self.showAppPodLog.bind(self, record)}>log</a>
+              <a onClick={self.showAppPodLog.bind(self, record)}>log</a>
               <Divider type="vertical" />
-              <a href="javascript:;" onClick={self.showAppPodStatus.bind(self, record)}>status</a>
+              <a onClick={self.showAppPodStatus.bind(self, record)}>status</a>
               <Divider type="vertical" />
-              <a href="javascript:;" onClick={self.stopContainer.bind(self, record)}>restart</a>
+              <a onClick={self.stopContainer.bind(self, record)}>restart</a>
               <Divider type="vertical" />
               <Link to={`/apps/${appName}/cluster/${nowCluster}/pod/${record.name}/entry`}>enter</Link>
               </span>
@@ -870,7 +870,7 @@ class AppDetail extends React.Component {
 
                     return (
                         <Dropdown overlay={menu} trigger={['click']}>
-                            <a className="ant-dropdown-link" href="javascript:;">
+                            <a className="ant-dropdown-link">
                                 <div style={{width: '40px', textAlign: 'center'}}>
                                     <Icon type="ellipsis" className="btnIcon" />
                                 </div>
@@ -1023,9 +1023,9 @@ class AppDetail extends React.Component {
             render(text, record) {
               return (
                   <span>
-                  <a href="javascript:;" onClick={self.showAppYamlAddModal.bind(self, record)}>Edit</a>
+                  <a onClick={self.showAppYamlAddModal.bind(self, record)}>Edit</a>
                   <Divider type="vertical" />
-                  <a href="javascript:;" onClick={self.handleDeleteAppYaml.bind(self, record)}>Delete</a>
+                  <a onClick={self.handleDeleteAppYaml.bind(self, record)}>Delete</a>
                   </span>
               );
             }
