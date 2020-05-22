@@ -1,6 +1,6 @@
 import React from 'react';
 
-import {Button, Modal, Select, Form, Input, InputNumber} from 'antd';
+import {Button, Checkbox, Modal, Select, Form, Input, InputNumber} from 'antd';
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -30,25 +30,26 @@ class DeployModal extends React.Component {
   }
 
   onChange(newValue) {
-      this.setState({value: newValue})
+    this.setState({value: newValue});
   }
 
   handleSubmit(event) {
     event.preventDefault();
     this.props.form.validateFields((err, values) => {
-        if (!err) {
-            let data = {
-              tag: this.state.initialValue.tag,
-              cluster: values.cluster_name,
-              app_yaml_name: values.app_yaml_name
-            }
+      if (!err) {
+        let data = {
+          tag: this.state.initialValue.tag,
+          cluster: values.cluster_name,
+          app_yaml_name: values.app_yaml_name,
+          use_newest_config: values.use_newest_config
+        };
 
-            if (values.replicas > 0) {
-                data.replicas = values.replicas
-            }
-            this.state.config.handler(data)
+        if (values.replicas > 0) {
+          data.replicas = values.replicas;
         }
-    })
+        this.state.config.handler(data);
+      }
+    });
   }
 
   render() {
@@ -86,6 +87,18 @@ class DeployModal extends React.Component {
             </FormItem>
             <FormItem
               {...formItemLayout}
+              label="App Yaml"
+            >
+              {getFieldDecorator('app_yaml_name', {
+                initialValue: "default"
+              })(
+                  <Select>
+                  { this.state.initialValue.yamlNameList.map(name => <Option key={name}>{name}</Option>) }
+                </Select>
+              )}
+            </FormItem>
+            <FormItem
+              {...formItemLayout}
               label="容器数量："
             >
               {getFieldDecorator('replicas', {
@@ -96,15 +109,14 @@ class DeployModal extends React.Component {
             </FormItem>
             <FormItem
               {...formItemLayout}
-              label="App Yaml"
+              label="使用最新配置"
             >
-              {getFieldDecorator('app_yaml_name', {
-                initialValue: "default"
-              })(
-                  <Select>
-                  { this.state.initialValue.yamlNameList.map(name => <Option key={name}>{name}</Option>) }
-                </Select>
-              )}
+                {getFieldDecorator('use_newest_config', {
+                  valuePropName: 'checked',
+                  initialValue: false,
+                })(
+                    <Checkbox />
+                )}
             </FormItem>
             <Button type="primary" htmlType="submit" className="create-job-button">
                 Submit

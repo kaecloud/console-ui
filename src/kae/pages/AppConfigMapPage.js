@@ -3,7 +3,7 @@ import {Link} from 'react-router-dom';
 
 import {
   Button, Row, Col, Select, Form, Input,
-  Checkbox, Layout, Breadcrumb
+  Checkbox, Layout, Breadcrumb, Modal
 } from 'antd';
 import SyntaxHighlighter from 'react-syntax-highlighter';
 import { docco } from 'react-syntax-highlighter/styles/hljs';
@@ -23,7 +23,8 @@ class AppConfigMap extends React.Component {
     super();
     this.alreadyInitialized = false;
     this.state = {
-      value: ""
+      value: "",
+      visible: false
     };
     this.handleSubmit = this.handleSubmit.bind(this);
   }
@@ -77,6 +78,9 @@ class AppConfigMap extends React.Component {
     processApiResult(AppApi.createConfigMap(appName, params), title)
       .then(data => {
         self.refreshConfigMap(nowCluster);
+        self.setState({
+          visible: false
+        });
       }).catch(e => {});
   }
 
@@ -97,6 +101,17 @@ class AppConfigMap extends React.Component {
     });
   }
 
+  handleUpdate = () => {
+    this.setState({
+      visible: true
+    });
+  }
+
+  handleCancel = () => {
+    this.setState({
+      visible: false
+    });
+  }
   refreshConfigMap(cluster) {
     const appName = this.getAppName();
     const {dispatch} = this.props;
@@ -132,14 +147,24 @@ class AppConfigMap extends React.Component {
     const appName = this.getAppName();
     const cluster = getNowCluster(this.props);
     let clusterNameList = getClusterNameList(this.props),
-      cmJsxContent = [],
-      cmData = this.state.value;
-    Object.entries(cmData).forEach(([key, value]) => {
-      cmJsxContent.push(<div key={key}><h3>{key}</h3> <SyntaxHighlighter  style={docco}>
+        currentJsxContent = [],
+        newestJsxContent = [],
+        current = this.state.value.current? this.state.value.current: {},
+        newest = this.state.value.newest? this.state.value.newest:{};
+    Object.entries(current).forEach(([key, value]) => {
+      currentJsxContent.push(<div key={key}><h3>{key}</h3> <SyntaxHighlighter  style={docco}>
         {value}
       </SyntaxHighlighter>
-      </div>)
-    })
+                        </div>);
+    });
+
+    Object.entries(newest).forEach(([key, value]) => {
+      newestJsxContent.push(<div key={key}><h3>{key}</h3> <SyntaxHighlighter  style={docco}>
+                        {value}
+                        </SyntaxHighlighter>
+                        </div>);
+    });
+
 
     return (
       <Content>
@@ -152,72 +177,87 @@ class AppConfigMap extends React.Component {
           </Breadcrumb.Item>
           <Breadcrumb.Item>Config</Breadcrumb.Item>
         </Breadcrumb>
-        <Row gutter={5} justify="space-between" tyep="flex" style={{background: '#fff'}}>
+        <div style={{background: '#fff', padding: '20px'}}>
+          <Button type="primary" style={{zIndex: '9', marginBottom: '20px'}}
+                  onClick={this.handleUpdate}>Update</Button>
+
+          <Modal
+            title= "修改config"
+            width={760}
+            visible={this.state.visible}
+            onCancel={this.handleCancel}
+            footer={null}
+          >
+            <Form onSubmit={this.handleSubmit}>
+              <FormItem
+                {...formItemLayout}
+                label="Cluster"
+              >
+                {getFieldDecorator('cluster_name', {
+                    initialValue: cluster
+                })(
+                    <Select onChange={this.handleChangeCluster.bind(this)}>
+                        { clusterNameList.map(name => <Select.Option key={name}>{name}</Select.Option>) }
+                    </Select>
+                )}
+              </FormItem>
+
+              <FormItem
+                {...formItemLayout}
+                label="Key"
+              >
+                {getFieldDecorator('key', {
+                  rules: [{required: true, message: 'Please input you config content'}]
+                })(
+                    <Input placeholder="the key name in configmap data" />
+                )}
+              </FormItem>
+
+              <FormItem
+                {...formItemLayout}
+                label="replace"
+              >
+                {getFieldDecorator('replace', {
+                  valuePropName: 'checked',
+                  initialValue: false,
+                })(
+                    <Checkbox />
+                )}
+              </FormItem>
+              <FormItem
+                {...formItemLayout}
+                label="Data"
+              >
+                {getFieldDecorator('data', {
+                    rules: [{required: true, message: 'Please input you config content'}]
+                })(
+                    <TextArea rows={8} />
+                )}
+              </FormItem>
+
+              <FormItem
+                {...tailFormItemLayout}
+              >
+                <Button type="primary" htmlType="submit" > Submit </Button>
+              </FormItem>
+            </Form>
+          </Modal>
+        </div>
+
+        <Row justify="space-between" tyep="flex" style={{background: '#fff'}}>
           <Col span={12} style={{height: '100%'}}>
-            <div style={{padding: '20px 10px', background: '#fff'}}>
-              <h2>{appName}在{cluster}集群的当前Config</h2>
+            <div style={{padding: '0px 20px', background: '#fff'}}>
+              <h2>{appName}的最新Config</h2>
               <div >
-                {cmJsxContent}
+                {newestJsxContent}
               </div>
             </div>
           </Col>
-          <Col span={12} style={{background: '#fff'}}>
-            <div style={{padding: '20px 10px'}}>
-              <h2>修改{appName}在{cluster}集群的Config</h2>
+          <Col span={12} style={{height: '100%'}}>
+            <div style={{padding: '0px 20px', background: '#fff'}}>
+              <h2>{appName}在{cluster}集群的当前Config</h2>
               <div >
-                <Form onSubmit={this.handleSubmit}>
-                  <FormItem
-                    {...formItemLayout}
-                    label="Cluster"
-                  >
-                    {getFieldDecorator('cluster_name', {
-                        initialValue: cluster
-                    })(
-                        <Select onChange={this.handleChangeCluster.bind(this)}>
-                            { clusterNameList.map(name => <Select.Option key={name}>{name}</Select.Option>) }
-                        </Select>
-                    )}
-                  </FormItem>
-
-                  <FormItem
-                    {...formItemLayout}
-                    label="Key"
-                  >
-                    {getFieldDecorator('key', {
-                      rules: [{required: true, message: 'Please input you config content'}]
-                    })(
-                        <Input placeholder="the key name in configmap data" />
-                    )}
-                  </FormItem>
-
-                  <FormItem
-                    {...formItemLayout}
-                    label="replace"
-                  >
-                    {getFieldDecorator('replace', {
-                      valuePropName: 'checked',
-                      initialValue: false,
-                    })(
-                        <Checkbox />
-                    )}
-                  </FormItem>
-                  <FormItem
-                    {...formItemLayout}
-                    label="Data"
-                  >
-                    {getFieldDecorator('data', {
-                        rules: [{required: true, message: 'Please input you config content'}]
-                    })(
-                        <TextArea rows={8} />
-                    )}
-                  </FormItem>
-
-                  <FormItem
-                    {...tailFormItemLayout}
-                  >
-                    <Button type="primary" htmlType="submit" > Submit </Button>
-                  </FormItem>
-                </Form>
+                {currentJsxContent}
               </div>
             </div>
           </Col>

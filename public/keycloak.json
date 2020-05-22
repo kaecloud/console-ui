@@ -1,0 +1,8 @@
+{
+  "realm": "kae",
+  "auth-server-url": "https://sso.gtapp.xyz/auth/",
+  "ssl-required": "external",
+  "resource": "kae-ui",
+  "public-client": true,
+  "confidential-port": 0
+}

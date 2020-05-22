@@ -766,9 +766,10 @@ class AppDetail extends React.Component {
         hasCanary = canaryPodsData.length > 0,
         clusterNameList = this.getClusterNameList(),
         nowCluster = this.getNowCluster();
-    let replicas = dp? dp.spec.replicas: 0,
+    let replicas = podsData.length,
         readyReplicas = 0,
-        version = dp? dp.metadata.annotations.release_tag: "";
+        deploy_info = dp? JSON.parse(dp.metadata.annotations["kae-app-deploy-info"]): {},
+        version = deploy_info.release_tag;
 
     // calculate ready pods
     for (const val of podsData.values() ) {
@@ -776,7 +777,6 @@ class AppDetail extends React.Component {
         readyReplicas++;
       }
     }
-
 
     let healthPercent = 100 * (readyReplicas / replicas);
     let healthStatus = healthPercent >= 100? 'success': 'exception';
