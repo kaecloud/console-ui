@@ -53,6 +53,8 @@ class KaeApp extends React.Component {
         }
       }).catch(function() {
         console.error('Failed to refresh the token, or the session has expired');
+        setAccessToken(null);
+        keycloak.login();
       });
   }
 
