@@ -778,7 +778,7 @@ class AppDetail extends React.Component {
       }
     }
 
-    let healthPercent = 100 * (readyReplicas / replicas);
+    let healthPercent = parseInt(100 * (readyReplicas / replicas));
     let healthStatus = healthPercent >= 100? 'success': 'exception';
     let healthFormat = healthPercent >= 100? 'Health': `${healthPercent}%`;
 
