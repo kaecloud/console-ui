@@ -78,6 +78,16 @@ export function renew(appName, cluster) {
   };
 }
 
+export function listAppDeployVersion(appName, params) {
+  return {
+    type: 'LIST_APP_DEPLOY_VERSION_REQUEST',
+    async: true,
+    shouldCallApi: (state) => true,
+    callApi: () => AppApi.listDeployVersion(appName, params),
+    payload: { appName }
+  };
+}
+
 export function rollback(appName, params) {
   return {
     type: 'ROLLBACK_APP_REQUEST',

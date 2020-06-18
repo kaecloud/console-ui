@@ -91,9 +91,7 @@ class AppDetail extends React.Component {
   getInitialState() {
     return {
       scaleNum: 1,
-      rollbackRevisionNum: 0,
       scaleVisible: false,
-      rollbackVisible: false
     };
   }
 
@@ -494,20 +492,6 @@ class AppDetail extends React.Component {
       }).catch(e => {});
   }
 
-  // 回滚
-  handleRollback = () => {
-    this.setState({rollbackVisible: false});
-    let {rollbackRevisionNum} = this.state;
-    let appName = this.getAppName(),
-        nowCluster = this.getNowCluster(),
-        title = 'Rollback App',
-        {dispatch} = this.props;
-    processApiResult(AppApi.rollback(appName, nowCluster, rollbackRevisionNum), title)
-      .then(data => {
-        dispatch(AppActions.getDeployment(appName, nowCluster));
-      }).catch(e => {});
-  }
-
   stopContainer(record) {
     let appName = this.getAppName(),
         nowCluster= this.getNowCluster(),
@@ -734,6 +718,14 @@ class AppDetail extends React.Component {
 
         {hasCanary && <Collapse bordered={false} defaultActiveKey={['1']}>
             <Panel header={<h2>canary副本集</h2>} key="1">
+         <span style={{ marginBottom: 10, display: 'block'}}>
+
+                <Button type="primary" onClick={self.handleChangeCanaryWeight}>ChangeWeight</Button>
+         <Divider type="vertical" />
+                <Button><Link to={`/apps/${appName}/abtesting?cluster=${nowCluster}`}>ABTesting</Link></Button>
+         <Divider type="vertical" />
+                <Button type="danger" onClick={self.handleDeleteCanary}>DeleteCanary</Button>
+              </span>
                 <Table
                     columns={podColumns}
                     dataSource={canaryPodTableData}
@@ -762,8 +754,6 @@ class AppDetail extends React.Component {
         dp = dpReq.data,
         releaseTableData = releasesReq.data? releasesReq.data: [],
         podsData = podsReq.data? podsReq.data: [],
-        canaryPodsData = canaryPodsReq.data? canaryPodsReq.data: [],
-        hasCanary = canaryPodsData.length > 0,
         clusterNameList = this.getClusterNameList(),
         nowCluster = this.getNowCluster();
     let replicas = podsData.length,
@@ -903,28 +893,23 @@ class AppDetail extends React.Component {
                           <Progress size="small" status={healthStatus} percent={healthPercent} format={()=>healthFormat} />
                         </div>
                       </div>
-                        <div style={{marginBottom: '10px', clear: 'both'}}>
-                         Canary: <span style={{color: 'blue'}}>{hasCanary.toString()}</span><strong></strong>
-                            {hasCanary &&
-                                <span>
-                                  <Divider type="vertical" />
-                                  <Button onClick={self.handleChangeCanaryWeight}>ChangeWeight</Button>
-                                  <Button onClick={self.handleDeleteCanary}>DeleteCanary</Button>
-              </span>
-                            }
+
+                        <div style={{marginBottom: '10px', clear: 'both'}}>Nav:
+ <span style={{marginLeft: '10px'}}>
+                        <Link to={`/apps/${appName}/deploy_version?cluster=${nowCluster}`}>rollback</Link>
+
+                  <Divider type="vertical" />
+<Link to={`/apps/${appName}/configmap?cluster=${nowCluster}`}>config</Link>
+
+                  <Divider type="vertical" />
+<Link to={`/apps/${appName}/secret?cluster=${nowCluster}`}>secret</Link>
+                  <Divider type="vertical" />
+<Link to={`/apps/${appName}/audit_logs`}>审计日志</Link>
+</span>
                         </div>
-                          <p>
-                              <Button onClick={this.showAppDeployment}>Deployment</Button>
-                              <Button><Link to={`/apps/${appName}/configmap?cluster=${nowCluster}`}>ConfigMap</Link></Button>
-                              <Button><Link to={`/apps/${appName}/secret?cluster=${nowCluster}`}>Secret</Link></Button>
-                          {hasCanary &&
-                           <Button><Link to={`/apps/${appName}/abtesting?cluster=${nowCluster}`}>ABTesting</Link></Button>
-                          }
-                          </p>
-                          <Button type="primary"><Link to={`/apps/${appName}/audit_logs`}>审计日志</Link></Button>
+                          <Button onClick={this.showAppDeployment}>Deployment</Button>
                           <Button onClick={self.handleRenew}>Recreate</Button>
                           <Button onClick={() => {self.setState({scaleVisible: true})}}>Scale</Button>
-                          <Button onClick={() => {self.setState({rollbackVisible: true})}}>Rollback</Button>
                           <Button type="danger" onClick={self.showDeleteAppConfirmModal}>Delete</Button>
               <Button type="danger" onClick={self.handleUndeploy}>Undeploy</Button>
                           </div>
@@ -967,17 +952,6 @@ class AppDetail extends React.Component {
                         <p>cluster：<span style={{color:'red'}}>{nowCluster}</span></p>
                         <span>所需容器数量：</span>
                         <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
-                    </Modal>
-
-                    <Modal
-                        title={<div>Rollback {appName} (cluster:<span style={{color:'red'}}>{nowCluster}</span>)</div>}
-                        visible={this.state.rollbackVisible}
-                        onOk={this.handleRollback}
-                        onCancel={() => {this.setState({rollbackVisible: false})}}
-                    >
-                        <p>cluster：<span style={{color:'red'}}>{nowCluster}</span></p>
-                        <span>revision：</span>
-                        <InputNumber min={0} max={10} defaultValue={0} onChange={num => {this.setState({rollbackRevisionNum: num})}} />
                     </Modal>
 
                     <div id="example"></div>

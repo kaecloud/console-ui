@@ -18,6 +18,7 @@ import AppSecret from './pages/AppSecretPage';
 import AppABTesting from './pages/AppABTestingPage';
 import AppPodEntry from './pages/AppPodEntryPage';
 import AppBuild from './pages/AppBuildPage';
+import AppDeployVersionList  from './pages/AppDeployVersionListPage.js';
 
 import { setAccessToken } from './models/apis/Fetch';
 
@@ -78,6 +79,7 @@ class KaeApp extends React.Component {
                         <Route path="/apps/:appName/cluster/:cluster/pod/:podName/entry" component={this.connectApi(AppPodEntry)} />
                         <Route path="/apps/:appName/tag/:tag/build" component={this.connectApi(AppBuild)} />
 
+                        <Route path="/apps/:appName/deploy_version" component={this.connectApi(AppDeployVersionList)} />
                         <Route path="/apps" component={this.connectApi(AppList)} />
 
                         <Redirect from='/' to='/apps' />

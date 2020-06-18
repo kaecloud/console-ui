@@ -63,11 +63,23 @@ export function renew(appName, cluster) {
     });
 }
 
+export function listDeployVersion(appName, cluster) {
+  let params = {
+    'cluster': cluster
+  };
+  return Fetch.get(`${baseApiUrl}/app/${appName}/deploy_history`, params)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't get app deploy versions, statusCode：${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
+
 // app_rollback
-export function rollback(appName, cluster, revision) {
+export function rollback(appName, cluster, revision, deploy_id) {
   let params = {
     'cluster': cluster,
-    'revision': revision
+    'revision': revision,
+    'deploy_id': deploy_id
   };
   return Fetch.put(`${baseApiUrl}/app/${appName}/rollback`, params)
     .then(({statusCode, data}) => {
@@ -237,6 +249,14 @@ export function getConfigMap(name, cluster) {
   return Fetch.get(`${baseApiUrl}/app/${name}/configmap?cluster=${cluster}`)
     .then(({statusCode, data}) => {
       const errMsg = `can't get app's configmap, statusCode：${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
+
+export function getAppConfig(name, config_id) {
+  return Fetch.get(`${baseApiUrl}/app/${name}/config/${config_id}`)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't get app's config, statusCode：${statusCode}`;
       return apiCallback(statusCode, data, errMsg);
     });
 }
