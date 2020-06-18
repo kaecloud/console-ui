@@ -19,6 +19,6 @@ deploy:
   stage: deploy
   image: kaecloud/cli:latest
   script:
-    - kae app:deploy --cluster kjy --yaml-name default
+    - kae app:deploy --cluster aliyun --yaml-name default
   only:
     - tags
