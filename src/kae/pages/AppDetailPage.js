@@ -744,10 +744,10 @@ class AppDetail extends React.Component {
     const { requests } =
           getPageRequests(this.props, [
             'GET_APP_DEPLOYMENT_REQUEST', 'GET_APP_RELEASES_REQUEST',
-            'APP_PODS_EVENT', 'APP_CANARY_PODS_EVENT'
+            'APP_PODS_EVENT'
           ]);
 
-    let [dpReq, releasesReq, podsReq, canaryPodsReq] = requests;
+    let [dpReq, releasesReq, podsReq] = requests;
 
     let self = this,
         appName = this.getAppName(),

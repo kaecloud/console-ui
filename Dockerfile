@@ -8,7 +8,7 @@ RUN mkdir -p /kae/app
 ADD . /kae/app
 
 WORKDIR /kae/app
-RUN npm config set registry http://registry.cnpmjs.org && \
+RUN npm config set registry https://registry.npm.taobao.org/ && \
     npm install && \
     npm run build
 

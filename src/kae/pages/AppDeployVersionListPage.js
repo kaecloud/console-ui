@@ -1,6 +1,6 @@
 import React from 'react';
 import { withRouter, Link } from 'react-router-dom';
-import { Table, Tooltip, Breadcrumb, Modal} from 'antd';
+import { Table, Breadcrumb, Modal} from 'antd';
 
 import { getRequestFromProps } from '../models/Utils';
 import {getNowCluster, processApiResult} from '../Utils';
