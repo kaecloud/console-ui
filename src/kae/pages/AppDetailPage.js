@@ -362,9 +362,11 @@ class AppDetail extends React.Component {
     const {dispatch} = this.props;
 
     let oldName = record.name,
-        title = "Change App Yaml";
+        title = "Change App Yaml",
+        is_add = false;
     if (! oldName) {
       title = "Add App Yaml";
+      is_add = true;
       record = {};
     }
     let div = document.createElement('div');
@@ -377,8 +379,8 @@ class AppDetail extends React.Component {
       }
     }
 
-    function handler(newRecord) {
-      if (oldName) {
+    function handler(newRecord, add_new) {
+      if (oldName && !add_new) {
         processApiResult(AppApi.updateAppYaml(appName, oldName, newRecord), title)
           .then(data => {
             destroy();
@@ -396,7 +398,8 @@ class AppDetail extends React.Component {
     let config = {
       title: title,
       handler: handler,
-      destroy: destroy
+      destroy: destroy,
+      is_add: is_add
     };
 
     ReactDOM.render(<AppYamlAddModal config={config} record={record} />, div);

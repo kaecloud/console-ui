@@ -1,6 +1,6 @@
 import React from 'react';
 
-import {Button, Modal, Row, Form, Input} from 'antd';
+import {Button, Checkbox, Modal, Row, Form, Input} from 'antd';
 
 // eslint-disable-next-line
 import brace from 'brace';
@@ -47,17 +47,19 @@ class AppYamlAddModal extends React.Component {
 
     this.props.form.validateFields((err, values) => {
       if (!err) {
-        let record = values;
+        let record = values,
+            add_new = values.add_new;
         record.specs_text = this.state.yamlValue;
+        delete record.add_new;
 
-        this.state.config.handler(record);
+        this.state.config.handler(record, add_new);
       }
     });
   }
 
   render() {
+    let self = this;
     const { getFieldDecorator } = this.props.form;
-
     return (
         <Modal
           title= {this.state.config.title}
@@ -77,6 +79,20 @@ class AppYamlAddModal extends React.Component {
                 <Input placeholder="App Yaml Name" />
             )}
           </FormItem>
+
+      {self.props.config.is_add ||
+          <FormItem
+            {...formItemLayout}
+            label="复制app.yaml"
+              >
+              {getFieldDecorator('add_new', {
+                valuePropName: 'checked',
+                initialValue: false,
+              })(
+                  <Checkbox><span style={{color: 'red'}}>如果你是要根据当前的app.yaml创建一份新的app.yaml,请选择该项</span></ Checkbox>
+              )}
+          </FormItem>
+      }
           <FormItem
             {...formItemLayout}
             label="Comment"
