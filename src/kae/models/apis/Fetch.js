@@ -2,6 +2,9 @@ import axios from 'axios';
 
 // axios请求带上cookie
 axios.defaults.withCredentials = true;
+// timeout 90s
+axios.defaults.timeout = 90000;
+
 
 export const Fetch = {
   accessToken: null,
