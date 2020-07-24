@@ -954,7 +954,7 @@ class AppDetail extends React.Component {
                     >
                         <p>cluster：<span style={{color:'red'}}>{nowCluster}</span></p>
                         <span>所需容器数量：</span>
-                        <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
+                        <InputNumber min={1} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
                     </Modal>
 
                     <div id="example"></div>
