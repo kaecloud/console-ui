@@ -247,7 +247,7 @@ class AppConfigMap extends React.Component {
         <Row justify="space-between" tyep="flex" style={{background: '#fff'}}>
           <Col span={12} style={{height: '100%'}}>
             <div style={{padding: '0px 20px', background: '#fff'}}>
-              <h2>{appName}的最新Config</h2>
+              <h2>{appName}的适用于{cluster}集群的最新Config</h2>
               <div >
                 {newestJsxContent}
               </div>
@@ -255,7 +255,7 @@ class AppConfigMap extends React.Component {
           </Col>
           <Col span={12} style={{height: '100%'}}>
             <div style={{padding: '0px 20px', background: '#fff'}}>
-              <h2>{appName}在{cluster}集群的当前Config</h2>
+              <h2>{appName}在{cluster}集群的当前生效的Config</h2>
               <div >
                 {currentJsxContent}
               </div>
