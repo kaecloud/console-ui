@@ -58,18 +58,7 @@ class AppBuild extends React.Component {
           outputs.push(<p key={keyIdx++} style={{color: '#00d600'}}>***** PHASE {data.phase}</p>);
           phase = data['phase'];
         }
-        if (data.phase.toLowerCase() === "pushing") {
-          let raw_data = data['raw_data'];
-          if (raw_data.id && raw_data.status) {
-            outputs.push(<p key={keyIdx++}>{raw_data.id}: {raw_data.status}</p>);
-          } else if (raw_data.digest) {
-            outputs.push(<p key={keyIdx++}>{raw_data.status}: digest: {raw_data.digest} size: {raw_data.size}</p>);
-          } else {
-            outputs.push(<p key={keyIdx++}>{JSON.stringify(data)}</p>);
-          }
-        } else {
-          outputs.push(<p key={keyIdx++}>{data.msg}</p>);
-        }
+        outputs.push(<p key={keyIdx++}>{data.msg}</p>);
       }
       self.setState({buildOutput: outputs});
     };

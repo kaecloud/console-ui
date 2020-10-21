@@ -570,10 +570,10 @@ class AppDetail extends React.Component {
     }
   }
 
-  showAppPodStatus(record) {
-    let text = JSON.stringify(record.pod.status, undefined, 2);
+  showAppPod(record) {
+    let text = JSON.stringify(record.pod, undefined, 2);
     let config = {
-      title: "Pod status",
+      title: "Pod",
       width: 700,
       visible: true,
       text: (
@@ -583,6 +583,29 @@ class AppDetail extends React.Component {
       )
     };
     showInfoModal(config, false);
+  }
+
+  showAppPodEvents(record) {
+    let appName = this.getAppName(),
+        nowCluster= this.getNowCluster(),
+        podName = record.name,
+        uid = record.pod.metadata.uid;
+
+    processApiResult(AppApi.getPodEvents(appName, podName, uid, nowCluster), "get pod events")
+      .then(data => {
+        let text = JSON.stringify(data, undefined, 2);
+        let config = {
+          title: "Pod Events",
+          width: 700,
+          visible: true,
+          text: (
+              <SyntaxHighlighter language="json" style={docco}>
+              {text}
+            </SyntaxHighlighter>
+          )
+        };
+        showInfoModal(config, false);
+      }).catch(e => {});
   }
 
   getAppName(props = this.props) {
@@ -695,7 +718,9 @@ class AppDetail extends React.Component {
                */}
               <a onClick={self.showAppPodLog.bind(self, record)}>log</a>
               <Divider type="vertical" />
-              <a onClick={self.showAppPodStatus.bind(self, record)}>status</a>
+              <a onClick={self.showAppPod.bind(self, record)}>pod</a>
+              <Divider type="vertical" />
+              <a onClick={self.showAppPodEvents.bind(self, record)}>events</a>
               <Divider type="vertical" />
               <a onClick={self.stopContainer.bind(self, record)}>restart</a>
               <Divider type="vertical" />
@@ -963,7 +988,7 @@ class AppDetail extends React.Component {
                     >
                         <p>cluster：<span style={{color:'red'}}>{nowCluster}</span></p>
                         <span>所需容器数量：</span>
-                        <InputNumber min={1} max={10} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
+                        <InputNumber min={1} defaultValue={1} onChange={num => {this.setState({scaleNum: num})}} />
                     </Modal>
 
                     <div id="example"></div>

@@ -298,6 +298,15 @@ export function getPodLog(appName, podName, cluster, container) {
     });
 }
 
+export function getPodEvents(appName, podName, uid, cluster) {
+  let url = `${baseApiUrl}/app/${appName}/pod/${podName}/events?cluster=${cluster}&uid=${uid}`;
+  return Fetch.get(url)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't get app's pod events, statusCode：${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+}
+
 export function stopContainer(appName, podName, cluster, container) {
   let params = {
     'podname': podName,
