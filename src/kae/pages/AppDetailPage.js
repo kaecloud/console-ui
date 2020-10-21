@@ -71,6 +71,7 @@ class AppDetail extends React.Component {
       dispatch(AppActions.getCanaryInfo(appName, nowCluster));
       dispatch(AppActions.getDeployment(appName, nowCluster));
       dispatch(AppActions.getIngress(appName, nowCluster));
+      dispatch(AppActions.getGrafanaDashboard(appName, nowCluster));
     }
     dispatch(AppActions.getReleases(appName));
     dispatch(AppActions.listAppYaml(appName));
@@ -478,8 +479,7 @@ class AppDetail extends React.Component {
       },
       onCancel() {}
     });
-
-  }
+  };
 
   // 伸缩
   handleScale = () => {
@@ -747,21 +747,23 @@ class AppDetail extends React.Component {
     const { requests } =
           getPageRequests(this.props, [
             'GET_APP_DEPLOYMENT_REQUEST', 'GET_APP_RELEASES_REQUEST',
+            'GET_APP_GRAFANA_DASHBOARD_REQUEST',
             'APP_PODS_EVENT'
           ]);
 
-    let [dpReq, releasesReq, podsReq] = requests;
-
+    let [dpReq, releasesReq, grafanaReq, podsReq] = requests;
     let self = this,
         appName = this.getAppName(),
         dp = dpReq.data,
         releaseTableData = releasesReq.data? releasesReq.data: [],
         podsData = podsReq.data? podsReq.data: [],
+        grafanaData = grafanaReq.data,
         clusterNameList = this.getClusterNameList(),
         nowCluster = this.getNowCluster();
     let replicas = podsData.length,
         readyReplicas = 0,
         deploy_info = dp? JSON.parse(dp.metadata.annotations["kae-app-deploy-info"]): {},
+        dashboard_url = grafanaData?grafanaData.dashboard_url:"",
         version = deploy_info.release_tag;
 
     // calculate ready pods
@@ -908,6 +910,13 @@ class AppDetail extends React.Component {
 <Link to={`/apps/${appName}/secret?cluster=${nowCluster}`}>secret</Link>
                   <Divider type="vertical" />
 <Link to={`/apps/${appName}/audit_logs`}>审计日志</Link>
+{dashboard_url === ""? "":
+
+<span>
+                  <Divider type="vertical" />
+<a href={`${dashboard_url}`}>Grafana</a>
+</span>
+}
 </span>
                         </div>
                           <Button onClick={this.showAppDeployment}>Deployment</Button>

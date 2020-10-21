@@ -63,6 +63,17 @@ export function renew(appName, cluster) {
     });
 }
 
+export function getGrafanaDashboard(appName, cluster) {
+  let params = {
+    'cluster': cluster
+  };
+  return Fetch.get(`${baseApiUrl}/app/${appName}/grafana_dashboard?cluster=${cluster}`, params)
+    .then(({statusCode, data}) => {
+      const errMsg = `can't get app grafana dashboard(${appName}), statusCode：${statusCode}`;
+      return apiCallback(statusCode, data, errMsg);
+    });
+};
+
 export function listDeployVersion(appName, cluster) {
   let params = {
     'cluster': cluster

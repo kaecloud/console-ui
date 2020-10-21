@@ -78,6 +78,16 @@ export function renew(appName, cluster) {
   };
 }
 
+export function getGrafanaDashboard(appName, cluster) {
+  return {
+    type: 'GET_APP_GRAFANA_DASHBOARD_REQUEST',
+    async: true,
+    shouldCallApi: (state) => true,
+    callApi: () => AppApi.getGrafanaDashboard(appName, cluster),
+    payload: { appName }
+  };
+}
+
 export function listAppDeployVersion(appName, params) {
   return {
     type: 'LIST_APP_DEPLOY_VERSION_REQUEST',
