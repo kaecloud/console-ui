@@ -4,3 +4,5 @@ Dockerfile
 .envrc
 .idea
 dist
+node_modules
+build
