@@ -935,12 +935,12 @@ class AppDetail extends React.Component {
 <Link to={`/apps/${appName}/secret?cluster=${nowCluster}`}>secret</Link>
                   <Divider type="vertical" />
 <Link to={`/apps/${appName}/audit_logs`}>审计日志</Link>
-{dashboard_url === ""? "":
 
-<span>
-                  <Divider type="vertical" />
-<a href={`${dashboard_url}`}>Grafana</a>
-</span>
+{dashboard_url === ""? "":
+  <span>
+    <Divider type="vertical" />
+    <a href={`${dashboard_url}`} target="_blank">Grafana</a>
+  </span>
 }
 </span>
                         </div>
