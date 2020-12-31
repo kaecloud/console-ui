@@ -73,6 +73,7 @@ class AppDetail extends React.Component {
       dispatch(AppActions.getIngress(appName, nowCluster));
       dispatch(AppActions.getGrafanaDashboard(appName, nowCluster));
     }
+    dispatch(AppActions.get(appName));
     dispatch(AppActions.getReleases(appName));
     dispatch(AppActions.listAppYaml(appName));
   }
@@ -108,6 +109,15 @@ class AppDetail extends React.Component {
 
       dispatch(AppActions.setCurrentCluster(newCluster));
     }
+  }
+
+  convertGitUrlToHttps = (url) => {
+    let re = /git@([\w\.]+):([\w\./\-~]+)(\.git)(\/)?/g;
+    let res = re.exec(url);
+    if (res) {
+      return `https://${res[1]}/${res[2]}`;
+    }
+    return url;
   }
 
   showAceEditorModal = (config) => {
@@ -771,18 +781,19 @@ class AppDetail extends React.Component {
   render() {
     const { requests } =
           getPageRequests(this.props, [
-            'GET_APP_DEPLOYMENT_REQUEST', 'GET_APP_RELEASES_REQUEST',
+            'GET_APP_REQUEST', 'GET_APP_DEPLOYMENT_REQUEST', 'GET_APP_RELEASES_REQUEST',
             'GET_APP_GRAFANA_DASHBOARD_REQUEST',
             'APP_PODS_EVENT'
           ]);
 
-    let [dpReq, releasesReq, grafanaReq, podsReq] = requests;
+    let [appReq, dpReq, releasesReq, grafanaReq, podsReq] = requests;
     let self = this,
         appName = this.getAppName(),
         dp = dpReq.data,
         releaseTableData = releasesReq.data? releasesReq.data: [],
         podsData = podsReq.data? podsReq.data: [],
         grafanaData = grafanaReq.data,
+        appSCM = appReq.data? this.convertGitUrlToHttps(appReq.data.git): "",
         clusterNameList = this.getClusterNameList(),
         nowCluster = this.getNowCluster();
     let replicas = podsData.length,
@@ -916,6 +927,7 @@ class AppDetail extends React.Component {
                         </Select>
                         </div>
                         <div>
+                        <p>git: <a href={`${appSCM}`} target="_blank">{appSCM}</a></p>
                          <div style={{float: 'left'}}>
                         <p>状态： 当前版本为<strong>{version}</strong>，共计<strong>{replicas}</strong>个副本，其中<strong>{readyReplicas}</strong>个可用 </p>
 </div>
